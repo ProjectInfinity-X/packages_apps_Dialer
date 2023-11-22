@@ -96,14 +96,7 @@ public class CallRecorder implements CallList.Listener {
       if (!isEnabled()) {
           return false;
       }
-      if (RECORD_ALLOWED_STATE_BY_COUNTRY.isEmpty()) {
-          loadAllowedStates();
-      }
-
-      String currentCountryIso = GeoUtil.getCurrentCountryIso(context);
-      Boolean allowedState = RECORD_ALLOWED_STATE_BY_COUNTRY.get(currentCountryIso);
-
-      return allowedState != null && allowedState;
+      return true;
   }
 
   private CallRecorder() {
