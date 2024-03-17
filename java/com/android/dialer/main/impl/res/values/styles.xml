@@ -16,7 +16,7 @@
   -->
 <resources>
 
-  <style name="LaunchTheme" parent="Theme.AppCompat.DayNight.DarkActionBar">
+  <style name="LaunchTheme" parent="Theme.Material3.DayNight">
     <item name="android:colorPrimary">@color/dialer_primary_color</item>
     <item name="colorPrimary">@color/dialer_primary_color</item>
     <item name="android:colorPrimaryDark">@color/dialer_theme_color_dark</item>

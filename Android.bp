@@ -226,7 +226,7 @@ android_app {
         "androidx.preference_preference",
         "androidx.recyclerview_recyclerview",
         "apache-commons-compress",
-        "com.google.android.material_material",
+        "com.google.android.material_material_md3",
         "dagger2",
         "dialer-apache-mime4j-core",
         "dialer-apache-mime4j-dom",
