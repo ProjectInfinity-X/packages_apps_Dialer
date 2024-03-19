@@ -44,7 +44,6 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.fragment.app.DialogFragment;
 
@@ -62,6 +61,8 @@ import com.android.dialer.oem.MotorolaUtils;
 import com.android.dialer.oem.TranssionUtils;
 import com.android.dialer.telecom.TelecomUtil;
 import com.android.dialer.util.PermissionsUtil;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.List;
 import java.util.Locale;
@@ -312,31 +313,31 @@ public class SpecialCharSequenceMgr {
         (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
 
     if (telephonyManager != null && input.equals(MMI_IMEI_DISPLAY)) {
-      int labelResId =
-          (telephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_GSM)
-              ? R.string.imei
-              : R.string.meid;
 
       View customView = LayoutInflater.from(context).inflate(R.layout.dialog_deviceids, null);
       ViewGroup holder = customView.findViewById(R.id.deviceids_holder);
 
       if (TelephonyManagerCompat.getPhoneCount(telephonyManager) > 1) {
         for (int slot = 0; slot < telephonyManager.getActiveModemCount(); slot++) {
-          String deviceId = telephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_GSM
-                  ? telephonyManager.getImei(slot)
-                  : telephonyManager.getMeid(slot);
-          if (!TextUtils.isEmpty(deviceId)) {
-            addDeviceIdRow(holder, deviceId);
+          String Imei = telephonyManager.getImei(slot);
+          String title = context.getString(R.string.imei) + (slot + 1);
+          if (!TextUtils.isEmpty(Imei)) {
+            addDeviceIdRow(holder, title, Imei);
           }
         }
       } else {
-        addDeviceIdRow(holder, telephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_GSM
-                ? telephonyManager.getImei()
-                : telephonyManager.getMeid());
+        addDeviceIdRow(holder, context.getString(R.string.imei), telephonyManager.getImei());
       }
 
-      new AlertDialog.Builder(context)
-          .setTitle(labelResId)
+      try {
+        String meid = telephonyManager.getMeid();
+        addDeviceIdRow(holder, context.getString(R.string.meid), meid);
+      } catch (Exception e) {
+        LogUtil.e("SpecialCharSequenceMgr.handleDeviceIdDisplay", "unable to get MEID", e);
+      }
+
+      new MaterialAlertDialogBuilder(context)
+          .setTitle(R.string.device_identification_title)
           .setView(customView)
           .setPositiveButton(android.R.string.ok, null)
           .setCancelable(false)
@@ -348,7 +349,7 @@ public class SpecialCharSequenceMgr {
     return false;
   }
 
-  private static void addDeviceIdRow(ViewGroup holder, String deviceId) {
+  private static void addDeviceIdRow(ViewGroup holder, String title, String deviceId) {
     if (TextUtils.isEmpty(deviceId)) {
       return;
     }
@@ -358,7 +359,12 @@ public class SpecialCharSequenceMgr {
             LayoutInflater.from(holder.getContext()).inflate(R.layout.row_deviceid, holder, false);
     holder.addView(row);
 
+    ((TextView) row.findViewById(R.id.deviceid_title)).setText(title);
     ((TextView) row.findViewById(R.id.deviceid_hex)).setText(deviceId);
+  }
+
+  private static boolean checkSupportedRadioBitmask(long supportedRadioBitmask, long targetBitmask) {
+    return (targetBitmask & supportedRadioBitmask) > 0;
   }
 
   private static String getDecimalFromHex(String hex) {
