@@ -80,7 +80,7 @@
     <item name="android:padding">8dp</item>
   </style>
 
-  <style name="DialerFlatButtonStyle" parent="@android:style/Widget.Material.Button">
+  <style name="DialerFlatButtonStyle" parent="@style/Widget.Material3.Button">
     <item name="android:background">?android:attr/selectableItemBackground</item>
     <item name="android:paddingEnd">@dimen/button_horizontal_padding</item>
     <item name="android:paddingStart">@dimen/button_horizontal_padding</item>
@@ -89,7 +89,7 @@
 
   <!-- Style for the 'primary' button in a view. Unlike the DialerFlatButtonStyle, this button -->
   <!-- is not colored white, to draw more attention to it. -->
-  <style name="DialerPrimaryFlatButtonStyle" parent="@android:style/Widget.Material.Button">
+  <style name="DialerPrimaryFlatButtonStyle" parent="@style/Widget.Material3.Button">
     <item name="android:background">@drawable/selectable_primary_flat_button</item>
     <item name="android:paddingEnd">@dimen/button_horizontal_padding</item>
     <item name="android:paddingStart">@dimen/button_horizontal_padding</item>
