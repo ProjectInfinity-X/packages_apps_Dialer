@@ -30,6 +30,8 @@ import androidx.annotation.Nullable;
 import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import com.android.dialer.R;
 
 /** Creates dialog fragments to block a number and/or report it as spam/not spam. */
@@ -41,9 +43,9 @@ public final class BlockReportSpamDialogs {
   public static final String NOT_SPAM_DIALOG_TAG = "NotSpamDialog";
 
   /** Creates a dialog with the default cancel button listener (which dismisses the dialog). */
-  private static AlertDialog.Builder createDialogBuilder(
+  private static MaterialAlertDialogBuilder createDialogBuilder(
       Activity activity, final DialogFragment fragment) {
-    return new AlertDialog.Builder(activity)
+    return new MaterialAlertDialogBuilder(activity)
         .setCancelable(true)
         .setNegativeButton(android.R.string.cancel, (dialog, which) -> fragment.dismiss());
   }
@@ -159,7 +161,7 @@ public final class BlockReportSpamDialogs {
       TextView details = (TextView) dialogView.findViewById(R.id.block_details);
       details.setText(getBlockMessage(getContext()));
 
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       Dialog blockReportSpamDialog =
           alertDialogBuilder
               .setView(dialogView)
@@ -201,7 +203,7 @@ public final class BlockReportSpamDialogs {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
       super.onCreateDialog(savedInstanceState);
       // Return the newly created dialog
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       Dialog dialog =
           alertDialogBuilder
               .setTitle(getString(R.string.block_number_confirmation_title, displayNumber))
@@ -238,7 +240,7 @@ public final class BlockReportSpamDialogs {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
       super.onCreateDialog(savedInstanceState);
       // Return the newly created dialog
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       Dialog dialog =
           alertDialogBuilder
               .setTitle(getString(R.string.block_number_confirmation_title, displayNumber))
@@ -281,7 +283,7 @@ public final class BlockReportSpamDialogs {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
       super.onCreateDialog(savedInstanceState);
       // Return the newly created dialog
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       if (isSpam) {
         alertDialogBuilder
             .setMessage(R.string.unblock_number_alert_details)
@@ -324,7 +326,7 @@ public final class BlockReportSpamDialogs {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
       super.onCreateDialog(savedInstanceState);
       // Return the newly created dialog
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       alertDialogBuilder.setMessage(
           getString(R.string.unblock_report_number_alert_title, displayNumber));
       Dialog dialog =
@@ -355,7 +357,7 @@ public final class BlockReportSpamDialogs {
     public Dialog onCreateDialog(Bundle savedInstanceState) {
       super.onCreateDialog(savedInstanceState);
       // Return the newly created dialog
-      AlertDialog.Builder alertDialogBuilder = createDialogBuilder(getActivity(), this);
+      MaterialAlertDialogBuilder alertDialogBuilder = createDialogBuilder(getActivity(), this);
       Dialog dialog =
           alertDialogBuilder
               .setTitle(R.string.report_not_spam_alert_title)
