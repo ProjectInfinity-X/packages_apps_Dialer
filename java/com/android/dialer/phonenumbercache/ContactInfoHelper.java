@@ -1,15 +1,18 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
- * in compliance with the License. You may obtain a copy of the License at
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
  *
- * http://www.apache.org/licenses/LICENSE-2.0
+ *      http://www.apache.org/licenses/LICENSE-2.0
  *
- * Unless required by applicable law or agreed to in writing, software distributed under the License
- * is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express
- * or implied. See the License for the specific language governing permissions and limitations under
- * the License.
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 
 package com.android.dialer.phonenumbercache;
@@ -26,10 +29,12 @@ import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Directory;
 import android.provider.ContactsContract.DisplayNameSources;
 import android.provider.ContactsContract.PhoneLookup;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.contacts.common.ContactsUtils;
 import com.android.contacts.common.ContactsUtils.UserType;
 import com.android.contacts.common.util.Constants;
@@ -43,10 +48,12 @@ import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.dialer.telecom.TelecomUtil;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.UriUtils;
-import java.util.ArrayList;
-import java.util.List;
+
 import org.json.JSONException;
 import org.json.JSONObject;
+
+import java.util.ArrayList;
+import java.util.List;
 
 /** Utility class to look up the contact information for a given number. */
 public class ContactInfoHelper {

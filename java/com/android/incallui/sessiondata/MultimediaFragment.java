@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,10 +21,6 @@ import android.graphics.drawable.Drawable;
 import android.location.Location;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.Fragment;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -31,11 +28,16 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+
+import com.android.dialer.R;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.multimedia.MultimediaData;
 import com.android.dialer.theme.base.ThemeComponent;
-import com.android.incallui.maps.MapsComponent;
 import com.bumptech.glide.Glide;
 import com.bumptech.glide.load.DataSource;
 import com.bumptech.glide.load.engine.GlideException;
@@ -76,8 +78,7 @@ public class MultimediaFragment extends Fragment implements AvatarPresenter {
         isSpam);
   }
 
-  @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-  public static MultimediaFragment newInstance(
+  private static MultimediaFragment newInstance(
       @Nullable String subject,
       @Nullable Uri imageUri,
       @Nullable Location location,
@@ -118,25 +119,7 @@ public class MultimediaFragment extends Fragment implements AvatarPresenter {
 
     boolean hasImage = getImageUri() != null;
     boolean hasSubject = !TextUtils.isEmpty(getSubject());
-    boolean hasMap = getLocation() != null;
-    if (hasMap && MapsComponent.get(getContext()).getMaps().isAvailable()) {
-      if (hasImage) {
-        if (hasSubject) {
-          LogUtil.i("MultimediaFragment.onCreateView", "show text, image, location layout");
-          return layoutInflater.inflate(
-              R.layout.fragment_composer_text_image_frag, viewGroup, false);
-        } else {
-          LogUtil.i("MultimediaFragment.onCreateView", "show image, location layout");
-          return layoutInflater.inflate(R.layout.fragment_composer_image_frag, viewGroup, false);
-        }
-      } else if (hasSubject) {
-        LogUtil.i("MultimediaFragment.onCreateView", "show text, location layout");
-        return layoutInflater.inflate(R.layout.fragment_composer_text_frag, viewGroup, false);
-      } else {
-        LogUtil.i("MultimediaFragment.onCreateView", "show location layout");
-        return layoutInflater.inflate(R.layout.fragment_composer_frag, viewGroup, false);
-      }
-    } else if (hasImage) {
+    if (hasImage) {
       if (hasSubject) {
         LogUtil.i("MultimediaFragment.onCreateView", "show text, image layout");
         return layoutInflater.inflate(R.layout.fragment_composer_text_image, viewGroup, false);
@@ -164,7 +147,7 @@ public class MultimediaFragment extends Fragment implements AvatarPresenter {
         && getImageUri() == null
         && !TextUtils.isEmpty(getSubject())) {
       ((ImageView) view.findViewById(R.id.spam_image))
-          .setImageResource(R.drawable.quantum_ic_message_white_24);
+          .setImageResource(R.drawable.quantum_ic_message_vd_theme_24);
       ((TextView) view.findViewById(R.id.spam_text)).setText(R.string.spam_message_text);
     }
 
@@ -209,12 +192,6 @@ public class MultimediaFragment extends Fragment implements AvatarPresenter {
     FrameLayout fragmentHolder = view.findViewById(R.id.answer_message_frag);
     if (fragmentHolder != null) {
       fragmentHolder.setClipToOutline(true);
-      Fragment mapFragment =
-          MapsComponent.get(getContext()).getMaps().createStaticMapFragment(getLocation());
-      getChildFragmentManager()
-          .beginTransaction()
-          .replace(R.id.answer_message_frag, mapFragment)
-          .commitNow();
     }
     avatarImageView = view.findViewById(R.id.answer_message_avatar);
     if (avatarImageView != null) {
@@ -250,12 +227,12 @@ public class MultimediaFragment extends Fragment implements AvatarPresenter {
 
   @Nullable
   public Uri getImageUri() {
-    return getArguments().getParcelable(ARG_IMAGE);
+    return getArguments().getParcelable(ARG_IMAGE, Uri.class);
   }
 
   @Nullable
   public Location getLocation() {
-    return getArguments().getParcelable(ARG_LOCATION);
+    return getArguments().getParcelable(ARG_LOCATION, Location.class);
   }
 
   /** Interface for notifying the fragment parent of changes. */

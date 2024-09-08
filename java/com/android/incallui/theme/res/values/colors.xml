@@ -20,8 +20,6 @@
   <!-- Used with some smaller texts in manage conference screen. -->
   <color name="conference_call_manager_secondary_text_color">#999999</color>
 
-  <color name="incall_dialpad_background">#ffffff</color>
-
   <!-- Background color for status bar. For portrait this will be ignored. -->
   <color name="statusbar_background_color">?android:attr/colorPrimary</color>
 
@@ -53,15 +51,17 @@
     <item>#841F10</item>
   </array>
 
-  <color name="incall_background_gradient_top">#E91141BB</color>
-  <color name="incall_background_gradient_middle">#E91141BB</color>
-  <color name="incall_background_gradient_bottom">#CC229FEB</color>
+  <color name="incall_background_gradient_top">@android:color/system_accent1_600</color>
+  <color name="incall_background_gradient_middle">@android:color/system_accent1_500</color>
+  <color name="incall_background_gradient_bottom">@android:color/system_accent1_400</color>
 
-  <color name="incall_background_multiwindow">#E91141BB</color>
+  <color name="incall_background_multiwindow">@android:color/system_accent1_500</color>
 
   <color name="incall_background_gradient_spam_top">#E5A30B0B</color>
   <color name="incall_background_gradient_spam_middle">#D6C01111</color>
   <color name="incall_background_gradient_spam_bottom">#B8E55135</color>
 
   <color name="incall_background_multiwindow_spam">#E9C22E2E</color>
+
+  <color name="incall_button_icon_color">@android:color/black</color>
 </resources>

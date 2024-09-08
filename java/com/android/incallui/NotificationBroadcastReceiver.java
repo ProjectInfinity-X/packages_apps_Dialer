@@ -16,29 +16,25 @@
 
 package com.android.incallui;
 
+import android.annotation.SuppressLint;
 import android.app.BroadcastOptions;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
 import android.telecom.CallAudioState;
 import android.telecom.VideoProfile;
 
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.TelecomAdapter;
-import com.android.incallui.speakeasy.SpeakEasyCallManager;
 
 import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
-import com.google.common.util.concurrent.ListenableFuture;
 
 /**
  * Accepts broadcast Intents which will be prepared by {@link StatusBarNotifier} and thus sent from
@@ -67,16 +63,14 @@ public class NotificationBroadcastReceiver extends BroadcastReceiver {
   public static final String ACTION_TURN_ON_SPEAKER = "com.android.incallui.ACTION_TURN_ON_SPEAKER";
   public static final String ACTION_TURN_OFF_SPEAKER =
       "com.android.incallui.ACTION_TURN_OFF_SPEAKER";
-  public static final String ACTION_ANSWER_SPEAKEASY_CALL =
-      "com.android.incallui.ACTION_ANSWER_SPEAKEASY_CALL";
 
-  @RequiresApi(VERSION_CODES.N_MR1)
   public static final String ACTION_PULL_EXTERNAL_CALL =
       "com.android.incallui.ACTION_PULL_EXTERNAL_CALL";
 
   public static final String EXTRA_NOTIFICATION_ID =
       "com.android.incallui.extra.EXTRA_NOTIFICATION_ID";
 
+  @SuppressLint("MissingPermission")
   @Override
   public void onReceive(Context context, Intent intent) {
     final String action = intent.getAction();
@@ -87,12 +81,7 @@ public class NotificationBroadcastReceiver extends BroadcastReceiver {
       answerIncomingCall(VideoProfile.STATE_BIDIRECTIONAL, context);
     } else if (action.equals(ACTION_ANSWER_VOICE_INCOMING_CALL)) {
       answerIncomingCall(VideoProfile.STATE_AUDIO_ONLY, context);
-    } else if (action.equals(ACTION_ANSWER_SPEAKEASY_CALL)) {
-      markIncomingCallAsSpeakeasyCall();
-      answerIncomingCall(VideoProfile.STATE_AUDIO_ONLY, context);
     } else if (action.equals(ACTION_DECLINE_INCOMING_CALL)) {
-      Logger.get(context)
-          .logImpression(DialerImpression.Type.REJECT_INCOMING_CALL_FROM_NOTIFICATION);
       declineIncomingCall();
     } else if (action.equals(ACTION_HANG_UP_ONGOING_CALL)) {
       hangUpOngoingCall();
@@ -155,19 +144,6 @@ public class NotificationBroadcastReceiver extends BroadcastReceiver {
     }
   }
 
-  private void markIncomingCallAsSpeakeasyCall() {
-    CallList callList = InCallPresenter.getInstance().getCallList();
-    if (callList == null) {
-      LogUtil.e(
-          "NotificationBroadcastReceiver.markIncomingCallAsSpeakeasyCall", "call list is empty");
-    } else {
-      DialerCall call = callList.getIncomingCall();
-      if (call != null) {
-        call.setIsSpeakEasyCall(true);
-      }
-    }
-  }
-
   private void answerIncomingCall(int videoState, @NonNull Context context) {
     CallList callList = InCallPresenter.getInstance().getCallList();
     if (callList == null) {
@@ -177,18 +153,8 @@ public class NotificationBroadcastReceiver extends BroadcastReceiver {
       DialerCall call = callList.getIncomingCall();
       if (call != null) {
 
-        SpeakEasyCallManager speakEasyCallManager =
-            InCallPresenter.getInstance().getSpeakEasyCallManager();
-        ListenableFuture<Void> answerPrecondition;
-
-        if (speakEasyCallManager != null) {
-          answerPrecondition = speakEasyCallManager.onNewIncomingCall(call);
-        } else {
-          answerPrecondition = Futures.immediateFuture(null);
-        }
-
         Futures.addCallback(
-            answerPrecondition,
+            Futures.immediateFuture(null),
             new FutureCallback<Void>() {
               @Override
               public void onSuccess(Void result) {

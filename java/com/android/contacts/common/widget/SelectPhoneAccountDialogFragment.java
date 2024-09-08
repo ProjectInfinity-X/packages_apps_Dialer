@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,13 @@
 package com.android.contacts.common.widget;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.ResultReceiver;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -43,13 +40,20 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ListAdapter;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+
 import com.android.contacts.common.compat.PhoneAccountCompat;
 import com.android.dialer.contacts.resources.R;
 import com.android.dialer.location.GeoUtil;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.dialer.protos.ProtoParsers;
 import com.android.dialer.telecom.TelecomUtil;
-import com.google.common.base.Optional;
+
+import java.util.Optional;
 
 /**
  * Dialog that allows the user to select a phone accounts for a given action. Optionally provides
@@ -57,7 +61,7 @@ import com.google.common.base.Optional;
  */
 public class SelectPhoneAccountDialogFragment extends DialogFragment {
 
-  @VisibleForTesting public static final String ARG_OPTIONS = "options";
+  private static final String ARG_OPTIONS = "options";
 
   private static final String ARG_IS_DEFAULT_CHECKED = "is_default_checked";
 
@@ -83,17 +87,6 @@ public class SelectPhoneAccountDialogFragment extends DialogFragment {
     this.listener = listener;
   }
 
-  @Nullable
-  @VisibleForTesting
-  public SelectPhoneAccountListener getListener() {
-    return listener;
-  }
-
-  @VisibleForTesting
-  public boolean canSetDefault() {
-    return options.getCanSetDefault();
-  }
-
   @Override
   public void onSaveInstanceState(Bundle outState) {
     super.onSaveInstanceState(outState);
@@ -111,31 +104,23 @@ public class SelectPhoneAccountDialogFragment extends DialogFragment {
     isSelected = false;
 
     final DialogInterface.OnClickListener selectionListener =
-        new DialogInterface.OnClickListener() {
-          @Override
-          public void onClick(DialogInterface dialog, int which) {
-            isSelected = true;
-            PhoneAccountHandle selectedAccountHandle =
-                SelectPhoneAccountDialogOptionsUtil.getPhoneAccountHandle(
-                    options.getEntriesList().get(which));
-            Bundle result = new Bundle();
-            result.putParcelable(
-                SelectPhoneAccountListener.EXTRA_SELECTED_ACCOUNT_HANDLE, selectedAccountHandle);
-            result.putBoolean(SelectPhoneAccountListener.EXTRA_SET_DEFAULT, isDefaultChecked);
-            result.putString(SelectPhoneAccountListener.EXTRA_CALL_ID, getCallId());
-            if (listener != null) {
-              listener.onReceiveResult(SelectPhoneAccountListener.RESULT_SELECTED, result);
-            }
-          }
-        };
+            (dialog, which) -> {
+              isSelected = true;
+              PhoneAccountHandle selectedAccountHandle =
+                  SelectPhoneAccountDialogOptionsUtil.getPhoneAccountHandle(
+                      options.getEntriesList().get(which));
+              Bundle result = new Bundle();
+              result.putParcelable(
+                  SelectPhoneAccountListener.EXTRA_SELECTED_ACCOUNT_HANDLE, selectedAccountHandle);
+              result.putBoolean(SelectPhoneAccountListener.EXTRA_SET_DEFAULT, isDefaultChecked);
+              result.putString(SelectPhoneAccountListener.EXTRA_CALL_ID, getCallId());
+              if (listener != null) {
+                listener.onReceiveResult(SelectPhoneAccountListener.RESULT_SELECTED, result);
+              }
+            };
 
     final CompoundButton.OnCheckedChangeListener checkListener =
-        new CompoundButton.OnCheckedChangeListener() {
-          @Override
-          public void onCheckedChanged(CompoundButton check, boolean isChecked) {
-            isDefaultChecked = isChecked;
-          }
-        };
+            (check, isChecked) -> isDefaultChecked = isChecked;
 
     AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
     ListAdapter selectAccountListAdapter =
@@ -201,14 +186,14 @@ public class SelectPhoneAccountDialogFragment extends DialogFragment {
     static final String EXTRA_CALL_ID = "extra_call_id";
 
     protected SelectPhoneAccountListener() {
-      super(new Handler());
+      super(new Handler(Looper.getMainLooper()));
     }
 
     @Override
     protected void onReceiveResult(int resultCode, Bundle resultData) {
       if (resultCode == RESULT_SELECTED) {
         onPhoneAccountSelected(
-            resultData.getParcelable(EXTRA_SELECTED_ACCOUNT_HANDLE),
+            resultData.getParcelable(EXTRA_SELECTED_ACCOUNT_HANDLE, PhoneAccountHandle.class),
             resultData.getBoolean(EXTRA_SET_DEFAULT),
             resultData.getString(EXTRA_CALL_ID));
       } else if (resultCode == RESULT_DISMISSED) {
@@ -225,7 +210,7 @@ public class SelectPhoneAccountDialogFragment extends DialogFragment {
   static class SelectAccountListAdapter
       extends ArrayAdapter<SelectPhoneAccountDialogOptions.Entry> {
 
-    private int mResId;
+    private final int mResId;
     private final SelectPhoneAccountDialogOptions options;
 
     SelectAccountListAdapter(

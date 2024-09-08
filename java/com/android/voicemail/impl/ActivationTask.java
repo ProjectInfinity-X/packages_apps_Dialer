@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +17,18 @@
 
 package com.android.voicemail.impl;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
-import com.android.dialer.logging.DialerImpression;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.proguard.UsedByReflection;
 import com.android.voicemail.VoicemailClient;
 import com.android.voicemail.impl.protocol.VisualVoicemailProtocol;
@@ -39,7 +39,7 @@ import com.android.voicemail.impl.sms.StatusMessage;
 import com.android.voicemail.impl.sms.StatusSmsFetcher;
 import com.android.voicemail.impl.sync.SyncTask;
 import com.android.voicemail.impl.sync.VvmAccountManager;
-import com.android.voicemail.impl.utils.LoggerUtils;
+
 import java.io.IOException;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.ExecutionException;
@@ -52,7 +52,6 @@ import java.util.concurrent.TimeoutException;
  * boots, the SIM is inserted, signal returned when VVM is not activated yet, and when the carrier
  * spontaneously sent a STATUS SMS.
  */
-@TargetApi(VERSION_CODES.O)
 @UsedByReflection(value = "Tasks.java")
 public class ActivationTask extends BaseTask {
 
@@ -61,11 +60,9 @@ public class ActivationTask extends BaseTask {
   private static final int RETRY_TIMES = 4;
   private static final int RETRY_INTERVAL_MILLIS = 5_000;
 
-  @VisibleForTesting static final String EXTRA_MESSAGE_DATA_BUNDLE = "extra_message_data_bundle";
+  private static final String EXTRA_MESSAGE_DATA_BUNDLE = "extra_message_data_bundle";
 
   private final RetryPolicy retryPolicy;
-
-  @Nullable private OmtpVvmCarrierConfigHelper configForTest;
 
   private Bundle messageData;
 
@@ -108,13 +105,11 @@ public class ActivationTask extends BaseTask {
   @Override
   public void onCreate(Context context, Bundle extras) {
     super.onCreate(context, extras);
-    messageData = extras.getParcelable(EXTRA_MESSAGE_DATA_BUNDLE);
+    messageData = extras.getParcelable(EXTRA_MESSAGE_DATA_BUNDLE, Bundle.class);
   }
 
   @Override
   public Intent createRestartIntent() {
-    LoggerUtils.logImpressionOnMainThread(
-        getContext(), DialerImpression.Type.VVM_AUTO_RETRY_ACTIVATION);
     Intent intent = super.createRestartIntent();
     // mMessageData is discarded, request a fresh STATUS SMS for retries.
     return intent;
@@ -124,8 +119,6 @@ public class ActivationTask extends BaseTask {
   @WorkerThread
   public void onExecuteInBackgroundThread() {
     Assert.isNotMainThread();
-    LoggerUtils.logImpressionOnMainThread(
-        getContext(), DialerImpression.Type.VVM_ACTIVATION_STARTED);
     PhoneAccountHandle phoneAccountHandle = getPhoneAccountHandle();
     if (phoneAccountHandle == null) {
       // This should never happen
@@ -133,14 +126,8 @@ public class ActivationTask extends BaseTask {
       return;
     }
 
-    PreOMigrationHandler.migrate(getContext(), phoneAccountHandle);
-
-    OmtpVvmCarrierConfigHelper helper;
-    if (configForTest != null) {
-      helper = configForTest;
-    } else {
-      helper = new OmtpVvmCarrierConfigHelper(getContext(), phoneAccountHandle);
-    }
+    OmtpVvmCarrierConfigHelper helper = new OmtpVvmCarrierConfigHelper(getContext(),
+            phoneAccountHandle);
     if (!helper.isValid()) {
       VvmLog.i(TAG, "VVM not supported on phoneAccountHandle " + phoneAccountHandle);
       VvmAccountManager.removeAccount(getContext(), phoneAccountHandle);
@@ -251,8 +238,6 @@ public class ActivationTask extends BaseTask {
         helper.handleEvent(status, OmtpEvents.CONFIG_SERVICE_NOT_AVAILABLE);
       }
     }
-    LoggerUtils.logImpressionOnMainThread(
-        getContext(), DialerImpression.Type.VVM_ACTIVATION_COMPLETED);
   }
 
   private static void updateSource(
@@ -290,16 +275,12 @@ public class ActivationTask extends BaseTask {
     context.sendBroadcast(intent);
   }
 
+  @SuppressLint("MissingPermission")
   private static boolean hasSignal(Context context, PhoneAccountHandle phoneAccountHandle) {
     TelephonyManager telephonyManager =
         context
             .getSystemService(TelephonyManager.class)
             .createForPhoneAccountHandle(phoneAccountHandle);
     return telephonyManager.getServiceState().getState() == ServiceState.STATE_IN_SERVICE;
-  }
-
-  @VisibleForTesting
-  void setConfigForTest(OmtpVvmCarrierConfigHelper config) {
-    configForTest = config;
   }
 }

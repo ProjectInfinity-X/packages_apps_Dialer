@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,6 +24,7 @@ import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
 import android.provider.VoicemailContract;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.constants.ScheduledJobIds;
 
@@ -52,11 +54,7 @@ public class VoicemailNotificationJobService extends JobService {
   @Override
   public boolean onStartJob(JobParameters params) {
     LogUtil.i("VoicemailNotificationJobService.onStartJob", "updating notification");
-    VisualVoicemailUpdateTask.scheduleTask(
-        this,
-        () -> {
-          jobFinished(params, false);
-        });
+    VisualVoicemailUpdateTask.scheduleTask(this, () -> jobFinished(params, false));
     return true; // Running in background
   }
 

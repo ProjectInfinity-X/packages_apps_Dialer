@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,17 +22,18 @@ import android.content.Context;
 import android.content.Intent;
 import android.provider.VoicemailContract;
 import android.provider.VoicemailContract.Voicemails;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.databasepopulator.BlockedBumberPopulator;
 import com.android.dialer.databasepopulator.CallLogPopulator;
 import com.android.dialer.databasepopulator.ContactsPopulator;
 import com.android.dialer.databasepopulator.VoicemailPopulator;
-import com.android.dialer.persistentlog.PersistentLogger;
 import com.android.dialer.preferredsim.PreferredSimFallbackContract;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -103,23 +105,6 @@ public class SimulatorUtils {
     context.sendBroadcast(intent);
   }
 
-  public static void sharePersistentLog(@NonNull Context context) {
-    DialerExecutorComponent.get(context)
-        .dialerExecutorFactory()
-        .createNonUiTaskBuilder(new ShareLogWorker())
-        .onSuccess(
-            (String log) -> {
-              Intent intent = new Intent(Intent.ACTION_SEND);
-              intent.setType("text/plain");
-              intent.putExtra(Intent.EXTRA_TEXT, log);
-              if (intent.resolveActivity(context.getPackageManager()) != null) {
-                context.startActivity(intent);
-              }
-            })
-        .build()
-        .executeSerial(null);
-  }
-
   public static void addVoicemailNotifications(@NonNull Context context, int notificationNum) {
     LogUtil.enterBlock("SimulatorNotifications.addVoicemailNotifications");
     List<ContentValues> voicemails = new ArrayList<>();
@@ -139,7 +124,7 @@ public class SimulatorUtils {
         .getContentResolver()
         .bulkInsert(
             Voicemails.buildSourceUri(context.getPackageName()),
-            voicemails.toArray(new ContentValues[voicemails.size()]));
+            voicemails.toArray(new ContentValues[0]));
   }
 
   private static class PopulateVoicemailWorker
@@ -170,7 +155,6 @@ public class SimulatorUtils {
       ContactsPopulator.deleteAllContacts(context);
       CallLogPopulator.deleteAllCallLog(context);
       VoicemailPopulator.deleteAllVoicemail(context);
-      BlockedBumberPopulator.deleteBlockedNumbers(context);
       return null;
     }
   }
@@ -184,17 +168,9 @@ public class SimulatorUtils {
     }
   }
 
-  private static class ShareLogWorker implements Worker<Void, String> {
-    @Nullable
-    @Override
-    public String doInBackground(Void unused) {
-      return PersistentLogger.dumpLogToString();
-    }
-  }
-
   private static class PopulateDatabaseWorkerInput {
-    Context context;
-    boolean fastMode;
+    final Context context;
+    final boolean fastMode;
 
     PopulateDatabaseWorkerInput(Context context, boolean fastMode) {
       this.context = context;

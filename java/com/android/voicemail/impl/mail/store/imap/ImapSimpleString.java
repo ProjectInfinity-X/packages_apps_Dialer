@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +17,13 @@
 
 package com.android.voicemail.impl.mail.store.imap;
 
-import com.android.voicemail.impl.VvmLog;
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
-import java.io.UnsupportedEncodingException;
+import java.nio.charset.StandardCharsets;
 
 /** Subclass of {@link ImapString} used for non literals. */
 public class ImapSimpleString extends ImapString {
-  private final String TAG = "ImapSimpleString";
+  private static final String TAG = "ImapSimpleString";
   private String string;
 
   /* package */ ImapSimpleString(String string) {
@@ -43,12 +43,7 @@ public class ImapSimpleString extends ImapString {
 
   @Override
   public InputStream getAsStream() {
-    try {
-      return new ByteArrayInputStream(string.getBytes("US-ASCII"));
-    } catch (UnsupportedEncodingException e) {
-      VvmLog.e(TAG, "Unsupported encoding: ", e);
-    }
-    return null;
+    return new ByteArrayInputStream(string.getBytes(StandardCharsets.US_ASCII));
   }
 
   @Override

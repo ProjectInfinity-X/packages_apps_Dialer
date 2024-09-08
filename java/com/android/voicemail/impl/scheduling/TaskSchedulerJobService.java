@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,6 @@
 
 package com.android.voicemail.impl.scheduling;
 
-import android.annotation.TargetApi;
 import android.app.job.JobInfo;
 import android.app.job.JobParameters;
 import android.app.job.JobScheduler;
@@ -24,21 +24,21 @@ import android.app.job.JobService;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Parcelable;
-import android.preference.PreferenceManager;
-import android.support.annotation.MainThread;
+
+import androidx.annotation.MainThread;
+import androidx.preference.PreferenceManager;
+
 import com.android.dialer.constants.ScheduledJobIds;
-import com.android.dialer.strictmode.StrictModeUtils;
 import com.android.voicemail.impl.Assert;
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.scheduling.Tasks.TaskCreationException;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /** A {@link JobService} that will trigger the background execution of {@link TaskExecutor}. */
-@TargetApi(VERSION_CODES.O)
 public class TaskSchedulerJobService extends JobService implements TaskExecutor.Job {
 
   private static final String TAG = "TaskSchedulerJobService";
@@ -59,9 +59,8 @@ public class TaskSchedulerJobService extends JobService implements TaskExecutor.
   @MainThread
   public boolean onStartJob(JobParameters params) {
     int jobId = params.getTransientExtras().getInt(EXTRA_JOB_ID);
-    int expectedJobId =
-        StrictModeUtils.bypass(
-            () -> PreferenceManager.getDefaultSharedPreferences(this).getInt(EXPECTED_JOB_ID, 0));
+    int expectedJobId = PreferenceManager.getDefaultSharedPreferences(this)
+            .getInt(EXPECTED_JOB_ID, 0);
     if (jobId != expectedJobId) {
       VvmLog.e(
           TAG, "Job " + jobId + " is not the last scheduled job " + expectedJobId + ", ignoring");
@@ -131,7 +130,7 @@ public class TaskSchedulerJobService extends JobService implements TaskExecutor.
         .apply();
 
     extras.putParcelableArray(
-        EXTRA_TASK_EXTRAS_ARRAY, pendingTasks.toArray(new Bundle[pendingTasks.size()]));
+        EXTRA_TASK_EXTRAS_ARRAY, pendingTasks.toArray(new Bundle[0]));
     JobInfo.Builder builder =
         new JobInfo.Builder(
                 ScheduledJobIds.VVM_TASK_SCHEDULER_JOB,

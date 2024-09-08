@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +18,16 @@
 package com.android.incallui;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.DisplayManager.DisplayListener;
 import android.os.PowerManager;
 import android.os.Trace;
-import android.support.annotation.NonNull;
 import android.telecom.CallAudioState;
 import android.view.Display;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.LogUtil;
 import com.android.incallui.InCallPresenter.InCallState;
 import com.android.incallui.InCallPresenter.InCallStateListener;
@@ -31,6 +35,7 @@ import com.android.incallui.audiomode.AudioModeProvider;
 import com.android.incallui.audiomode.AudioModeProvider.AudioModeListener;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
+import android.preference.PreferenceManager;
 
 /**
  * Class manages the proximity sensor for the in-call UI. We enable the proximity sensor while the
@@ -40,9 +45,10 @@ import com.android.incallui.call.DialerCall;
  * and disabled. Most of that state is fed into this class through public methods.
  */
 public class ProximitySensor
-    implements AccelerometerListener.OrientationListener, InCallStateListener, AudioModeListener {
+    implements AccelerometerListener.ChangeListener, InCallStateListener, AudioModeListener {
 
   private static final String TAG = ProximitySensor.class.getSimpleName();
+  private static final String PREF_KEY_DISABLE_PROXI_SENSOR = "disable_proximity_sensor";
 
   private final PowerManager powerManager;
   private final PowerManager.WakeLock proximityWakeLock;
@@ -56,18 +62,26 @@ public class ProximitySensor
   private boolean isAttemptingVideoCall;
   private boolean isVideoCall;
   private boolean isRttCall;
+  private SharedPreferences mPrefs;
 
   public ProximitySensor(
       @NonNull Context context,
       @NonNull AudioModeProvider audioModeProvider,
       @NonNull AccelerometerListener accelerometerListener) {
     Trace.beginSection("ProximitySensor.Constructor");
+
+    mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+    final boolean mIsProximitySensorDisabled = mPrefs.getBoolean(PREF_KEY_DISABLE_PROXI_SENSOR, false);
+
     powerManager = (PowerManager) context.getSystemService(Context.POWER_SERVICE);
-    if (powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
+    if (powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)
+          && !mIsProximitySensorDisabled) {
       proximityWakeLock =
           powerManager.newWakeLock(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, TAG);
+    } else if (mIsProximitySensorDisabled) {
+      turnOffProximitySensor(true); // Ensure the wakelock is released before destroying it.
+      proximityWakeLock = null;
     } else {
-      LogUtil.i("ProximitySensor.constructor", "Device does not support proximity wake lock.");
       proximityWakeLock = null;
     }
     this.accelerometerListener = accelerometerListener;
@@ -94,9 +108,14 @@ public class ProximitySensor
 
   /** Called to identify when the device is laid down flat. */
   @Override
-  public void orientationChanged(int orientation) {
+  public void onOrientationChanged(int orientation) {
     this.orientation = orientation;
     updateProximitySensorMode();
+  }
+
+  @Override
+  public void onDeviceFlipped(boolean faceDown) {
+      // ignored
   }
 
   /** Called to keep track of the overall UI state. */
@@ -165,16 +184,6 @@ public class ProximitySensor
     accelerometerListener.enable(isDisplayOn);
   }
 
-  /**
-   * TODO: There is no way to determine if a screen is off due to proximity or if it is legitimately
-   * off, but if ever we can do that in the future, it would be useful here. Until then, this
-   * function will simply return true of the screen is off. TODO: Investigate whether this can be
-   * replaced with the ProximityDisplayListener.
-   */
-  public boolean isScreenReallyOff() {
-    return !powerManager.isScreenOn();
-  }
-
   private void turnOnProximitySensor() {
     if (proximityWakeLock != null) {
       if (!proximityWakeLock.isHeld()) {
@@ -216,6 +225,12 @@ public class ProximitySensor
   private synchronized void updateProximitySensorMode() {
     Trace.beginSection("ProximitySensor.updateProximitySensorMode");
     final int audioRoute = audioModeProvider.getAudioState().getRoute();
+
+    final boolean mIsProximitySensorDisabled = mPrefs.getBoolean(PREF_KEY_DISABLE_PROXI_SENSOR, false);
+
+    if (mIsProximitySensorDisabled) {
+        return;
+    }
 
     boolean screenOnImmediately =
         (CallAudioState.ROUTE_WIRED_HEADSET == audioRoute
@@ -269,7 +284,7 @@ public class ProximitySensor
    */
   public class ProximityDisplayListener implements DisplayListener {
 
-    private DisplayManager displayManager;
+    private final DisplayManager displayManager;
     private boolean isDisplayOn = true;
 
     ProximityDisplayListener(DisplayManager displayManager) {

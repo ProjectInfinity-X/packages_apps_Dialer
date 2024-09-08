@@ -20,9 +20,6 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.StringRes;
 import android.text.Editable;
 import android.text.TextUtils;
 import android.text.TextWatcher;
@@ -31,11 +28,18 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
+
+import com.android.dialer.R;
 import com.android.dialer.animation.AnimUtils;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.UiUtil;
 import com.android.dialer.util.DialerUtils;
-import com.google.common.base.Optional;
+
+import java.util.Optional;
 
 /** Search bar for {@link MainToolbar}. Mostly used to handle expand and collapse animation. */
 final class SearchBarView extends FrameLayout {
@@ -134,9 +138,7 @@ final class SearchBarView extends FrameLayout {
           @Override
           public void onAnimationEnd(Animator animation) {
             super.onAnimationEnd(animation);
-            if (text.isPresent()) {
-              searchBox.setText(text.get());
-            }
+            text.ifPresent(s -> searchBox.setText(s));
             // Don't request focus unless we're actually showing the search box, otherwise
             // physical/bluetooth keyboards will type into this box when the dialpad is open.
             if (requestFocus) {

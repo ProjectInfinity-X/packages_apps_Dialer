@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,47 +16,44 @@
  */
 package com.android.dialer.app.calllog;
 
-import android.app.Fragment;
-import android.app.FragmentManager;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
-import android.support.annotation.VisibleForTesting;
-import android.support.design.widget.Snackbar;
-import android.support.v13.app.FragmentPagerAdapter;
-import android.support.v4.view.ViewPager;
-import android.support.v7.app.ActionBar;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.ViewGroup;
+
+import androidx.appcompat.app.ActionBar;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+import androidx.fragment.app.FragmentPagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
 import com.android.contacts.common.list.ViewPagerTabs;
-import com.android.dialer.app.R;
-import com.android.dialer.calldetails.OldCallDetailsActivity;
+import com.android.dialer.R;
+import com.android.dialer.callstats.CallStatsFragment;
+import com.android.dialer.callstats.DoubleDatePickerDialog;
 import com.android.dialer.common.Assert;
-import com.android.dialer.constants.ActivityRequestCodes;
 import com.android.dialer.database.CallLogQueryHandler;
-import com.android.dialer.logging.Logger;
-import com.android.dialer.logging.ScreenEvent;
-import com.android.dialer.logging.UiAction;
-import com.android.dialer.performancereport.PerformanceReport;
-import com.android.dialer.postcall.PostCall;
 import com.android.dialer.util.TransactionSafeActivity;
 import com.android.dialer.util.ViewUtil;
 
 /** Activity for viewing call history. */
-public class CallLogActivity extends TransactionSafeActivity
-    implements ViewPager.OnPageChangeListener {
+public class CallLogActivity extends TransactionSafeActivity implements
+    ViewPager.OnPageChangeListener, DoubleDatePickerDialog.OnDateSetListener {
 
-  @VisibleForTesting static final int TAB_INDEX_ALL = 0;
-  @VisibleForTesting static final int TAB_INDEX_MISSED = 1;
-  private static final int TAB_INDEX_COUNT = 2;
+  private static final int TAB_INDEX_ALL = 0;
+  private static final int TAB_INDEX_MISSED = 1;
+  private static final int TAB_INDEX_STATS = 2;
+  private static final int TAB_INDEX_COUNT = 3;
   private ViewPager viewPager;
   private ViewPagerTabs viewPagerTabs;
   private ViewPagerAdapter viewPagerAdapter;
   private CallLogFragment allCallsFragment;
   private CallLogFragment missedCallsFragment;
+  private CallStatsFragment statsFragment;
   private String[] tabTitles;
   private boolean isResumed;
   private int selectedPageIndex;
@@ -86,15 +84,16 @@ public class CallLogActivity extends TransactionSafeActivity
     tabTitles = new String[TAB_INDEX_COUNT];
     tabTitles[0] = getString(R.string.call_log_all_title);
     tabTitles[1] = getString(R.string.call_log_missed_title);
+    tabTitles[2] = getString(R.string.call_log_stats_title);
 
-    viewPager = (ViewPager) findViewById(R.id.call_log_pager);
+    viewPager = findViewById(R.id.call_log_pager);
 
-    viewPagerAdapter = new ViewPagerAdapter(getFragmentManager());
+    viewPagerAdapter = new ViewPagerAdapter(getSupportFragmentManager());
     viewPager.setAdapter(viewPagerAdapter);
     viewPager.setOffscreenPageLimit(1);
     viewPager.setOnPageChangeListener(this);
 
-    viewPagerTabs = (ViewPagerTabs) findViewById(R.id.viewpager_header);
+    viewPagerTabs = findViewById(R.id.viewpager_header);
 
     viewPagerTabs.setViewPager(viewPager);
     viewPager.setCurrentItem(startingTab);
@@ -102,16 +101,8 @@ public class CallLogActivity extends TransactionSafeActivity
 
   @Override
   protected void onResume() {
-    // Some calls may not be recorded (eg. from quick contact),
-    // so we should restart recording after these calls. (Recorded call is stopped)
-    PostCall.restartPerformanceRecordingIfARecentCallExist(this);
-    if (!PerformanceReport.isRecording()) {
-      PerformanceReport.startRecording();
-    }
-
     isResumed = true;
     super.onResume();
-    sendScreenViewForChildFragment();
   }
 
   @Override
@@ -155,13 +146,12 @@ public class CallLogActivity extends TransactionSafeActivity
     }
 
     if (item.getItemId() == android.R.id.home) {
-      PerformanceReport.recordClick(UiAction.Type.CLOSE_CALL_HISTORY_WITH_CANCEL_BUTTON);
       final Intent intent = new Intent("com.android.dialer.main.impl.MAIN");
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
       startActivity(intent);
       return true;
     } else if (item.getItemId() == R.id.delete_all) {
-      ClearCallLogDialog.show(getFragmentManager());
+      ClearCallLogDialog.show(getSupportFragmentManager());
       return true;
     }
     return super.onOptionsItemSelected(item);
@@ -176,9 +166,6 @@ public class CallLogActivity extends TransactionSafeActivity
   public void onPageSelected(int position) {
     updateMissedCalls(position);
     selectedPageIndex = position;
-    if (isResumed) {
-      sendScreenViewForChildFragment();
-    }
     viewPagerTabs.onPageSelected(position);
   }
 
@@ -187,8 +174,13 @@ public class CallLogActivity extends TransactionSafeActivity
     viewPagerTabs.onPageScrollStateChanged(state);
   }
 
-  private void sendScreenViewForChildFragment() {
-    Logger.get(this).logScreenView(ScreenEvent.Type.CALL_LOG_FILTER, this);
+  @Override
+  public void onDateSet(long from, long to) {
+    switch (viewPager.getCurrentItem()) {
+      case TAB_INDEX_STATS:
+        statsFragment.onDateSet(from, to);
+        break;
+    }
   }
 
   private int getRtlPosition(int position) {
@@ -213,15 +205,11 @@ public class CallLogActivity extends TransactionSafeActivity
           missedCallsFragment.markMissedCallsAsReadAndRemoveNotifications();
         }
         break;
+      case TAB_INDEX_STATS:
+        break;
       default:
         throw Assert.createIllegalStateFailException("Invalid position: " + position);
     }
-  }
-
-  @Override
-  public void onBackPressed() {
-    PerformanceReport.recordClick(UiAction.Type.PRESS_ANDROID_BACK_BUTTON);
-    super.onBackPressed();
   }
 
   /** Adapter for the view pager. */
@@ -244,6 +232,8 @@ public class CallLogActivity extends TransactionSafeActivity
               CallLogQueryHandler.CALL_TYPE_ALL, true /* isCallLogActivity */);
         case TAB_INDEX_MISSED:
           return new CallLogFragment(Calls.MISSED_TYPE, true /* isCallLogActivity */);
+        case TAB_INDEX_STATS:
+          return new CallStatsFragment();
         default:
           throw new IllegalStateException("No fragment at position " + position);
       }
@@ -251,13 +241,16 @@ public class CallLogActivity extends TransactionSafeActivity
 
     @Override
     public Object instantiateItem(ViewGroup container, int position) {
-      final CallLogFragment fragment = (CallLogFragment) super.instantiateItem(container, position);
+      final Object fragment = super.instantiateItem(container, position);
       switch (getRtlPosition(position)) {
         case TAB_INDEX_ALL:
-          allCallsFragment = fragment;
+          allCallsFragment = (CallLogFragment) fragment;
           break;
         case TAB_INDEX_MISSED:
-          missedCallsFragment = fragment;
+          missedCallsFragment = (CallLogFragment) fragment;
+          break;
+        case TAB_INDEX_STATS:
+          statsFragment = (CallStatsFragment) fragment;
           break;
         default:
           throw Assert.createIllegalStateFailException("Invalid position: " + position);
@@ -278,19 +271,6 @@ public class CallLogActivity extends TransactionSafeActivity
 
   @Override
   protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-    if (requestCode == ActivityRequestCodes.DIALTACTS_CALL_DETAILS) {
-      if (resultCode == RESULT_OK
-          && data != null
-          && data.getBooleanExtra(OldCallDetailsActivity.EXTRA_HAS_ENRICHED_CALL_DATA, false)) {
-        String number = data.getStringExtra(OldCallDetailsActivity.EXTRA_PHONE_NUMBER);
-        Snackbar.make(findViewById(R.id.calllog_frame), getString(R.string.ec_data_deleted), 5_000)
-            .setAction(
-                R.string.view_conversation,
-                v -> startActivity(IntentProvider.getSendSmsIntentProvider(number).getIntent(this)))
-            .setActionTextColor(getResources().getColor(R.color.dialer_snackbar_action_text_color))
-            .show();
-      }
-    }
     super.onActivityResult(requestCode, resultCode, data);
   }
 }

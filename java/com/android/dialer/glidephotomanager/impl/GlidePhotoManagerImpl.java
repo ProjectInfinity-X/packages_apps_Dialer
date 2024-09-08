@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,12 +23,15 @@ import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Data;
-import android.support.annotation.MainThread;
-import android.support.annotation.Nullable;
 import android.telecom.TelecomManager;
 import android.text.TextUtils;
 import android.widget.ImageView;
 import android.widget.QuickContactBadge;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.glide.GlideApp;
 import com.android.dialer.glide.GlideRequest;
@@ -37,7 +41,9 @@ import com.android.dialer.glidephotomanager.PhotoInfo;
 import com.android.dialer.i18n.DialerBidiFormatter;
 import com.android.dialer.inject.ApplicationContext;
 import com.android.dialer.lettertile.LetterTileDrawable;
+
 import java.util.List;
+
 import javax.inject.Inject;
 
 /** Implementation of {@link GlidePhotoManager} */

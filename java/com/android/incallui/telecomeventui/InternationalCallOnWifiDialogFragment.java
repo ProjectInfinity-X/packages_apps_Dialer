@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,12 +22,14 @@ import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.os.UserManagerCompat;
 import android.view.View;
 import android.widget.CheckBox;
+
+import androidx.annotation.NonNull;
+import androidx.core.os.UserManagerCompat;
+import androidx.fragment.app.DialogFragment;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
@@ -80,8 +83,7 @@ public class InternationalCallOnWifiDialogFragment extends DialogFragment {
    * Key to the preference used to determine if the user wants to see {@link
    * InternationalCallOnWifiDialogFragment InternationalCallOnWifiDialogFragments}.
    */
-  @VisibleForTesting
-  public static final String ALWAYS_SHOW_WARNING_PREFERENCE_KEY =
+  private static final String ALWAYS_SHOW_WARNING_PREFERENCE_KEY =
       "ALWAYS_SHOW_INTERNATIONAL_CALL_ON_WIFI_WARNING";
 
   /** Key in the arguments bundle for call id. */

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,25 +17,24 @@
 
 package com.android.dialer.simulator.impl;
 
-import android.annotation.TargetApi;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.v4.os.BuildCompat;
 import android.telecom.Connection;
-import android.telecom.Connection.RttTextStream;
 import android.telecom.ConnectionRequest;
 import android.telecom.VideoProfile;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.simulator.Simulator;
 import com.android.dialer.simulator.Simulator.Event;
 import com.android.dialer.simulator.SimulatorComponent;
 import com.android.dialer.simulator.SimulatorConnectionsBank;
+
 import java.util.ArrayList;
 import java.util.List;
 
 /** Represents a single phone call on the device. */
-@TargetApi(28)
 public final class SimulatorConnection extends Connection {
   private final List<Listener> listeners = new ArrayList<>();
   private final List<Event> events = new ArrayList<>();
@@ -51,7 +51,8 @@ public final class SimulatorConnection extends Connection {
         CAPABILITY_MUTE
             | CAPABILITY_SUPPORT_HOLD
             | CAPABILITY_HOLD
-            | CAPABILITY_CAN_UPGRADE_TO_VIDEO
+            | CAPABILITY_SUPPORTS_VT_LOCAL_BIDIRECTIONAL
+            | CAPABILITY_SUPPORTS_VT_REMOTE_BIDIRECTIONAL
             | CAPABILITY_DISCONNECT_FROM_CONFERENCE);
 
     if (request.getExtras() != null) {
@@ -60,9 +61,7 @@ public final class SimulatorConnection extends Connection {
             getConnectionCapabilities() | CAPABILITY_SEPARATE_FROM_CONFERENCE);
       }
     }
-    if (BuildCompat.isAtLeastP()) {
-      rttTextStream = request.getRttTextStream();
-    }
+    rttTextStream = request.getRttTextStream();
     setVideoProvider(new SimulatorVideoProvider(context, this));
     simulatorConnectionsBank = SimulatorComponent.get(context).getSimulatorConnectionsBank();
   }

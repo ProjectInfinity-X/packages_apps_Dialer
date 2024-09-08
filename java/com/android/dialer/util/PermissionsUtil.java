@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +26,7 @@ import static android.Manifest.permission.READ_CALL_LOG;
 import static android.Manifest.permission.READ_CONTACTS;
 import static android.Manifest.permission.READ_PHONE_STATE;
 import static android.Manifest.permission.READ_VOICEMAIL;
+import static android.Manifest.permission.RECEIVE_SMS;
 import static android.Manifest.permission.SEND_SMS;
 import static android.Manifest.permission.WRITE_CALL_LOG;
 import static android.Manifest.permission.WRITE_CONTACTS;
@@ -36,13 +38,16 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.pm.PackageManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.content.ContextCompat;
-import android.support.v4.content.LocalBroadcastManager;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.storage.StorageComponent;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -51,8 +56,7 @@ import java.util.List;
 /** Utility class to help with runtime permissions. */
 public class PermissionsUtil {
 
-  @VisibleForTesting
-  public static final String PREFERENCE_CAMERA_ALLOWED_BY_USER = "camera_allowed_by_user";
+  private static final String PREFERENCE_CAMERA_ALLOWED_BY_USER = "camera_allowed_by_user";
 
   private static final String PERMISSION_PREFERENCE = "dialer_permissions";
   private static final String CEQUINT_PERMISSION = "com.cequint.ecid.CALLER_ID_LOOKUP";
@@ -67,6 +71,7 @@ public class PermissionsUtil {
               WRITE_CALL_LOG,
               READ_PHONE_STATE,
               MODIFY_PHONE_STATE,
+              RECEIVE_SMS,
               SEND_SMS,
               CALL_PHONE,
               ADD_VOICEMAIL,
@@ -85,6 +90,10 @@ public class PermissionsUtil {
 
   public static boolean hasReadPhoneStatePermissions(Context context) {
     return hasPermission(context, permission.READ_PHONE_STATE);
+  }
+
+  public static boolean hasModifyPhoneStatePermissions(Context context) {
+    return hasPermission(context, MODIFY_PHONE_STATE);
   }
 
   public static boolean hasContactsReadPermissions(Context context) {
@@ -129,6 +138,10 @@ public class PermissionsUtil {
 
   public static boolean hasAddVoicemailPermissions(Context context) {
     return hasPermission(context, permission.ADD_VOICEMAIL);
+  }
+
+  public static boolean hasReceiveSmsPermissions(Context context) {
+    return hasPermission(context, permission.RECEIVE_SMS);
   }
 
   public static boolean hasSendSmsPermissions(Context context) {
@@ -225,7 +238,7 @@ public class PermissionsUtil {
         permissionsCurrentlyDenied.add(permission);
       }
     }
-    return permissionsCurrentlyDenied.toArray(new String[permissionsCurrentlyDenied.size()]);
+    return permissionsCurrentlyDenied.toArray(new String[0]);
   }
 
   /**

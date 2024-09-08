@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.media.AudioManager;
+
 import com.android.dialer.common.LogUtil;
 
 /** Listens for and caches headset state. */
@@ -29,7 +31,7 @@ class WiredHeadsetManager {
   private final WiredHeadsetBroadcastReceiver receiver;
   private boolean isPluggedIn;
   private Listener listener;
-  private Context context;
+  private final Context context;
 
   WiredHeadsetManager(Context context) {
     this.context = context;

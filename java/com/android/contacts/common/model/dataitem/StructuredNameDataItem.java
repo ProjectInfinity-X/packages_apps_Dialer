@@ -17,6 +17,7 @@
 package com.android.contacts.common.model.dataitem;
 
 import android.content.ContentValues;
+import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import android.provider.ContactsContract.Contacts.Data;
 
@@ -43,14 +44,6 @@ public class StructuredNameDataItem extends DataItem {
     getContentValues().put(StructuredName.DISPLAY_NAME, name);
   }
 
-  public String getGivenName() {
-    return getContentValues().getAsString(StructuredName.GIVEN_NAME);
-  }
-
-  public String getFamilyName() {
-    return getContentValues().getAsString(StructuredName.FAMILY_NAME);
-  }
-
   public String getPrefix() {
     return getContentValues().getAsString(StructuredName.PREFIX);
   }
@@ -61,34 +54,6 @@ public class StructuredNameDataItem extends DataItem {
 
   public String getSuffix() {
     return getContentValues().getAsString(StructuredName.SUFFIX);
-  }
-
-  public String getPhoneticGivenName() {
-    return getContentValues().getAsString(StructuredName.PHONETIC_GIVEN_NAME);
-  }
-
-  public void setPhoneticGivenName(String name) {
-    getContentValues().put(StructuredName.PHONETIC_GIVEN_NAME, name);
-  }
-
-  public String getPhoneticMiddleName() {
-    return getContentValues().getAsString(StructuredName.PHONETIC_MIDDLE_NAME);
-  }
-
-  public void setPhoneticMiddleName(String name) {
-    getContentValues().put(StructuredName.PHONETIC_MIDDLE_NAME, name);
-  }
-
-  public String getPhoneticFamilyName() {
-    return getContentValues().getAsString(StructuredName.PHONETIC_FAMILY_NAME);
-  }
-
-  public void setPhoneticFamilyName(String name) {
-    getContentValues().put(StructuredName.PHONETIC_FAMILY_NAME, name);
-  }
-
-  public String getFullNameStyle() {
-    return getContentValues().getAsString(StructuredName.FULL_NAME_STYLE);
   }
 
   public boolean isSuperPrimary() {

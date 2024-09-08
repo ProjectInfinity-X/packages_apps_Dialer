@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +19,13 @@ package com.android.incallui.incall.protocol;
 
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.multimedia.MultimediaData;
 import com.google.auto.value.AutoValue;
+
 import java.util.Locale;
 
 /** Information about the primary call. */
@@ -62,7 +66,6 @@ public abstract class PrimaryInfo {
 
   public abstract boolean answeringDisconnectsOngoingCall();
 
-  public abstract boolean shouldShowLocation();
   // Used for consistent LetterTile coloring.
   @Nullable
   public abstract String contactInfoLookupKey();
@@ -110,8 +113,6 @@ public abstract class PrimaryInfo {
     public abstract Builder setAnsweringDisconnectsOngoingCall(
         boolean answeringDisconnectsOngoingCall);
 
-    public abstract Builder setShouldShowLocation(boolean shouldShowLocation);
-
     public abstract Builder setContactInfoLookupKey(String contactInfoLookupKey);
 
     public abstract Builder setMultimediaData(MultimediaData multimediaData);
@@ -133,7 +134,6 @@ public abstract class PrimaryInfo {
         .setIsSpam(false)
         .setIsLocalContact(false)
         .setAnsweringDisconnectsOngoingCall(false)
-        .setShouldShowLocation(false)
         .setShowInCallButtonGrid(true)
         .setNumberPresentation(-1)
         .build();

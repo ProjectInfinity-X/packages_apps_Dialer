@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,27 +22,28 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.os.Trace;
 import android.provider.CallLog;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.PhoneNumberUtils;
-import android.telephony.SubscriptionInfo;
 import android.telephony.TelephonyManager;
 import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.compat.telephony.TelephonyManagerCompat;
 import com.android.dialer.i18n.LocaleUtils;
 import com.android.dialer.oem.MotorolaUtils;
-import com.android.dialer.oem.PhoneNumberUtilsAccessor;
 import com.android.dialer.phonenumbergeoutil.PhoneNumberGeoUtilComponent;
 import com.android.dialer.telecom.TelecomUtil;
-import com.google.common.base.Optional;
+
 import java.util.Arrays;
 import java.util.HashSet;
-import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 public class PhoneNumberHelper {
@@ -93,7 +95,7 @@ public class PhoneNumberHelper {
    * @return true if a match can be found.
    */
   public static boolean updateCursorToMatchContactLookupUri(
-      @Nullable Cursor cursor, int columnIndexForNumber, @Nullable Uri contactLookupUri) {
+          @Nullable Cursor cursor, int columnIndexForNumber, @Nullable Uri contactLookupUri) {
     if (cursor == null || contactLookupUri == null) {
       return false;
     }
@@ -141,37 +143,13 @@ public class PhoneNumberHelper {
     return rawNumber1.equals(rawNumber2);
   }
 
-  /**
-   * An enhanced version of {@link PhoneNumberUtils#isLocalEmergencyNumber(Context, String)}.
-   *
-   * <p>This methods supports checking the number for all SIMs.
-   *
-   * @param context the context which the number should be checked against
-   * @param number the number to tbe checked
-   * @return true if the specified number is an emergency number for any SIM in the device.
-   */
-  @SuppressWarnings("Guava")
-  public static boolean isLocalEmergencyNumber(Context context, String number) {
-    List<PhoneAccountHandle> phoneAccountHandles =
-        TelecomUtil.getSubscriptionPhoneAccounts(context);
+  public static boolean isEmergencyNumber(Context context, String number) {
+    TelephonyManager telephonyManager = context.getSystemService(TelephonyManager.class);
+    return telephonyManager.isEmergencyNumber(number);
+  }
 
-    // If the number of phone accounts with a subscription is no greater than 1, only one SIM is
-    // installed in the device. We hand over the job to PhoneNumberUtils#isLocalEmergencyNumber.
-    if (phoneAccountHandles.size() <= 1) {
-      return PhoneNumberUtils.isLocalEmergencyNumber(context, number);
-    }
-
-    for (PhoneAccountHandle phoneAccountHandle : phoneAccountHandles) {
-      Optional<SubscriptionInfo> subscriptionInfo =
-          TelecomUtil.getSubscriptionInfo(context, phoneAccountHandle);
-      if (subscriptionInfo.isPresent()
-          && PhoneNumberUtilsAccessor.isLocalEmergencyNumber(
-              context, subscriptionInfo.get().getSubscriptionId(), number)) {
-        return true;
-      }
-    }
-
-    return false;
+  public static boolean isEmergencyNumber(Context context, String number, String countryIso) {
+    return isEmergencyNumber(context, PhoneNumberUtils.formatNumberToE164(number, countryIso));
   }
 
   /**
@@ -192,32 +170,6 @@ public class PhoneNumberHelper {
    */
   public static boolean isSipNumber(CharSequence number) {
     return number != null && isUriNumber(number.toString());
-  }
-
-  public static boolean isUnknownNumberThatCanBeLookedUp(
-      Context context, PhoneAccountHandle accountHandle, CharSequence number, int presentation) {
-    if (presentation == CallLog.Calls.PRESENTATION_UNKNOWN) {
-      return false;
-    }
-    if (presentation == CallLog.Calls.PRESENTATION_RESTRICTED) {
-      return false;
-    }
-    if (presentation == CallLog.Calls.PRESENTATION_UNAVAILABLE) {
-      return false;
-    }
-    if (presentation == CallLog.Calls.PRESENTATION_PAYPHONE) {
-      return false;
-    }
-    if (TextUtils.isEmpty(number)) {
-      return false;
-    }
-    if (isVoicemailNumber(context, accountHandle, number)) {
-      return false;
-    }
-    if (isLegacyUnknownNumbers(number)) {
-      return false;
-    }
-    return true;
   }
 
   public static boolean isLegacyUnknownNumbers(CharSequence number) {
@@ -342,65 +294,33 @@ public class PhoneNumberHelper {
     return number.substring(0, delimiterIndex);
   }
 
-  private static boolean isVerizon(Context context) {
-    // Verizon MCC/MNC codes copied from com/android/voicemailomtp/res/xml/vvm_config.xml.
-    // TODO(sail): Need a better way to do per carrier and per OEM configurations.
-    switch (context.getSystemService(TelephonyManager.class).getSimOperator()) {
-      case "310004":
-      case "310010":
-      case "310012":
-      case "310013":
-      case "310590":
-      case "310890":
-      case "310910":
-      case "311110":
-      case "311270":
-      case "311271":
-      case "311272":
-      case "311273":
-      case "311274":
-      case "311275":
-      case "311276":
-      case "311277":
-      case "311278":
-      case "311279":
-      case "311280":
-      case "311281":
-      case "311282":
-      case "311283":
-      case "311284":
-      case "311285":
-      case "311286":
-      case "311287":
-      case "311288":
-      case "311289":
-      case "311390":
-      case "311480":
-      case "311481":
-      case "311482":
-      case "311483":
-      case "311484":
-      case "311485":
-      case "311486":
-      case "311487":
-      case "311488":
-      case "311489":
-        return true;
-      default:
-        return false;
+  public static boolean compareSipAddresses(@Nullable String number1, @Nullable String number2) {
+    if (number1 == null || number2 == null) {
+      return Objects.equals(number1, number2);
     }
-  }
 
-  /**
-   * Gets the label to display for a phone call where the presentation is set as
-   * PRESENTATION_RESTRICTED. For Verizon we want this to be displayed as "Restricted". For all
-   * other carriers we want this to be be displayed as "Private number".
-   */
-  public static String getDisplayNameForRestrictedNumber(Context context) {
-    if (isVerizon(context)) {
-      return context.getString(R.string.private_num_verizon);
+    int index1 = number1.indexOf('@');
+    final String userinfo1;
+    final String rest1;
+    if (index1 != -1) {
+      userinfo1 = number1.substring(0, index1);
+      rest1 = number1.substring(index1);
     } else {
-      return context.getString(R.string.private_num_non_verizon);
+      userinfo1 = number1;
+      rest1 = "";
     }
+
+    int index2 = number2.indexOf('@');
+    final String userinfo2;
+    final String rest2;
+    if (index2 != -1) {
+      userinfo2 = number2.substring(0, index2);
+      rest2 = number2.substring(index2);
+    } else {
+      userinfo2 = number2;
+      rest2 = "";
+    }
+
+    return userinfo1.equals(userinfo2) && rest1.equalsIgnoreCase(rest2);
   }
 }

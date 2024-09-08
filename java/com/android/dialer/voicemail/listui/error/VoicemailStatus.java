@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +17,21 @@
 
 package com.android.dialer.voicemail.listui.error;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.content.ComponentName;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.provider.Settings;
 import android.provider.Settings.Global;
 import android.provider.VoicemailContract.Status;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.ServiceState;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.voicemailstatus.VoicemailStatusQuery;
 import com.android.voicemail.VoicemailClient;
@@ -46,7 +46,8 @@ public class VoicemailStatus {
   public final String phoneAccountComponentName;
   public final String phoneAccountId;
 
-  @Nullable public final Uri settingsUri;
+  @Nullable
+  public final Uri settingsUri;
   @Nullable public final Uri voicemailAccessUri;
 
   public final int configurationState;
@@ -67,18 +68,11 @@ public class VoicemailStatus {
     settingsUri = getUri(statusCursor, VoicemailStatusQuery.SETTINGS_URI_INDEX);
     voicemailAccessUri = getUri(statusCursor, VoicemailStatusQuery.VOICEMAIL_ACCESS_URI_INDEX);
 
-    if (VERSION.SDK_INT >= VERSION_CODES.N_MR1) {
-      type =
-          getString(
-              statusCursor, VoicemailStatusQuery.SOURCE_TYPE_INDEX, TelephonyManager.VVM_TYPE_OMTP);
-      phoneAccountComponentName =
-          getString(statusCursor, VoicemailStatusQuery.PHONE_ACCOUNT_COMPONENT_NAME, "");
-      phoneAccountId = getString(statusCursor, VoicemailStatusQuery.PHONE_ACCOUNT_ID, "");
-    } else {
-      type = TelephonyManager.VVM_TYPE_OMTP;
-      phoneAccountComponentName = "";
-      phoneAccountId = "";
-    }
+    type = getString(
+            statusCursor, VoicemailStatusQuery.SOURCE_TYPE_INDEX, TelephonyManager.VVM_TYPE_OMTP);
+    phoneAccountComponentName =
+        getString(statusCursor, VoicemailStatusQuery.PHONE_ACCOUNT_COMPONENT_NAME, "");
+    phoneAccountId = getString(statusCursor, VoicemailStatusQuery.PHONE_ACCOUNT_ID, "");
 
     configurationState =
         getInt(
@@ -97,7 +91,7 @@ public class VoicemailStatus {
      * user. It is much simpler to poll the status on the UI side. The result is injected back to
      * the status query result so the handling will be consistent with other voicemail clients.
      */
-    if (BuildCompat.isAtLeastO() && sourcePackage.equals(context.getPackageName())) {
+    if (sourcePackage.equals(context.getPackageName())) {
       notificationChannelState =
           getNotificationChannelStateFormTelephony(context, getPhoneAccountHandle());
     } else {
@@ -130,7 +124,7 @@ public class VoicemailStatus {
     isAirplaneMode = builder.isAirplaneMode;
   }
 
-  @TargetApi(VERSION_CODES.O)
+  @SuppressLint("MissingPermission")
   private static int getNotificationChannelStateFormTelephony(
       Context context, PhoneAccountHandle phoneAccountHandle) {
     TelephonyManager telephonyManager =

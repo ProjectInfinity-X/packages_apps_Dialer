@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,30 +18,24 @@
 package com.android.voicemail.impl;
 
 import android.content.Context;
-import android.support.v4.os.BuildCompat;
+
 import com.android.dialer.inject.ApplicationContext;
-import com.android.dialer.inject.DialerVariant;
-import com.android.dialer.inject.InstallIn;
 import com.android.voicemail.VoicemailClient;
 import com.android.voicemail.VoicemailPermissionHelper;
 import com.android.voicemail.stub.StubVoicemailClient;
-import dagger.Module;
-import dagger.Provides;
+
 import javax.inject.Singleton;
 
+import dagger.Module;
+import dagger.Provides;
+
 /** This module provides an instance of the voicemail client. */
-@InstallIn(variants = {DialerVariant.DIALER_TEST})
 @Module
 public final class VoicemailModule {
 
   @Provides
   @Singleton
   static VoicemailClient provideVoicemailClient(@ApplicationContext Context context) {
-    if (!BuildCompat.isAtLeastO()) {
-      VvmLog.i("VoicemailModule.provideVoicemailClient", "SDK below O");
-      return new StubVoicemailClient();
-    }
-
     if (!VoicemailPermissionHelper.hasPermissions(context)) {
       VvmLog.i(
           "VoicemailModule.provideVoicemailClient",

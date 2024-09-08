@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +17,15 @@
 
 package com.android.dialer.calldetails;
 
-
 import android.content.Context;
-import android.support.v7.widget.RecyclerView;
 import android.view.View;
+
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.android.dialer.calldetails.CallDetailsEntryViewHolder.CallDetailsEntryListener;
 import com.android.dialer.calldetails.CallDetailsFooterViewHolder.DeleteCallDetailsListener;
 import com.android.dialer.calldetails.CallDetailsHeaderViewHolder.CallDetailsHeaderListener;
+import com.android.dialer.callrecord.CallRecordingDataStore;
 import com.android.dialer.dialercontact.DialerContact;
 import com.android.dialer.glidephotomanager.PhotoInfo;
 import com.android.dialer.lettertile.LetterTileDrawable;
@@ -45,14 +48,16 @@ final class OldCallDetailsAdapter extends CallDetailsAdapterCommon {
       CallDetailsEntryListener callDetailsEntryListener,
       CallDetailsHeaderListener callDetailsHeaderListener,
       CallDetailsFooterViewHolder.ReportCallIdListener reportCallIdListener,
-      DeleteCallDetailsListener deleteCallDetailsListener) {
+      DeleteCallDetailsListener deleteCallDetailsListener,
+      CallRecordingDataStore callRecordingDataStore) {
     super(
         context,
         callDetailsEntries,
         callDetailsEntryListener,
         callDetailsHeaderListener,
         reportCallIdListener,
-        deleteCallDetailsListener);
+        deleteCallDetailsListener,
+        callRecordingDataStore);
     this.contact = contact;
   }
 

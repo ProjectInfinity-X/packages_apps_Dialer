@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +18,14 @@
 package com.android.dialer.calldetails;
 
 import android.content.Context;
-import android.content.CursorLoader;
 import android.database.Cursor;
+
+import androidx.loader.content.CursorLoader;
+
 import com.android.dialer.CoalescedIds;
 import com.android.dialer.calldetails.CallDetailsEntries.CallDetailsEntry;
 import com.android.dialer.calllog.database.contract.AnnotatedCallLogContract.AnnotatedCallLog;
 import com.android.dialer.common.Assert;
-import com.android.dialer.duo.DuoComponent;
 
 /**
  * A {@link CursorLoader} that loads call detail entries from {@link AnnotatedCallLog} for {@link
@@ -145,7 +147,6 @@ public final class CallDetailsCursorLoader extends CursorLoader {
         .setCallMappingId(cursor.getString(CALL_MAPPING_ID));
 
     String phoneAccountComponentName = cursor.getString(PHONE_ACCOUNT_COMPONENT_NAME);
-    entry.setIsDuoCall(DuoComponent.get(context).getDuo().isDuoAccount(phoneAccountComponentName));
 
     return entry.build();
   }

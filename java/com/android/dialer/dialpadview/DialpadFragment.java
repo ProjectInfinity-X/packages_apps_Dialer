@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +17,9 @@
 
 package com.android.dialer.dialpadview;
 
-import android.annotation.TargetApi;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.Fragment;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
 import android.content.Context;
@@ -35,8 +33,6 @@ import android.graphics.BitmapFactory;
 import android.media.AudioManager;
 import android.media.ToneGenerator;
 import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.PersistableBundle;
 import android.os.Trace;
@@ -44,12 +40,9 @@ import android.provider.Contacts.People;
 import android.provider.Contacts.Phones;
 import android.provider.Contacts.PhonesColumns;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.design.widget.FloatingActionButton;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
 import android.telephony.PhoneNumberFormattingTextWatcher;
 import android.telephony.PhoneNumberUtils;
 import android.telephony.ServiceState;
@@ -64,6 +57,7 @@ import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.SubMenu;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.Animation;
@@ -77,8 +71,14 @@ import android.widget.ListView;
 import android.widget.PopupMenu;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.Fragment;
+
 import com.android.contacts.common.dialog.CallSubjectDialog;
-import com.android.contacts.common.util.StopWatch;
+import com.android.dialer.R;
 import com.android.dialer.animation.AnimUtils;
 import com.android.dialer.animation.AnimUtils.AnimationCallback;
 import com.android.dialer.callintent.CallInitiationType;
@@ -90,9 +90,7 @@ import com.android.dialer.common.concurrent.DialerExecutor;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
 import com.android.dialer.location.GeoUtil;
-import com.android.dialer.logging.UiAction;
 import com.android.dialer.oem.MotorolaUtils;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.proguard.UsedByReflection;
@@ -101,8 +99,9 @@ import com.android.dialer.util.CallUtil;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.ViewUtil;
 import com.android.dialer.widget.FloatingActionButtonController;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.base.Ascii;
-import com.google.common.base.Optional;
+
 import java.util.HashSet;
 import java.util.List;
 import java.util.regex.Matcher;
@@ -154,11 +153,8 @@ public class DialpadFragment extends Fragment
    * device is registered over WFC. Default value is -1, which indicates that this notification is
    * not pertinent for a particular carrier. We've added a delay to prevent false positives."
    */
-  @VisibleForTesting
-  static final String KEY_EMERGENCY_NOTIFICATION_DELAY_INT = "emergency_notification_delay_int";
-
-  private static Optional<String> currentCountryIsoForTesting = Optional.absent();
-  private static Boolean showEmergencyCallWarningForTest = null;
+  private static final String KEY_EMERGENCY_NOTIFICATION_DELAY_INT =
+          "emergency_notification_delay_int";
 
   private final Object toneGeneratorLock = new Object();
   /** Set of dialpad keys that are currently being pressed */
@@ -203,6 +199,8 @@ public class DialpadFragment extends Fragment
 
   private boolean isLayoutRtl;
   private boolean isLandscape;
+
+  private PhoneAccountHandle selectedAccount;
 
   private DialerExecutor<String> initPhoneNumberFormattingTextWatcherExecutor;
   private boolean isDialpadSlideUp;
@@ -262,7 +260,6 @@ public class DialpadFragment extends Fragment
    * returns false. Only prevents input of WAIT and PAUSE digits at an unsupported position. Fails
    * early if start == -1 or start is larger than end.
    */
-  @VisibleForTesting
   /* package */ static boolean canAddDigit(CharSequence digits, int start, int end, char newDigit) {
     if (newDigit != WAIT && newDigit != PAUSE) {
       throw new IllegalArgumentException(
@@ -359,9 +356,6 @@ public class DialpadFragment extends Fragment
 
     firstLaunch = state == null;
 
-    prohibitedPhoneNumberRegexp =
-        getResources().getString(R.string.config_prohibited_phone_number_regexp);
-
     if (state != null) {
       digitsFilledByIntent = state.getBoolean(PREF_DIGITS_FILLED_BY_INTENT);
       isDialpadSlideUp = state.getBoolean(PREF_IS_DIALPAD_SLIDE_OUT);
@@ -380,7 +374,7 @@ public class DialpadFragment extends Fragment
         DialerExecutorComponent.get(getContext())
             .dialerExecutorFactory()
             .createUiTaskBuilder(
-                getFragmentManager(),
+                getParentFragmentManager(),
                 "DialpadFragment.initPhoneNumberFormattingTextWatcher",
                 new InitPhoneNumberFormattingTextWatcherWorker())
             .onSuccess(watcher -> dialpadView.getDigits().addTextChangedListener(watcher))
@@ -489,15 +483,7 @@ public class DialpadFragment extends Fragment
    * cannot be inflated in robolectric.
    */
   @SuppressWarnings("missingPermission")
-  @TargetApi(VERSION_CODES.O)
-  @VisibleForTesting
   static boolean shouldShowEmergencyCallWarning(Context context) {
-    if (showEmergencyCallWarningForTest != null) {
-      return showEmergencyCallWarningForTest;
-    }
-    if (VERSION.SDK_INT < VERSION_CODES.O) {
-      return false;
-    }
     if (!PermissionsUtil.hasReadPhoneStatePermissions(context)) {
       return false;
     }
@@ -524,11 +510,6 @@ public class DialpadFragment extends Fragment
     }
   }
 
-  @VisibleForTesting
-  static void setShowEmergencyCallWarningForTest(Boolean value) {
-    showEmergencyCallWarningForTest = value;
-  }
-
   @Override
   public void onAttach(Context context) {
     super.onAttach(context);
@@ -538,16 +519,7 @@ public class DialpadFragment extends Fragment
   }
 
   private String getCurrentCountryIso() {
-    if (currentCountryIsoForTesting.isPresent()) {
-      return currentCountryIsoForTesting.get();
-    }
-
     return GeoUtil.getCurrentCountryIso(getActivity());
-  }
-
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  public static void setCurrentCountryIsoForTesting(String countryCode) {
-    currentCountryIsoForTesting = Optional.of(countryCode);
   }
 
   private boolean isLayoutReady() {
@@ -744,6 +716,7 @@ public class DialpadFragment extends Fragment
     }
     floatingActionButtonController.changeIcon(
         getContext(), iconId, res.getString(R.string.description_dial_button));
+    floatingActionButtonController.changeIconColor(getContext(), R.color.dialer_call_icon_color);
 
     // if the mToneGenerator creation fails, just continue without it.  It is
     // a local audio signal, and is not as important as the dtmf tone itself.
@@ -775,13 +748,9 @@ public class DialpadFragment extends Fragment
 
     dialpadQueryListener = FragmentUtils.getParentUnsafe(this, OnDialpadQueryChangedListener.class);
 
-    final StopWatch stopWatch = StopWatch.start("Dialpad.onResume");
-
     // Query the last dialed number. Do it first because hitting
     // the DB is 'slow'. This call is asynchronous.
     queryLastOutgoingCall();
-
-    stopWatch.lap("qloc");
 
     final ContentResolver contentResolver = getActivity().getContentResolver();
 
@@ -789,15 +758,9 @@ public class DialpadFragment extends Fragment
     dTMFToneEnabled =
         Settings.System.getInt(contentResolver, Settings.System.DTMF_TONE_WHEN_DIALING, 1) == 1;
 
-    stopWatch.lap("dtwd");
-
-    stopWatch.lap("hptc");
-
     pressedDialpadKeys.clear();
 
     configureScreenFromIntent(getActivity().getIntent());
-
-    stopWatch.lap("fdin");
 
     if (!isPhoneInUse()) {
       LogUtil.i("DialpadFragment.onResume", "phone not in use");
@@ -805,13 +768,7 @@ public class DialpadFragment extends Fragment
       showDialpadChooser(false);
     }
 
-    stopWatch.lap("hnt");
-
     updateDeleteButtonEnabledState();
-
-    stopWatch.lap("bes");
-
-    stopWatch.stopAndLog(TAG, 50);
 
     // Populate the overflow menu in onResume instead of onCreate, so that if the SMS activity
     // is disabled while Dialer is paused, the "Send a text message" option can be correctly
@@ -1021,6 +978,37 @@ public class DialpadFragment extends Fragment
                 item.setVisible(CallUtil.isCallWithSubjectSupported(getContext()));
               }
             }
+
+            final MenuItem callWithItem = menu.findItem(R.id.call_with);
+            List<PhoneAccount> accounts =
+                CallUtil.getCallCapablePhoneAccounts(getContext(), PhoneAccount.SCHEME_TEL);
+            if (accounts != null && accounts.size() > 1) {
+              final PhoneAccountHandle selected;
+              if (selectedAccount != null) {
+                selected = selectedAccount;
+              } else {
+                selected = TelecomUtil.getDefaultOutgoingPhoneAccount(getContext(),
+                    PhoneAccount.SCHEME_TEL);
+              }
+
+              SubMenu callWithMenu = callWithItem.getSubMenu();
+              callWithMenu.clear();
+
+              for (PhoneAccount account : accounts) {
+                final PhoneAccountHandle handle = account.getAccountHandle();
+                final Intent intent = new Intent()
+                    .putExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, handle);
+
+                callWithMenu.add(Menu.FIRST, Menu.NONE, Menu.NONE, account.getLabel())
+                    .setIntent(intent)
+                    .setChecked(handle.equals(selected));
+              }
+              callWithMenu.setGroupCheckable(Menu.FIRST, true, true);
+              callWithItem.setVisible(callWithMenu.hasVisibleItems());
+            } else {
+              callWithItem.setVisible(false);
+            }
+
             super.show();
           }
         };
@@ -1083,18 +1071,17 @@ public class DialpadFragment extends Fragment
         } else if (getActivity() != null) {
           // Voicemail is unavailable maybe because Airplane mode is turned on.
           // Check the current status and show the most appropriate error message.
-          final boolean isAirplaneModeOn =
-              Settings.System.getInt(
-                      getActivity().getContentResolver(), Settings.System.AIRPLANE_MODE_ON, 0)
-                  != 0;
+          final boolean isAirplaneModeOn = Settings.Global.getInt(
+                  getActivity().getContentResolver(), Settings.Global.AIRPLANE_MODE_ON, 0) != 0;
           if (isAirplaneModeOn) {
             DialogFragment dialogFragment =
                 ErrorDialogFragment.newInstance(R.string.dialog_voicemail_airplane_mode_message);
-            dialogFragment.show(getFragmentManager(), "voicemail_request_during_airplane_mode");
+            dialogFragment.show(getParentFragmentManager(),
+                    "voicemail_request_during_airplane_mode");
           } else {
             DialogFragment dialogFragment =
                 ErrorDialogFragment.newInstance(R.string.dialog_voicemail_not_ready_message);
-            dialogFragment.show(getFragmentManager(), "voicemail_not_ready");
+            dialogFragment.show(getParentFragmentManager(), "voicemail_not_ready");
           }
         }
         return true;
@@ -1162,33 +1149,14 @@ public class DialpadFragment extends Fragment
   private void handleDialButtonPressed() {
     if (isDigitsEmpty()) { // No number entered.
       // No real call made, so treat it as a click
-      PerformanceReport.recordClick(UiAction.Type.PRESS_CALL_BUTTON_WITHOUT_CALLING);
       handleDialButtonClickWithEmptyDigits();
     } else {
       final String number = digits.getText().toString();
 
-      // "persist.radio.otaspdial" is a temporary hack needed for one carrier's automated
-      // test equipment.
-      // TODO: clean it up.
-      if (number != null
-          && !TextUtils.isEmpty(prohibitedPhoneNumberRegexp)
-          && number.matches(prohibitedPhoneNumberRegexp)) {
-        PerformanceReport.recordClick(UiAction.Type.PRESS_CALL_BUTTON_WITHOUT_CALLING);
-        LogUtil.i(
-            "DialpadFragment.handleDialButtonPressed",
-            "The phone number is prohibited explicitly by a rule.");
-        if (getActivity() != null) {
-          DialogFragment dialogFragment =
-              ErrorDialogFragment.newInstance(R.string.dialog_phone_call_prohibited_message);
-          dialogFragment.show(getFragmentManager(), "phone_prohibited_dialog");
-        }
-
-        // Clear the digits just in case.
-        clearDialpad();
-      } else {
-        PreCall.start(getContext(), new CallIntentBuilder(number, CallInitiationType.Type.DIALPAD));
-        hideAndClearDialpad();
-      }
+      CallIntentBuilder builder = new CallIntentBuilder(number, CallInitiationType.Type.DIALPAD)
+          .setPhoneAccountHandle(selectedAccount);
+      PreCall.start(getContext(), builder);
+      hideAndClearDialpad();
     }
   }
 
@@ -1196,6 +1164,7 @@ public class DialpadFragment extends Fragment
     if (digits != null) {
       digits.getText().clear();
     }
+    selectedAccount = null;
   }
 
   private void handleDialButtonClickWithEmptyDigits() {
@@ -1208,10 +1177,6 @@ public class DialpadFragment extends Fragment
       startActivity(newFlashIntent());
     } else {
       if (!TextUtils.isEmpty(lastNumberDialed)) {
-        // Dialpad will be filled with last called number,
-        // but we don't want to record it as user action
-        PerformanceReport.setIgnoreActionOnce(UiAction.Type.TEXT_CHANGE_WITH_INPUT);
-
         // Recall the last number dialed.
         digits.setText(lastNumberDialed);
 
@@ -1420,6 +1385,12 @@ public class DialpadFragment extends Fragment
 
   @Override
   public boolean onMenuItemClick(MenuItem item) {
+    if (item.getGroupId() == Menu.FIRST) {
+      Intent intent = item.getIntent();
+      selectedAccount = intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+              PhoneAccountHandle.class);
+      return true;
+    }
     int resId = item.getItemId();
     if (resId == R.id.menu_2s_pause) {
       updateDialString(PAUSE);
@@ -1785,8 +1756,8 @@ public class DialpadFragment extends Fragment
     static final int DIALPAD_CHOICE_RETURN_TO_CALL = 102;
     static final int DIALPAD_CHOICE_ADD_NEW_CALL = 103;
     private static final int NUM_ITEMS = 3;
-    private LayoutInflater inflater;
-    private ChoiceItem[] choiceItems = new ChoiceItem[NUM_ITEMS];
+    private final LayoutInflater inflater;
+    private final ChoiceItem[] choiceItems = new ChoiceItem[NUM_ITEMS];
 
     DialpadChooserAdapter(Context context) {
       // Cache the LayoutInflate to avoid asking for a new one each time.
@@ -1858,9 +1829,9 @@ public class DialpadFragment extends Fragment
     // Simple struct for a single "choice" item.
     static class ChoiceItem {
 
-      String text;
-      Bitmap icon;
-      int id;
+      final String text;
+      final Bitmap icon;
+      final int id;
 
       ChoiceItem(String s, Bitmap b, int i) {
         text = s;
@@ -1938,7 +1909,6 @@ public class DialpadFragment extends Fragment
    * formatting for such numbers until libphonenumber is fixed (which will come as early as the next
    * Android release).
    */
-  @VisibleForTesting
   public static class DialerPhoneNumberFormattingTextWatcher
       extends PhoneNumberFormattingTextWatcher {
     private static final Pattern AR_DOMESTIC_CALL_MOBILE_NUMBER_PATTERN;

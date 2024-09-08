@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +21,6 @@ import android.content.Context;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.os.Handler;
-import android.support.annotation.VisibleForTesting;
-import android.support.design.widget.Snackbar;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -30,15 +29,17 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.SeekBar.OnSeekBarChangeListener;
 import android.widget.TextView;
-import com.android.dialer.app.R;
+
+import com.android.dialer.R;
 import com.android.dialer.app.calllog.CallLogAsyncTaskUtil;
 import com.android.dialer.app.calllog.CallLogListItemViewHolder;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
+import com.google.android.material.snackbar.Snackbar;
+
 import java.util.Objects;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
 import javax.annotation.concurrent.GuardedBy;
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
@@ -58,7 +59,7 @@ public class VoicemailPlaybackLayout extends LinearLayout
   private static final String TAG = VoicemailPlaybackLayout.class.getSimpleName();
   private static final int VOICEMAIL_DELETE_DELAY_MS = 3000;
 
-  private Context context;
+  private final Context context;
   private CallLogListItemViewHolder viewHolder;
   private VoicemailPlaybackPresenter presenter;
   /** Click listener to toggle speakerphone. */
@@ -77,7 +78,6 @@ public class VoicemailPlaybackLayout extends LinearLayout
       new View.OnClickListener() {
         @Override
         public void onClick(View view) {
-          Logger.get(context).logImpression(DialerImpression.Type.VOICEMAIL_DELETE_ENTRY);
           if (presenter == null) {
             return;
           }
@@ -92,16 +92,12 @@ public class VoicemailPlaybackLayout extends LinearLayout
           presenter.onVoicemailDeleted(viewHolder);
 
           final Uri deleteUri = voicemailUri;
-          final Runnable deleteCallback =
-              new Runnable() {
-                @Override
-                public void run() {
-                  if (Objects.equals(deleteUri, voicemailUri)) {
-                    CallLogAsyncTaskUtil.deleteVoicemail(
-                        context, deleteUri, VoicemailPlaybackLayout.this);
-                  }
-                }
-              };
+          final Runnable deleteCallback = () -> {
+            if (Objects.equals(deleteUri, voicemailUri)) {
+              CallLogAsyncTaskUtil.deleteVoicemail(
+                      context, deleteUri, VoicemailPlaybackLayout.this);
+            }
+          };
 
           final Handler handler = new Handler();
           // Add a little buffer time in case the user clicked "undo" at the end of the delay
@@ -113,15 +109,10 @@ public class VoicemailPlaybackLayout extends LinearLayout
                   R.string.snackbar_voicemail_deleted,
                   Snackbar.LENGTH_LONG)
               .setDuration(VOICEMAIL_DELETE_DELAY_MS)
-              .setAction(
-                  R.string.snackbar_undo,
-                  new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                      presenter.onVoicemailDeleteUndo(adapterPosition);
-                      handler.removeCallbacks(deleteCallback);
-                    }
-                  })
+              .setAction(R.string.snackbar_undo, view1 -> {
+                presenter.onVoicemailDeleteUndo(adapterPosition);
+                handler.removeCallbacks(deleteCallback);
+              })
               .setActionTextColor(
                   context.getResources().getColor(R.color.dialer_snackbar_action_text_color))
               .show();
@@ -140,8 +131,6 @@ public class VoicemailPlaybackLayout extends LinearLayout
           if (isPlaying) {
             presenter.pausePlayback();
           } else {
-            Logger.get(context)
-                .logImpression(DialerImpression.Type.VOICEMAIL_PLAY_AUDIO_AFTER_EXPANDING_ENTRY);
             presenter.resumePlayback();
           }
         }
@@ -241,7 +230,7 @@ public class VoicemailPlaybackLayout extends LinearLayout
   public void onPlaybackStarted(int duration, ScheduledExecutorService executorService) {
     isPlaying = true;
 
-    startStopButton.setImageResource(R.drawable.ic_pause);
+    startStopButton.setImageResource(R.drawable.quantum_ic_pause_vd_theme_24);
 
     if (positionUpdater != null) {
       positionUpdater.stopUpdating();
@@ -255,7 +244,7 @@ public class VoicemailPlaybackLayout extends LinearLayout
   public void onPlaybackStopped() {
     isPlaying = false;
 
-    startStopButton.setImageResource(R.drawable.ic_play_arrow);
+    startStopButton.setImageResource(R.drawable.quantum_ic_play_arrow_vd_theme_24);
 
     if (positionUpdater != null) {
       positionUpdater.stopUpdating();
@@ -280,7 +269,7 @@ public class VoicemailPlaybackLayout extends LinearLayout
       // Speaker is now on, tapping button will turn it off.
       playbackSpeakerphone.setContentDescription(context.getString(R.string.voicemail_speaker_off));
     } else {
-      playbackSpeakerphone.setImageResource(R.drawable.quantum_ic_volume_down_white_24);
+      playbackSpeakerphone.setImageResource(R.drawable.quantum_ic_volume_down_vd_theme_24);
       // Speaker is now off, tapping button will turn it on.
       playbackSpeakerphone.setContentDescription(context.getString(R.string.voicemail_speaker_on));
     }
@@ -368,11 +357,6 @@ public class VoicemailPlaybackLayout extends LinearLayout
     return String.format("%02d:%02d", minutes, seconds);
   }
 
-  @VisibleForTesting
-  public String getStateText() {
-    return stateText.getText().toString();
-  }
-
   /** Controls the animation of the playback slider. */
   @ThreadSafe
   private final class PositionUpdater implements Runnable {
@@ -382,12 +366,12 @@ public class VoicemailPlaybackLayout extends LinearLayout
 
     private final ScheduledExecutorService executorService;
     private final Object lock = new Object();
-    private int durationMs;
+    private final int durationMs;
 
     @GuardedBy("lock")
     private ScheduledFuture<?> scheduledFuture;
 
-    private Runnable updateClipPositionRunnable =
+    private final Runnable updateClipPositionRunnable =
         new Runnable() {
           @Override
           public void run() {

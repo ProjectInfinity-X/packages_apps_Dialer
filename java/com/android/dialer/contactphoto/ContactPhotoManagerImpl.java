@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,26 +38,30 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Handler.Callback;
 import android.os.HandlerThread;
+import android.os.Looper;
 import android.os.Message;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Contacts.Photo;
 import android.provider.ContactsContract.Data;
 import android.provider.ContactsContract.Directory;
-import android.support.annotation.UiThread;
-import android.support.annotation.WorkerThread;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawable;
-import android.support.v4.graphics.drawable.RoundedBitmapDrawableFactory;
 import android.text.TextUtils;
 import android.util.LruCache;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
+
+import androidx.annotation.UiThread;
+import androidx.annotation.WorkerThread;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.constants.Constants;
 import com.android.dialer.constants.TrafficStatsTags;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.UriUtils;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -105,7 +110,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
 
   static {
     BITMAP_UNAVAILABLE = new BitmapHolder(new byte[0], 0);
-    BITMAP_UNAVAILABLE.bitmapRef = new SoftReference<Bitmap>(null);
+    BITMAP_UNAVAILABLE.bitmapRef = new SoftReference<>(null);
   }
 
   private final Context context;
@@ -126,10 +131,9 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
    * A map from ImageView to the corresponding photo ID or uri, encapsulated in a request. The
    * request may swapped out before the photo loading request is started.
    */
-  private final ConcurrentHashMap<ImageView, Request> pendingRequests =
-      new ConcurrentHashMap<ImageView, Request>();
+  private final ConcurrentHashMap<ImageView, Request> pendingRequests = new ConcurrentHashMap<>();
   /** Handler for messages sent to the UI thread. */
-  private final Handler mainThreadHandler = new Handler(this);
+  private final Handler mainThreadHandler = new Handler(Looper.getMainLooper(), this);
   /** For debug: How many times we had to reload cached photo for a stale entry */
   private final AtomicInteger staleCacheOverwrite = new AtomicInteger();
   /** For debug: How many times we had to reload cached photo for a fresh entry. Should be 0. */
@@ -143,7 +147,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
   /** Flag indicating if the image loading is paused. */
   private boolean paused;
   /** The user agent string to use when loading URI based photos. */
-  private String userAgent;
+  private final String userAgent;
 
   public ContactPhotoManagerImpl(Context context) {
     this.context = context;
@@ -198,10 +202,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
         context.getResources().getDimensionPixelSize(R.dimen.contact_browser_list_item_photo_size);
 
     // Get a user agent string to use for URI photo requests.
-    userAgent = Constants.get().getUserAgent(context);
-    if (userAgent == null) {
-      userAgent = "";
-    }
+    userAgent = "";
   }
 
   /** Converts bytes to K bytes, rounding up. Used only for debug log. */
@@ -209,7 +210,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
     return ((bytes + 1023) / 1024) + "K";
   }
 
-  private static final int safeDiv(int dividend, int divisor) {
+  private static int safeDiv(int dividend, int divisor) {
     return (divisor == 0) ? 0 : (dividend / divisor);
   }
 
@@ -279,7 +280,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
 
       holder.decodedSampleSize = sampleSize;
       holder.bitmap = bitmap;
-      holder.bitmapRef = new SoftReference<Bitmap>(bitmap);
+      holder.bitmapRef = new SoftReference<>(bitmap);
       if (DEBUG) {
         LogUtil.d(
             "ContactPhotoManagerImpl.inflateBitmap",
@@ -337,7 +338,7 @@ class ContactPhotoManagerImpl extends ContactPhotoManager implements Callback {
       LogUtil.d(
           "ContactPhotoManagerImpl.dumpStats",
           "L1 Stats: "
-              + bitmapHolderCache.toString()
+              + bitmapHolderCache
               + ", overwrite: fresh="
               + freshCacheOverwrite.get()
               + " stale="

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,11 +20,12 @@ package com.android.dialer.phonelookup.blockednumber;
 import android.content.Context;
 import android.database.Cursor;
 import android.provider.BlockedNumberContract.BlockedNumbers;
-import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
 import android.util.ArraySet;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.DialerPhoneNumber;
-import com.android.dialer.blocking.FilteredNumberCompat;
 import com.android.dialer.calllog.observer.MarkDirtyObserver;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
@@ -41,7 +43,9 @@ import com.google.common.collect.ImmutableSet;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+
 import java.util.Set;
+
 import javax.inject.Inject;
 
 /**
@@ -66,9 +70,6 @@ public class SystemBlockedNumberPhoneLookup implements PhoneLookup<SystemBlocked
 
   @Override
   public ListenableFuture<SystemBlockedNumberInfo> lookup(@NonNull DialerPhoneNumber number) {
-    if (!FilteredNumberCompat.useNewFiltering(appContext)) {
-      return Futures.immediateFuture(SystemBlockedNumberInfo.getDefaultInstance());
-    }
     return executorService.submit(() -> queryNumbers(ImmutableSet.of(number)).get(number));
   }
 
@@ -83,9 +84,6 @@ public class SystemBlockedNumberPhoneLookup implements PhoneLookup<SystemBlocked
   public ListenableFuture<ImmutableMap<DialerPhoneNumber, SystemBlockedNumberInfo>>
       getMostRecentInfo(ImmutableMap<DialerPhoneNumber, SystemBlockedNumberInfo> existingInfoMap) {
     LogUtil.enterBlock("SystemBlockedNumberPhoneLookup.getMostRecentPhoneLookupInfo");
-    if (!FilteredNumberCompat.useNewFiltering(appContext)) {
-      return Futures.immediateFuture(existingInfoMap);
-    }
     return executorService.submit(() -> queryNumbers(existingInfoMap.keySet()));
   }
 

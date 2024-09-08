@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,8 @@
 
 package com.android.incallui;
 
-import android.support.annotation.NonNull;
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.incallui.InCallPresenter.InCallState;
@@ -25,6 +27,7 @@ import com.android.incallui.InCallPresenter.IncomingCallListener;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.state.DialerCallState;
+
 import java.util.Objects;
 
 /**

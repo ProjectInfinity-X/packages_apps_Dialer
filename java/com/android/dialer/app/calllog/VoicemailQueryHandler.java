@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +22,12 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.net.Uri;
 import android.provider.CallLog.Calls;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.ThreadUtil;
@@ -44,24 +47,20 @@ public class VoicemailQueryHandler extends AsyncQueryHandler {
   @WorkerThread
   public static void markAllNewVoicemailsAsOld(final @NonNull Context context) {
     ThreadUtil.postOnUiThread(
-        () -> {
-          new VoicemailQueryHandler(context.getContentResolver())
-              .markNewVoicemailsAsOld(context, null);
-        });
+        () -> new VoicemailQueryHandler(context.getContentResolver())
+            .markNewVoicemailsAsOld(context, null));
   }
 
   @WorkerThread
   public static void markSingleNewVoicemailAsOld(
-      final @NonNull Context context, final Uri voicemailUri) {
+          final @NonNull Context context, final Uri voicemailUri) {
     if (voicemailUri == null) {
       LogUtil.e("VoicemailQueryHandler.markSingleNewVoicemailAsOld", "voicemail URI is null");
       return;
     }
     ThreadUtil.postOnUiThread(
-        () -> {
-          new VoicemailQueryHandler(context.getContentResolver())
-              .markNewVoicemailsAsOld(context, voicemailUri);
-        });
+        () -> new VoicemailQueryHandler(context.getContentResolver())
+            .markNewVoicemailsAsOld(context, voicemailUri));
   }
 
   /** Updates all new voicemails to mark them as old. */

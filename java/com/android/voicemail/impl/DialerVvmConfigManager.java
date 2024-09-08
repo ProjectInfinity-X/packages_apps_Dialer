@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,21 +20,24 @@ package com.android.voicemail.impl;
 import android.content.Context;
 import android.net.Uri;
 import android.os.PersistableBundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.util.ArrayMap;
-import com.android.dialer.configprovider.ConfigProviderComponent;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.voicemail.impl.utils.XmlUtils;
 import com.google.common.collect.ComparisonChain;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.SortedSet;
 import java.util.TreeSet;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
 
 /** Load and caches dialer vvm config from res/xml/vvm_config.xml */
 public class DialerVvmConfigManager {
@@ -81,7 +85,7 @@ public class DialerVvmConfigManager {
    *
    * @see #KEY_GID1
    */
-  @VisibleForTesting static final String KEY_MCCMNC = "mccmnc";
+  private static final String KEY_MCCMNC = "mccmnc";
 
   /**
    * Additional query parameter in {@link #KEY_MCCMNC} to filter by the Group ID level 1.
@@ -101,11 +105,6 @@ public class DialerVvmConfigManager {
       cachedConfigs = loadConfigs(context, context.getResources().getXml(R.xml.vvm_config));
     }
     configs = cachedConfigs;
-  }
-
-  @VisibleForTesting
-  DialerVvmConfigManager(Context context, XmlPullParser parser) {
-    configs = loadConfigs(context, parser);
   }
 
   @Nullable
@@ -132,10 +131,7 @@ public class DialerVvmConfigManager {
         }
         PersistableBundle bundle = (PersistableBundle) object;
 
-        if (bundle.containsKey(KEY_FEATURE_FLAG_NAME)
-            && !ConfigProviderComponent.get(context)
-                .getConfigProvider()
-                .getBoolean(bundle.getString(KEY_FEATURE_FLAG_NAME), false)) {
+        if (bundle.containsKey(KEY_FEATURE_FLAG_NAME)) {
           continue;
         }
 

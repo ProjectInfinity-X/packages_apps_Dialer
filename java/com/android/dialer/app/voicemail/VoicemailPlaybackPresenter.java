@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,6 @@
 
 package com.android.dialer.app.voicemail;
 
-import android.app.Activity;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.Context;
@@ -26,24 +26,28 @@ import android.database.Cursor;
 import android.media.AudioManager;
 import android.media.MediaPlayer;
 import android.net.Uri;
-import android.os.AsyncTask;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.PowerManager;
 import android.provider.CallLog;
 import android.provider.VoicemailContract;
 import android.provider.VoicemailContract.Voicemails;
-import android.support.annotation.MainThread;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.content.FileProvider;
 import android.text.TextUtils;
 import android.util.Pair;
 import android.view.View;
 import android.view.WindowManager.LayoutParams;
 import android.webkit.MimeTypeMap;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.content.FileProvider;
+
 import com.android.common.io.MoreCloseables;
-import com.android.dialer.app.R;
+import com.android.dialer.R;
+import com.android.dialer.app.calllog.CallLogAdapter;
+import com.android.dialer.app.calllog.CallLogFragment;
 import com.android.dialer.app.calllog.CallLogListItemViewHolder;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
@@ -51,15 +55,12 @@ import com.android.dialer.common.concurrent.AsyncTaskExecutor;
 import com.android.dialer.common.concurrent.AsyncTaskExecutors;
 import com.android.dialer.common.concurrent.DialerExecutor;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.android.dialer.constants.Constants;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.phonenumbercache.CallLogQuery;
-import com.android.dialer.strictmode.StrictModeUtils;
 import com.android.dialer.telecom.TelecomUtil;
 import com.android.dialer.util.PermissionsUtil;
 import com.google.common.io.ByteStreams;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -67,11 +68,13 @@ import java.io.OutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.RejectedExecutionException;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.annotation.concurrent.NotThreadSafe;
 import javax.annotation.concurrent.ThreadSafe;
 
@@ -110,7 +113,6 @@ public class VoicemailPlaybackPresenter
   private static final String IS_SPEAKERPHONE_ON_KEY =
       VoicemailPlaybackPresenter.class.getName() + ".IS_SPEAKER_PHONE_ON";
   private static final String VOICEMAIL_SHARE_FILE_NAME_DATE_FORMAT = "MM-dd-yy_hhmmaa";
-  private static final String CONFIG_SHARE_VOICEMAIL_ALLOWED = "share_voicemail_allowed";
 
   private static VoicemailPlaybackPresenter instance;
   private static ScheduledExecutorService scheduledExecutorService;
@@ -126,8 +128,8 @@ public class VoicemailPlaybackPresenter
   protected Uri voicemailUri;
   protected MediaPlayer mediaPlayer;
   // Used to run async tasks that need to interact with the UI.
-  protected AsyncTaskExecutor asyncTaskExecutor;
-  private Activity activity;
+  protected final AsyncTaskExecutor asyncTaskExecutor;
+  private AppCompatActivity activity;
   private PlaybackView view;
   private int position;
   private boolean isPlaying;
@@ -145,14 +147,14 @@ public class VoicemailPlaybackPresenter
   private FetchResultHandler fetchResultHandler;
 
   private PowerManager.WakeLock proximityWakeLock;
-  private VoicemailAudioManager voicemailAudioManager;
+  private final VoicemailAudioManager voicemailAudioManager;
   private OnVoicemailDeletedListener onVoicemailDeletedListener;
   private View shareVoicemailButtonView;
 
   private DialerExecutor<Pair<Context, Uri>> shareVoicemailExecutor;
 
   /** Initialize variables which are activity-independent and state-independent. */
-  protected VoicemailPlaybackPresenter(Activity activity) {
+  protected VoicemailPlaybackPresenter(AppCompatActivity activity) {
     Context context = activity.getApplicationContext();
     asyncTaskExecutor = AsyncTaskExecutors.createAsyncTaskExecutor();
     voicemailAudioManager = new VoicemailAudioManager(context, this);
@@ -160,7 +162,7 @@ public class VoicemailPlaybackPresenter
     if (powerManager.isWakeLockLevelSupported(PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK)) {
       proximityWakeLock =
           powerManager.newWakeLock(
-              PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "VoicemailPlaybackPresenter");
+              PowerManager.PROXIMITY_SCREEN_OFF_WAKE_LOCK, "Voicemail:PlaybackPresenter");
     }
   }
 
@@ -175,7 +177,7 @@ public class VoicemailPlaybackPresenter
    */
   @MainThread
   public static VoicemailPlaybackPresenter getInstance(
-      Activity activity, Bundle savedInstanceState) {
+      AppCompatActivity activity, Bundle savedInstanceState) {
     if (instance == null) {
       instance = new VoicemailPlaybackPresenter(activity);
     }
@@ -193,7 +195,7 @@ public class VoicemailPlaybackPresenter
 
   /** Update variables which are activity-dependent or state-dependent. */
   @MainThread
-  protected void init(Activity activity, Bundle savedInstanceState) {
+  protected void init(AppCompatActivity activity, Bundle savedInstanceState) {
     Assert.isMainThread();
     this.activity = activity;
     context = activity;
@@ -215,7 +217,7 @@ public class VoicemailPlaybackPresenter
     }
 
     if (this.activity != null) {
-      if (isPlaying()) {
+      if (isPlaying) {
         this.activity.getWindow().addFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
       } else {
         this.activity.getWindow().clearFlags(LayoutParams.FLAG_KEEP_SCREEN_ON);
@@ -223,8 +225,8 @@ public class VoicemailPlaybackPresenter
       shareVoicemailExecutor =
           DialerExecutorComponent.get(context)
               .dialerExecutorFactory()
-              .createUiTaskBuilder(
-                  this.activity.getFragmentManager(), "shareVoicemail", new ShareVoicemailWorker())
+              .createUiTaskBuilder(this.activity.getSupportFragmentManager(), "shareVoicemail",
+                      new ShareVoicemailWorker())
               .onSuccess(
                   output -> {
                     if (output == null) {
@@ -391,19 +393,13 @@ public class VoicemailPlaybackPresenter
 
   /** Checks to see if we have content available for this voicemail. */
   protected void checkForContent(final OnContentCheckedListener callback) {
-    asyncTaskExecutor.submit(
-        Tasks.CHECK_FOR_CONTENT,
-        new AsyncTask<Void, Void, Boolean>() {
-          @Override
-          public Boolean doInBackground(Void... params) {
-            return queryHasContent(voicemailUri);
-          }
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    Handler handler = new Handler(Looper.getMainLooper());
 
-          @Override
-          public void onPostExecute(Boolean hasContent) {
-            callback.onContentChecked(hasContent);
-          }
-        });
+    executor.execute(() -> {
+      final boolean hasContent = queryHasContent(voicemailUri);
+      handler.post(() -> callback.onContentChecked(hasContent));
+    });
   }
 
   private boolean queryHasContent(Uri voicemailUri) {
@@ -458,37 +454,28 @@ public class VoicemailPlaybackPresenter
         break;
     }
 
-    asyncTaskExecutor.submit(
-        Tasks.SEND_FETCH_REQUEST,
-        new AsyncTask<Void, Void, Void>() {
-
-          @Override
-          protected Void doInBackground(Void... voids) {
-            try (Cursor cursor =
-                context
-                    .getContentResolver()
-                    .query(
-                        voicemailUri, new String[] {Voicemails.SOURCE_PACKAGE}, null, null, null)) {
-              String sourcePackage;
-              if (!hasContent(cursor)) {
-                LogUtil.e(
-                    "VoicemailPlaybackPresenter.requestContent",
-                    "mVoicemailUri does not return a SOURCE_PACKAGE");
-                sourcePackage = null;
-              } else {
-                sourcePackage = cursor.getString(0);
-              }
-              // Send voicemail fetch request.
-              Intent intent = new Intent(VoicemailContract.ACTION_FETCH_VOICEMAIL, voicemailUri);
-              intent.setPackage(sourcePackage);
-              LogUtil.i(
+    ExecutorService executor = Executors.newSingleThreadExecutor();
+    executor.execute(() -> {
+      try (Cursor cursor = context.getContentResolver().query(
+              voicemailUri, new String[] {Voicemails.SOURCE_PACKAGE}, null, null, null)) {
+        String sourcePackage;
+        if (!hasContent(cursor)) {
+          LogUtil.e(
                   "VoicemailPlaybackPresenter.requestContent",
-                  "Sending ACTION_FETCH_VOICEMAIL to " + sourcePackage);
-              context.sendBroadcast(intent);
-            }
-            return null;
-          }
-        });
+                  "mVoicemailUri does not return a SOURCE_PACKAGE");
+          sourcePackage = null;
+        } else {
+          sourcePackage = cursor.getString(0);
+        }
+        // Send voicemail fetch request.
+        Intent intent = new Intent(VoicemailContract.ACTION_FETCH_VOICEMAIL, voicemailUri);
+        intent.setPackage(sourcePackage);
+        LogUtil.i(
+                "VoicemailPlaybackPresenter.requestContent",
+                "Sending ACTION_FETCH_VOICEMAIL to " + sourcePackage);
+        context.sendBroadcast(intent);
+      }
+    });
     return true;
   }
 
@@ -519,7 +506,7 @@ public class VoicemailPlaybackPresenter
       handleError(new IllegalStateException("Cannot play voicemail when call is in progress"));
       return;
     }
-    StrictModeUtils.bypass(this::prepareMediaPlayer);
+    prepareMediaPlayer();
   }
 
   private void prepareMediaPlayer() {
@@ -814,16 +801,6 @@ public class VoicemailPlaybackPresenter
     }
   }
 
-  @VisibleForTesting
-  public boolean isPlaying() {
-    return isPlaying;
-  }
-
-  @VisibleForTesting
-  public boolean isSpeakerphoneOn() {
-    return isSpeakerphoneOn;
-  }
-
   /**
    * This method only handles app-level changes to the speakerphone. Audio layer changes should be
    * handled separately. This is so that the VoicemailAudioManager can trigger changes to the
@@ -850,28 +827,14 @@ public class VoicemailPlaybackPresenter
     }
   }
 
-  @VisibleForTesting
-  public void clearInstance() {
-    instance = null;
-  }
-
   private void showShareVoicemailButton(boolean show) {
     if (context == null) {
       return;
     }
-    if (isShareVoicemailAllowed(context) && shareVoicemailButtonView != null) {
-      if (show) {
-        Logger.get(context).logImpression(DialerImpression.Type.VVM_SHARE_VISIBLE);
-      }
+    if (shareVoicemailButtonView != null) {
       LogUtil.d("VoicemailPlaybackPresenter.showShareVoicemailButton", "show: %b", show);
       shareVoicemailButtonView.setVisibility(show ? View.VISIBLE : View.GONE);
     }
-  }
-
-  private static boolean isShareVoicemailAllowed(Context context) {
-    return ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean(CONFIG_SHARE_VOICEMAIL_ALLOWED, true);
   }
 
   private static class ShareVoicemailWorker
@@ -899,6 +862,7 @@ public class VoicemailPlaybackPresenter
           // dialer/app/res/xml/file_paths.xml for correct cache directory name.
           File parentDir = new File(context.getCacheDir(), "my_cache");
           if (!parentDir.exists()) {
+            //noinspection ResultOfMethodCallIgnored
             parentDir.mkdirs();
           }
           File temporaryVoicemailFile =
@@ -911,7 +875,7 @@ public class VoicemailPlaybackPresenter
               ByteStreams.copy(inputStream, outputStream);
               return new Pair<>(
                   FileProvider.getUriForFile(
-                      context, Constants.get().getFileProviderAuthority(), temporaryVoicemailFile),
+                      context, Constants.FILE_PROVIDER_AUTHORITY, temporaryVoicemailFile),
                   transcription);
             }
           } catch (IOException e) {
@@ -998,14 +962,6 @@ public class VoicemailPlaybackPresenter
         null);
   }
 
-  /** The enumeration of {@link AsyncTask} objects we use in this class. */
-  public enum Tasks {
-    CHECK_FOR_CONTENT,
-    CHECK_CONTENT_AFTER_CHANGE,
-    SHARE_VOICEMAIL,
-    SEND_FETCH_REQUEST
-  }
-
   /** Contract describing the behaviour we need from the ui we are controlling. */
   public interface PlaybackView {
 
@@ -1055,7 +1011,7 @@ public class VoicemailPlaybackPresenter
 
     private final Handler fetchResultHandler;
     private final Uri voicemailUri;
-    private AtomicBoolean isWaitingForResult = new AtomicBoolean(true);
+    private final AtomicBoolean isWaitingForResult = new AtomicBoolean(true);
 
     public FetchResultHandler(Handler handler, Uri uri, int code) {
       super(handler);
@@ -1089,24 +1045,19 @@ public class VoicemailPlaybackPresenter
 
     @Override
     public void onChange(boolean selfChange) {
-      asyncTaskExecutor.submit(
-          Tasks.CHECK_CONTENT_AFTER_CHANGE,
-          new AsyncTask<Void, Void, Boolean>() {
+      ExecutorService executor = Executors.newSingleThreadExecutor();
+      Handler handler = new Handler(Looper.getMainLooper());
 
-            @Override
-            public Boolean doInBackground(Void... params) {
-              return queryHasContent(voicemailUri);
-            }
-
-            @Override
-            public void onPostExecute(Boolean hasContent) {
-              if (hasContent && context != null && isWaitingForResult.getAndSet(false)) {
-                context.getContentResolver().unregisterContentObserver(FetchResultHandler.this);
-                showShareVoicemailButton(true);
-                prepareContent();
-              }
-            }
-          });
+      executor.execute(() -> {
+        final boolean hasContent = queryHasContent(voicemailUri);
+        handler.post(() -> {
+          if (hasContent && context != null && isWaitingForResult.getAndSet(false)) {
+            context.getContentResolver().unregisterContentObserver(FetchResultHandler.this);
+            showShareVoicemailButton(true);
+            prepareContent();
+          }
+        });
+      });
     }
   }
 }

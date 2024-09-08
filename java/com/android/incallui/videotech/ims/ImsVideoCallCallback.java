@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,23 +19,22 @@ package com.android.incallui.videotech.ims;
 
 import android.content.Context;
 import android.os.Handler;
+import android.os.Looper;
 import android.telecom.Call;
 import android.telecom.Connection;
 import android.telecom.Connection.VideoProvider;
 import android.telecom.InCallService.VideoCall;
 import android.telecom.VideoProfile;
 import android.telecom.VideoProfile.CameraCapabilities;
+
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.LoggingBindings;
 import com.android.incallui.videotech.VideoTech.VideoTechListener;
 import com.android.incallui.videotech.utils.SessionModificationState;
 
 /** Receives IMS video call state updates. */
 public class ImsVideoCallCallback extends VideoCall.Callback {
   private static final int CLEAR_FAILED_REQUEST_TIMEOUT_MILLIS = 4000;
-  private final Handler handler = new Handler();
-  private final LoggingBindings logger;
+  private final Handler handler = new Handler(Looper.getMainLooper());
   private final Call call;
   private final ImsVideoTech videoTech;
   private final VideoTechListener listener;
@@ -42,12 +42,10 @@ public class ImsVideoCallCallback extends VideoCall.Callback {
   private int requestedVideoState = VideoProfile.STATE_AUDIO_ONLY;
 
   ImsVideoCallCallback(
-      final LoggingBindings logger,
       final Call call,
       ImsVideoTech videoTech,
       VideoTechListener listener,
       Context context) {
-    this.logger = logger;
     this.call = call;
     this.videoTech = videoTech;
     this.listener = listener;
@@ -74,7 +72,6 @@ public class ImsVideoCallCallback extends VideoCall.Callback {
         videoTech.setSessionModificationState(
             SessionModificationState.RECEIVED_UPGRADE_TO_VIDEO_REQUEST);
         listener.onVideoUpgradeRequestReceived();
-        logger.logImpression(DialerImpression.Type.IMS_VIDEO_REQUEST_RECEIVED);
       } else {
         LogUtil.i(
             "ImsVideoTech.onSessionModifyRequestReceived", "call updated to %d", newVideoState);

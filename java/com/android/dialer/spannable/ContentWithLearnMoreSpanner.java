@@ -16,10 +16,13 @@
 package com.android.dialer.spannable;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
 import android.text.SpannableString;
 import android.text.Spanned;
 import android.text.style.TypefaceSpan;
+
+import androidx.annotation.NonNull;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 
 /**
@@ -78,7 +81,7 @@ public final class ContentWithLearnMoreSpanner {
     int learnMoreSpanEndIndex = learnMoreSpanStartIndex + learnMore.length();
 
     contents.setSpan(
-        new TypefaceSpan("sans-serif-medium"),
+        new TypefaceSpan("@*android:string/config_headlineFontFamilyMedium"),
         learnMoreSpanStartIndex,
         learnMoreSpanEndIndex,
         Spanned.SPAN_INCLUSIVE_INCLUSIVE);

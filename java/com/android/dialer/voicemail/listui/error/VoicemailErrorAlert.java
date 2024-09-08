@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,16 @@
 package com.android.dialer.voicemail.listui.error;
 
 import android.content.Context;
-import android.support.annotation.VisibleForTesting;
 import android.text.method.LinkMovementMethod;
 import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
+
 import com.android.dialer.app.alert.AlertManager;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.voicemail.listui.error.VoicemailErrorMessage.Action;
+
 import java.util.List;
 
 /**
@@ -98,16 +100,6 @@ public class VoicemailErrorAlert {
         alertManager.add(view);
       }
     }
-  }
-
-  @VisibleForTesting
-  public View getView() {
-    return view;
-  }
-
-  @VisibleForTesting
-  public View getModalView() {
-    return modalView;
   }
 
   void loadMessage(VoicemailErrorMessage message) {

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,20 +21,22 @@ import android.content.ComponentName;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
 import android.telecom.Connection;
 import android.telecom.ConnectionRequest;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.strictmode.StrictModeUtils;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.Random;
 
@@ -67,23 +70,19 @@ public class SimulatorSimCallManager {
   public static void register(@NonNull Context context) {
     LogUtil.enterBlock("SimulatorSimCallManager.register");
     Assert.isNotNull(context);
-    StrictModeUtils.bypass(
-        () -> {
-          TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
-          telecomManager.registerPhoneAccount(buildSimCallManagerAccount(context));
-          telecomManager.registerPhoneAccount(buildVideoProviderAccount(context));
-        });
+
+    TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
+    telecomManager.registerPhoneAccount(buildSimCallManagerAccount(context));
+    telecomManager.registerPhoneAccount(buildVideoProviderAccount(context));
   }
 
   public static void unregister(@NonNull Context context) {
     LogUtil.enterBlock("SimulatorSimCallManager.unregister");
     Assert.isNotNull(context);
-    StrictModeUtils.bypass(
-        () -> {
-          TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
-          telecomManager.unregisterPhoneAccount(getSimCallManagerHandle(context));
-          telecomManager.unregisterPhoneAccount(getVideoProviderHandle(context));
-        });
+
+    TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
+    telecomManager.unregisterPhoneAccount(getSimCallManagerHandle(context));
+    telecomManager.unregisterPhoneAccount(getVideoProviderHandle(context));
   }
 
   @NonNull
@@ -167,7 +166,7 @@ public class SimulatorSimCallManager {
     return new PhoneAccount.Builder(getSimCallManagerHandle(context), "Simulator SIM call manager")
         .setCapabilities(PhoneAccount.CAPABILITY_CONNECTION_MANAGER | PhoneAccount.CAPABILITY_RTT)
         .setShortDescription("Simulator SIM call manager")
-        .setSupportedUriSchemes(Arrays.asList(PhoneAccount.SCHEME_TEL))
+        .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_TEL))
         .build();
   }
 
@@ -179,7 +178,7 @@ public class SimulatorSimCallManager {
                 | PhoneAccount.CAPABILITY_SUPPORTS_VIDEO_CALLING
                 | PhoneAccount.CAPABILITY_VIDEO_CALLING)
         .setShortDescription("Simulator video provider")
-        .setSupportedUriSchemes(Arrays.asList(PhoneAccount.SCHEME_TEL))
+        .setSupportedUriSchemes(Collections.singletonList(PhoneAccount.SCHEME_TEL))
         .build();
   }
 

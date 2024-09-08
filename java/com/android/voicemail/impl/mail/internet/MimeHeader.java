@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 package com.android.voicemail.impl.mail.internet;
 
 import com.android.voicemail.impl.mail.MessagingException;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -45,7 +47,7 @@ public class MimeHeader {
     HEADER_ANDROID_ATTACHMENT_STORE_DATA
   };
 
-  protected final ArrayList<Field> fields = new ArrayList<Field>();
+  protected final ArrayList<Field> fields = new ArrayList<>();
 
   public void clear() {
     fields.clear();
@@ -72,7 +74,7 @@ public class MimeHeader {
   }
 
   public String[] getHeader(String name) throws MessagingException {
-    ArrayList<String> values = new ArrayList<String>();
+    ArrayList<String> values = new ArrayList<>();
     for (Field field : fields) {
       if (field.name.equalsIgnoreCase(name)) {
         values.add(field.value);
@@ -85,7 +87,7 @@ public class MimeHeader {
   }
 
   public void removeHeader(String name) throws MessagingException {
-    ArrayList<Field> removeFields = new ArrayList<Field>();
+    ArrayList<Field> removeFields = new ArrayList<>();
     for (Field field : fields) {
       if (field.name.equalsIgnoreCase(name)) {
         removeFields.add(field);
@@ -143,12 +145,12 @@ public class MimeHeader {
     return (fields == null) ? null : fields.toString();
   }
 
-  public static final boolean arrayContains(Object[] a, Object o) {
+  public static boolean arrayContains(Object[] a, Object o) {
     int index = arrayIndex(a, o);
     return (index >= 0);
   }
 
-  public static final int arrayIndex(Object[] a, Object o) {
+  public static int arrayIndex(Object[] a, Object o) {
     for (int i = 0, count = a.length; i < count; i++) {
       if (a[i].equals(o)) {
         return i;

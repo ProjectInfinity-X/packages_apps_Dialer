@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023-2024 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,26 +26,26 @@ import android.content.res.ColorStateList;
 import android.graphics.PorterDuff.Mode;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
-import android.support.design.widget.BottomSheetDialogFragment;
-import android.support.v4.os.BuildCompat;
 import android.telecom.CallAudioState;
+import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+import androidx.core.widget.TextViewCompat;
+
+import com.android.dialer.R;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.theme.base.ThemeComponent;
-import com.android.incallui.call.CallList;
-import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.TelecomAdapter;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
+import com.android.incallui.util.BluetoothUtil;
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+
 import java.util.Collection;
 
 /** Shows picker for audio routes */
@@ -79,13 +80,12 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
     LogUtil.i("AudioRouteSelectorDialogFragment.onCreateDialog", null);
     Dialog dialog = super.onCreateDialog(savedInstanceState);
     dialog.getWindow().addFlags(WindowManager.LayoutParams.FLAG_SHOW_WHEN_LOCKED);
+    dialog.setCancelable(true);
+    dialog.setCanceledOnTouchOutside(true);
     if (Settings.canDrawOverlays(getContext())) {
       dialog
           .getWindow()
-          .setType(
-              BuildCompat.isAtLeastO()
-                  ? WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY
-                  : WindowManager.LayoutParams.TYPE_PHONE);
+          .setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
     }
     return dialog;
   }
@@ -96,47 +96,31 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
   public View onCreateView(
       LayoutInflater layoutInflater, @Nullable ViewGroup viewGroup, @Nullable Bundle bundle) {
     View view = layoutInflater.inflate(R.layout.audioroute_selector, viewGroup, false);
-    CallAudioState audioState = getArguments().getParcelable(ARG_AUDIO_STATE);
+    CallAudioState audioState = getArguments().getParcelable(ARG_AUDIO_STATE, CallAudioState.class);
 
-    if (BuildCompat.isAtLeastP()) {
-      // Create items for all connected Bluetooth devices
-      Collection<BluetoothDevice> bluetoothDeviceSet = audioState.getSupportedBluetoothDevices();
-      for (BluetoothDevice device : bluetoothDeviceSet) {
-        boolean selected =
-            (audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH)
-                && (bluetoothDeviceSet.size() == 1
-                    || device.equals(audioState.getActiveBluetoothDevice()));
-        TextView textView = createBluetoothItem(device, selected);
-        ((LinearLayout) view).addView(textView, 0);
-      }
-    } else {
-      // Only create Bluetooth audio route
-      TextView textView =
-          (TextView) getLayoutInflater().inflate(R.layout.audioroute_item, null, false);
-      textView.setText(getString(R.string.audioroute_bluetooth));
-      initItem(
-          textView,
-          CallAudioState.ROUTE_BLUETOOTH,
-          audioState,
-          DialerImpression.Type.IN_CALL_SWITCH_AUDIO_ROUTE_BLUETOOTH);
+    // Create items for all connected Bluetooth devices
+    Collection<BluetoothDevice> bluetoothDeviceSet = audioState.getSupportedBluetoothDevices();
+    for (BluetoothDevice device : bluetoothDeviceSet) {
+      boolean selected =
+          (audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH)
+              && (bluetoothDeviceSet.size() == 1
+                  || device.equals(audioState.getActiveBluetoothDevice()));
+      TextView textView = createBluetoothItem(device, selected);
       ((LinearLayout) view).addView(textView, 0);
     }
 
     initItem(
-        (TextView) view.findViewById(R.id.audioroute_speaker),
+        view.findViewById(R.id.audioroute_speaker),
         CallAudioState.ROUTE_SPEAKER,
-        audioState,
-        DialerImpression.Type.IN_CALL_SWITCH_AUDIO_ROUTE_SPEAKER);
+        audioState);
     initItem(
-        (TextView) view.findViewById(R.id.audioroute_headset),
+        view.findViewById(R.id.audioroute_headset),
         CallAudioState.ROUTE_WIRED_HEADSET,
-        audioState,
-        DialerImpression.Type.IN_CALL_SWITCH_AUDIO_ROUTE_WIRED_HEADSET);
+        audioState);
     initItem(
-        (TextView) view.findViewById(R.id.audioroute_earpiece),
+        view.findViewById(R.id.audioroute_earpiece),
         CallAudioState.ROUTE_EARPIECE,
-        audioState,
-        DialerImpression.Type.IN_CALL_SWITCH_AUDIO_ROUTE_EARPIECE);
+        audioState);
 
     // TODO(a bug): set peak height correctly to fully expand it in landscape mode.
     return view;
@@ -153,20 +137,17 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
   private void initItem(
       TextView item,
       final int itemRoute,
-      CallAudioState audioState,
-      DialerImpression.Type impressionType) {
-    int selectedColor = ThemeComponent.get(getContext()).theme().getColorPrimary();
+      CallAudioState audioState) {
     if ((audioState.getSupportedRouteMask() & itemRoute) == 0) {
       item.setVisibility(View.GONE);
     } else if (audioState.getRoute() == itemRoute) {
       item.setSelected(true);
-      item.setTextColor(selectedColor);
-      item.setCompoundDrawableTintList(ColorStateList.valueOf(selectedColor));
-      item.setCompoundDrawableTintMode(Mode.SRC_ATOP);
+      setColor(item, true);
+    } else {
+      setColor(item, false);
     }
     item.setOnClickListener(
         (v) -> {
-          logCallAudioRouteImpression(impressionType);
           FragmentUtils.getParentUnsafe(
                   AudioRouteSelectorDialogFragment.this, AudioRouteSelectorPresenter.class)
               .onAudioRouteSelected(itemRoute);
@@ -175,19 +156,19 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
   }
 
   private TextView createBluetoothItem(BluetoothDevice bluetoothDevice, boolean selected) {
-    int selectedColor = ThemeComponent.get(getContext()).theme().getColorPrimary();
     TextView textView =
         (TextView) getLayoutInflater().inflate(R.layout.audioroute_item, null, false);
-    textView.setText(getAliasName(bluetoothDevice));
+    String alias = BluetoothUtil.getAliasName(bluetoothDevice);
+    if (TextUtils.isEmpty(alias)) {
+      alias = getString(R.string.audioroute_bluetooth);
+    }
+    textView.setText(alias);
     if (selected) {
       textView.setSelected(true);
-      textView.setTextColor(selectedColor);
-      textView.setCompoundDrawableTintList(ColorStateList.valueOf(selectedColor));
-      textView.setCompoundDrawableTintMode(Mode.SRC_ATOP);
     }
+    setColor(textView, selected);
     textView.setOnClickListener(
         (v) -> {
-          logCallAudioRouteImpression(DialerImpression.Type.IN_CALL_SWITCH_AUDIO_ROUTE_BLUETOOTH);
           // Set Bluetooth audio route
           FragmentUtils.getParentUnsafe(
                   AudioRouteSelectorDialogFragment.this, AudioRouteSelectorPresenter.class)
@@ -200,30 +181,12 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
     return textView;
   }
 
-  @SuppressLint("PrivateApi")
-  private String getAliasName(BluetoothDevice bluetoothDevice) {
-    try {
-      Method getActiveDeviceMethod = bluetoothDevice.getClass().getDeclaredMethod("getAliasName");
-      getActiveDeviceMethod.setAccessible(true);
-      return (String) getActiveDeviceMethod.invoke(bluetoothDevice);
-    } catch (NoSuchMethodException | InvocationTargetException | IllegalAccessException e) {
-      e.printStackTrace();
-      return bluetoothDevice.getName();
-    }
-  }
-
-  private void logCallAudioRouteImpression(DialerImpression.Type impressionType) {
-    DialerCall dialerCall = CallList.getInstance().getOutgoingCall();
-    if (dialerCall == null) {
-      dialerCall = CallList.getInstance().getActiveOrBackgroundCall();
-    }
-
-    if (dialerCall != null) {
-      Logger.get(getContext())
-          .logCallImpression(
-              impressionType, dialerCall.getUniqueCallId(), dialerCall.getTimeAddedMs());
-    } else {
-      Logger.get(getContext()).logImpression(impressionType);
-    }
+  private void setColor(TextView item, boolean isSelected) {
+    int color = isSelected
+            ? ThemeComponent.get(requireContext()).theme().getColorAccent()
+            : requireContext().getColor(R.color.nav_item);
+    item.setTextColor(color);
+    TextViewCompat.setCompoundDrawableTintList(item, ColorStateList.valueOf(color));
+    TextViewCompat.setCompoundDrawableTintMode(item, Mode.SRC_ATOP);
   }
 }

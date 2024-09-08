@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +17,20 @@
 
 package com.android.incallui.call;
 
-import android.annotation.TargetApi;
 import android.app.Notification;
+import android.app.Service;
 import android.bluetooth.BluetoothDevice;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.content.pm.ServiceInfo;
 import android.os.Looper;
-import android.support.annotation.MainThread;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.InCallService;
+
+import androidx.annotation.MainThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
+
 import java.util.List;
 
 /** Wrapper around Telecom APIs. */
@@ -50,10 +54,6 @@ public class TelecomAdapter implements InCallServiceListener {
     return instance;
   }
 
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  public static void setInstanceForTesting(TelecomAdapter telecomAdapter) {
-    instance = telecomAdapter;
-  }
 
   @Override
   public void setInCallService(InCallService inCallService) {
@@ -180,7 +180,8 @@ public class TelecomAdapter implements InCallServiceListener {
   public void startForegroundNotification(int id, Notification notification) {
     Assert.isNotNull(
         inCallService, "No inCallService available for starting foreground notification");
-    inCallService.startForeground(id, notification);
+    inCallService.startForeground(id, notification, ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL
+        | ServiceInfo.FOREGROUND_SERVICE_TYPE_MICROPHONE);
   }
 
   /**
@@ -188,7 +189,7 @@ public class TelecomAdapter implements InCallServiceListener {
    */
   public void stopForegroundNotification() {
     if (inCallService != null) {
-      inCallService.stopForeground(true /*removeNotification*/);
+      inCallService.stopForeground(Service.STOP_FOREGROUND_REMOVE);
     } else {
       LogUtil.e(
           "TelecomAdapter.stopForegroundNotification",
@@ -196,7 +197,6 @@ public class TelecomAdapter implements InCallServiceListener {
     }
   }
 
-  @TargetApi(28)
   public void requestBluetoothAudio(BluetoothDevice bluetoothDevice) {
     if (inCallService != null) {
       inCallService.requestBluetoothAudio(bluetoothDevice);

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,45 +19,46 @@ package com.android.dialer.contactsfragment;
 
 import static android.Manifest.permission.READ_CONTACTS;
 
-import android.app.Fragment;
-import android.app.LoaderManager.LoaderCallbacks;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.Loader;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
-import android.support.v13.app.FragmentCompat;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.Recycler;
-import android.support.v7.widget.RecyclerView.State;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnScrollChangeListener;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.util.DialerUtils;
 import com.android.dialer.util.IntentUtil;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.widget.EmptyContentView;
 import com.android.dialer.widget.EmptyContentView.OnEmptyViewActionButtonClickedListener;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Arrays;
 
 /** Fragment containing a list of all contacts. */
 public class ContactsFragment extends Fragment
-    implements LoaderCallbacks<Cursor>,
+    implements LoaderManager.LoaderCallbacks<Cursor>,
         OnScrollChangeListener,
         OnEmptyViewActionButtonClickedListener {
 
@@ -68,8 +70,6 @@ public class ContactsFragment extends Fragment
     /** Header that allows the user to add a new contact. */
     int ADD_CONTACT = 1;
   }
-
-  public static final int READ_CONTACTS_PERMISSION_REQUEST_CODE = 1;
 
   private static final String EXTRA_HEADER = "extra_header";
   private static final String EXTRA_HAS_PHONE_NUMBERS = "extra_has_phone_numbers";
@@ -85,6 +85,16 @@ public class ContactsFragment extends Fragment
           loadContacts();
         }
       };
+
+  private final ActivityResultLauncher<String[]> permissionLauncher = registerForActivityResult(
+          new ActivityResultContracts.RequestMultiplePermissions(),
+          grantResults -> {
+            if (grantResults.size() >= 1  && grantResults.values().iterator().next()) {
+              String key = grantResults.keySet().iterator().next();
+              // Force a refresh of the data since we were missing the permission before this.
+              PermissionsUtil.notifyPermissionGranted(getContext(), key);
+            }
+          });
 
   private FastScroller fastScroller;
   private TextView anchoredHeader;
@@ -122,26 +132,6 @@ public class ContactsFragment extends Fragment
     ContactsFragment fragment = new ContactsFragment();
     Bundle args = new Bundle();
     args.putInt(EXTRA_HEADER, header);
-    fragment.setArguments(args);
-    return fragment;
-  }
-
-  /**
-   * Returns {@link ContactsFragment} with a list of contacts such that:
-   *
-   * <ul>
-   *   <li>Each contact has a phone number
-   *   <li>Contacts are filterable via {@link #updateQuery(String)}
-   *   <li>There is no list header (i.e. {@link Header#NONE}
-   *   <li>Clicking on a contact notifies the parent activity via {@link
-   *       OnContactSelectedListener#onContactSelected(ImageView, Uri, long)}.
-   * </ul>
-   */
-  public static ContactsFragment newAddFavoritesInstance() {
-    ContactsFragment fragment = new ContactsFragment();
-    Bundle args = new Bundle();
-    args.putInt(EXTRA_HEADER, Header.NONE);
-    args.putBoolean(EXTRA_HAS_PHONE_NUMBERS, true);
     fragment.setArguments(args);
     return fragment;
   }
@@ -188,7 +178,7 @@ public class ContactsFragment extends Fragment
     manager =
         new LinearLayoutManager(getContext()) {
           @Override
-          public void onLayoutChildren(Recycler recycler, State state) {
+          public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
             super.onLayoutChildren(recycler, state);
             int itemsShown = findLastVisibleItemPosition() - findFirstVisibleItemPosition() + 1;
             if (adapter.getItemCount() > itemsShown) {
@@ -202,7 +192,7 @@ public class ContactsFragment extends Fragment
     recyclerView.setLayoutManager(manager);
 
     emptyContentView = view.findViewById(R.id.empty_list_view);
-    emptyContentView.setImage(R.drawable.empty_contacts);
+    emptyContentView.setImage(R.drawable.oneplus_empty_contacts_illustration);
     emptyContentView.setActionClickedListener(this);
 
     if (PermissionsUtil.hasContactsReadPermissions(getContext())) {
@@ -223,7 +213,7 @@ public class ContactsFragment extends Fragment
     if (getActivity() != null
         && isAdded()
         && PermissionsUtil.hasContactsReadPermissions(getContext())) {
-      getLoaderManager().restartLoader(0, null, this);
+      LoaderManager.getInstance(this).restartLoader(0, null, this);
     }
   }
 
@@ -233,11 +223,6 @@ public class ContactsFragment extends Fragment
     ContactsCursorLoader cursorLoader = new ContactsCursorLoader(getContext(), hasPhoneNumbers);
     cursorLoader.setQuery(query);
     return cursorLoader;
-  }
-
-  public void updateQuery(String query) {
-    this.query = query;
-    getLoaderManager().restartLoader(0, null, this);
   }
 
   @Override
@@ -253,7 +238,6 @@ public class ContactsFragment extends Fragment
       recyclerView.setVisibility(View.VISIBLE);
       adapter.updateCursor(cursor);
 
-      PerformanceReport.logOnScrollStateChange(recyclerView);
       fastScroller.setup(adapter, manager);
     }
   }
@@ -328,8 +312,7 @@ public class ContactsFragment extends Fragment
         LogUtil.i(
             "ContactsFragment.onEmptyViewActionButtonClicked",
             "Requesting permissions: " + Arrays.toString(deniedPermissions));
-        FragmentCompat.requestPermissions(
-            this, deniedPermissions, READ_CONTACTS_PERMISSION_REQUEST_CODE);
+        permissionLauncher.launch(deniedPermissions);
       }
 
     } else if (emptyContentView.getActionLabel()
@@ -339,17 +322,6 @@ public class ContactsFragment extends Fragment
           getContext(), IntentUtil.getNewContactIntent(), R.string.add_contact_not_available);
     } else {
       throw Assert.createIllegalStateFailException("Invalid empty content view action label.");
-    }
-  }
-
-  @Override
-  public void onRequestPermissionsResult(
-      int requestCode, String[] permissions, int[] grantResults) {
-    if (requestCode == READ_CONTACTS_PERMISSION_REQUEST_CODE) {
-      if (grantResults.length >= 1 && PackageManager.PERMISSION_GRANTED == grantResults[0]) {
-        // Force a refresh of the data since we were missing the permission before this.
-        PermissionsUtil.notifyPermissionGranted(getContext(), permissions[0]);
-      }
     }
   }
 
@@ -364,7 +336,7 @@ public class ContactsFragment extends Fragment
   }
 
   private void loadContacts() {
-    getLoaderManager().initLoader(0, null, this);
+    LoaderManager.getInstance(this).initLoader(0, null, this);
     recyclerView.setVisibility(View.VISIBLE);
     emptyContentView.setVisibility(View.GONE);
   }

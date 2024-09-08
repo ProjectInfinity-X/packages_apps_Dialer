@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,14 +20,15 @@ package com.android.incallui.multisim;
 import android.content.Context;
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
@@ -37,6 +39,7 @@ import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.DialerCallListener;
 import com.android.incallui.incalluilock.InCallUiLock;
+
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
@@ -62,8 +65,6 @@ public class SwapSimWorker implements Worker<Void, Void>, DialerCallListener, Ca
 
   private final int timeoutMillis;
 
-  private CountDownLatch latchForTest;
-
   @MainThread
   public SwapSimWorker(
       Context context,
@@ -74,7 +75,6 @@ public class SwapSimWorker implements Worker<Void, Void>, DialerCallListener, Ca
     this(context, call, callList, otherAccount, lock, DEFAULT_TIMEOUT_MILLIS);
   }
 
-  @VisibleForTesting
   SwapSimWorker(
       Context context,
       DialerCall call,
@@ -118,9 +118,6 @@ public class SwapSimWorker implements Worker<Void, Void>, DialerCallListener, Ca
       extras.putParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE, otherAccount);
       callList.addListener(this);
       telecomManager.placeCall(Uri.fromParts(PhoneAccount.SCHEME_TEL, number, null), extras);
-      if (latchForTest != null) {
-        latchForTest.countDown();
-      }
       if (!dialingLatch.await(timeoutMillis, TimeUnit.MILLISECONDS)) {
         LogUtil.e("SwapSimWorker.doInBackground", "timeout waiting for call to dial");
       }
@@ -152,11 +149,6 @@ public class SwapSimWorker implements Worker<Void, Void>, DialerCallListener, Ca
     }
   }
 
-  @VisibleForTesting
-  void setLatchForTest(CountDownLatch latch) {
-    latchForTest = latch;
-  }
-
   @Override
   public void onDialerCallUpdate() {}
 
@@ -180,9 +172,6 @@ public class SwapSimWorker implements Worker<Void, Void>, DialerCallListener, Ca
 
   @Override
   public void onInternationalCallOnWifi() {}
-
-  @Override
-  public void onEnrichedCallSessionUpdate() {}
 
   @Override
   public void onIncomingCall(DialerCall call) {}

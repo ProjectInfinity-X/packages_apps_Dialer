@@ -16,17 +16,15 @@
 
 package com.android.contacts.common.compat;
 
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.NonNull;
 import android.telecom.Call;
+
+import androidx.annotation.NonNull;
 
 /** Compatibility utilities for android.telecom.Call */
 public class CallCompat {
 
   public static boolean canPullExternalCall(@NonNull android.telecom.Call call) {
-    return VERSION.SDK_INT >= VERSION_CODES.N_MR1
-        && ((call.getDetails().getCallCapabilities() & Details.CAPABILITY_CAN_PULL_CALL)
+    return ((call.getDetails().getCallCapabilities() & Details.CAPABILITY_CAN_PULL_CALL)
             == Details.CAPABILITY_CAN_PULL_CALL);
   }
 

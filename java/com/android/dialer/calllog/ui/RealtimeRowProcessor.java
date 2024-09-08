@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +20,10 @@ package com.android.dialer.calllog.ui;
 import android.content.ContentProviderOperation;
 import android.content.ContentValues;
 import android.content.Context;
-import android.support.annotation.MainThread;
-import android.support.annotation.VisibleForTesting;
 import android.util.ArrayMap;
+
+import androidx.annotation.MainThread;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.calllog.model.CoalescedRow;
 import com.android.dialer.calllogutils.NumberAttributesBuilder;
@@ -40,11 +42,13 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.TimeUnit;
+
 import javax.inject.Inject;
 
 /**
@@ -65,7 +69,7 @@ public final class RealtimeRowProcessor {
   /*
    * The time to wait between writing batches of records to PhoneLookupHistory.
    */
-  @VisibleForTesting static final long BATCH_WAIT_MILLIS = TimeUnit.SECONDS.toMillis(3);
+  private static final long BATCH_WAIT_MILLIS = TimeUnit.SECONDS.toMillis(3);
 
   private final Context appContext;
   private final CompositePhoneLookup compositePhoneLookup;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +21,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.Bundle;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.OnScrollListener;
 import android.telecom.CallAudioState;
 import android.text.Editable;
 import android.text.TextUtils;
@@ -44,13 +38,20 @@ import android.widget.EditText;
 import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.TextView.OnEditorActionListener;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.UiUtil;
 import com.android.dialer.lettertile.LetterTileDrawable;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.rtt.RttTranscript;
 import com.android.dialer.rtt.RttTranscriptMessage;
 import com.android.dialer.util.DrawableConverter;
@@ -73,6 +74,7 @@ import com.android.incallui.rtt.protocol.Constants;
 import com.android.incallui.rtt.protocol.RttCallScreen;
 import com.android.incallui.rtt.protocol.RttCallScreenDelegate;
 import com.android.incallui.rtt.protocol.RttCallScreenDelegateFactory;
+
 import java.util.List;
 
 /** RTT chat fragment to show chat bubbles. */
@@ -130,9 +132,6 @@ public class RttChatFragment extends Fragment
     inCallButtonUiDelegate =
         FragmentUtils.getParent(this, InCallButtonUiDelegateFactory.class)
             .newInCallButtonUiDelegate();
-    if (savedInstanceState != null) {
-      inCallButtonUiDelegate.onRestoreInstanceState(savedInstanceState);
-    }
     inCallScreenDelegate =
         FragmentUtils.getParentUnsafe(this, InCallScreenDelegateFactory.class)
             .newInCallScreenDelegate();
@@ -202,7 +201,7 @@ public class RttChatFragment extends Fragment
     adapter = new RttChatAdapter(getContext(), this);
     recyclerView.setAdapter(adapter);
     recyclerView.addOnScrollListener(
-        new OnScrollListener() {
+        new RecyclerView.OnScrollListener() {
           @Override
           public void onScrollStateChanged(RecyclerView recyclerView, int i) {
             if (i == RecyclerView.SCROLL_STATE_DRAGGING) {
@@ -225,7 +224,6 @@ public class RttChatFragment extends Fragment
     submitButton = view.findViewById(R.id.rtt_chat_submit_button);
     submitButton.setOnClickListener(
         v -> {
-          Logger.get(getContext()).logImpression(DialerImpression.Type.RTT_SEND_BUTTON_CLICKED);
           adapter.submitLocalMessage();
           resumeInput("");
           rttCallScreenDelegate.onLocalMessage(Constants.BUBBLE_BREAKER);
@@ -261,8 +259,6 @@ public class RttChatFragment extends Fragment
   public boolean onEditorAction(TextView v, int actionId, KeyEvent event) {
     if (actionId == EditorInfo.IME_ACTION_SEND) {
       if (!TextUtils.isEmpty(editText.getText())) {
-        Logger.get(getContext())
-            .logImpression(DialerImpression.Type.RTT_KEYBOARD_SEND_BUTTON_CLICKED);
         submitButton.performClick();
       }
       return true;
@@ -571,9 +567,6 @@ public class RttChatFragment extends Fragment
   public void updateButtonStates() {}
 
   @Override
-  public void updateInCallButtonUiColors(int color) {}
-
-  @Override
   public Fragment getInCallButtonUiFragment() {
     return this;
   }
@@ -595,4 +588,13 @@ public class RttChatFragment extends Fragment
 
   @Override
   public void onAudioRouteSelectorDismiss() {}
+
+  @Override
+  public void requestCallRecordingPermissions(String[] permissions) {}
+
+  @Override
+  public void setCallRecordingDuration(long duration) {}
+
+  @Override
+  public void setCallRecordingState(boolean isRecording) {}
 }

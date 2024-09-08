@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,10 +22,12 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.os.Handler;
 import android.os.HandlerThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
+import android.os.Looper;
 import android.view.Surface;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 
@@ -34,7 +37,8 @@ import com.android.dialer.common.LogUtil;
  * green screen with a ball bouncing around.
  */
 final class SimulatorRemoteVideo {
-  @NonNull private final RenderThread thread;
+  @NonNull
+  private final RenderThread thread;
   private boolean isStopped;
 
   SimulatorRemoteVideo(@NonNull Surface surface) {
@@ -51,11 +55,6 @@ final class SimulatorRemoteVideo {
     LogUtil.enterBlock("SimulatorRemoteVideo.stopVideo");
     isStopped = true;
     thread.quitSafely();
-  }
-
-  @VisibleForTesting
-  Runnable getRenderer() {
-    return thread.getRenderer();
   }
 
   private static class Renderer implements Runnable {
@@ -81,7 +80,7 @@ final class SimulatorRemoteVideo {
     @WorkerThread
     void schedule() {
       Assert.isWorkerThread();
-      new Handler().postDelayed(this, FRAME_DELAY_MILLIS);
+      new Handler(Looper.getMainLooper()).postDelayed(this, FRAME_DELAY_MILLIS);
     }
 
     @WorkerThread
@@ -155,9 +154,5 @@ final class SimulatorRemoteVideo {
       renderer.schedule();
     }
 
-    @VisibleForTesting
-    Runnable getRenderer() {
-      return renderer;
-    }
   }
 }

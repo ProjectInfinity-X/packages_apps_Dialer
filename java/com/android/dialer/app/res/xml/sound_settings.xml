@@ -2,6 +2,7 @@
 
 <!--
   ~ Copyright (C) 2014 The Android Open Source Project
+  ~ Copyright (C) 2023 The LineageOS Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -16,31 +17,100 @@
   ~ limitations under the License
   -->
 
-<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android">
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
 
-  <com.android.dialer.app.settings.DefaultRingtonePreference
-    android:dialogTitle="@string/ringtone_title"
-    android:key="@string/ringtone_preference_key"
-    android:persistent="false"
-    android:ringtoneType="ringtone"
-    android:title="@string/ringtone_title"/>
+    <com.android.dialer.app.settings.DefaultRingtonePreference
+        android:dialogTitle="@string/ringtone_title"
+        android:key="@string/ringtone_preference_key"
+        android:persistent="false"
+        android:ringtoneType="ringtone"
+        android:title="@string/ringtone_title"
+        android:summary="&#x20;"
+        app:iconSpaceReserved="false" />
 
-  <SwitchPreference
-    android:defaultValue="false"
-    android:key="@string/vibrate_on_preference_key"
-    android:persistent="false"
-    android:title="@string/vibrate_on_ring_title"/>
+    <SwitchPreferenceCompat
+        android:defaultValue="false"
+        android:key="@string/vibrate_on_preference_key"
+        android:persistent="false"
+        android:title="@string/vibrate_on_ring_title" />
 
-  <SwitchPreference
-    android:defaultValue="true"
-    android:key="@string/play_dtmf_preference_key"
-    android:persistent="false"
-    android:title="@string/dtmf_tone_enable_title"/>
+    <SwitchPreferenceCompat
+        android:defaultValue="true"
+        android:key="@string/play_dtmf_preference_key"
+        android:persistent="false"
+        android:title="@string/dtmf_tone_enable_title" />
 
-  <ListPreference
-    android:entries="@array/dtmf_tone_length_entries"
-    android:entryValues="@array/dtmf_tone_length_entry_values"
-    android:key="@string/dtmf_tone_length_preference_key"
-    android:title="@string/dtmf_tone_length_title"/>
+    <ListPreference
+        android:entries="@array/dtmf_tone_length_entries"
+        android:entryValues="@array/dtmf_tone_length_entry_values"
+        android:key="@string/dtmf_tone_length_preference_key"
+        android:title="@string/dtmf_tone_length_title"
+        app:iconSpaceReserved="false" />
+
+    <PreferenceCategory
+        android:key="@string/incall_category_key"
+        android:title="@string/incall_category_title"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            android:defaultValue="false"
+            android:key="incall_enable_dnd"
+            android:title="@string/incall_enable_dnd_title" />
+
+        <SwitchPreferenceCompat
+            android:key="@string/incall_vibrate_outgoing_key"
+            android:title="@string/incall_vibrate_outgoing_title" />
+
+        <SwitchPreferenceCompat
+            android:key="@string/incall_vibrate_call_waiting_key"
+            android:title="@string/incall_vibrate_call_waiting_title" />
+
+        <SwitchPreferenceCompat
+            android:key="@string/incall_vibrate_hangup_key"
+            android:title="@string/incall_vibrate_hangup_title" />
+
+        <SwitchPreferenceCompat
+            android:key="@string/incall_vibrate_45_key"
+            android:summary="@string/incall_vibrate_45_summary"
+            android:title="@string/incall_vibrate_45_title" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="@string/call_recording_category_key"
+        android:title="@string/call_recording_category_title"
+        app:iconSpaceReserved="false">
+
+        <ListPreference
+            android:defaultValue="0"
+            android:entries="@array/call_recording_encoder_entries"
+            android:entryValues="@array/call_recording_encoder_values"
+            android:key="@string/call_recording_format_key"
+            android:summary="%s"
+            android:title="@string/call_recording_format"
+            app:iconSpaceReserved="false" />
+
+        <SwitchPreferenceCompat
+            android:key="auto_call_recording"
+            android:title="@string/auto_call_recording_title"
+            android:summary="@string/auto_call_recording_summary"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
+
+    <PreferenceCategory
+        android:key="dialer_general_smart_category_key"
+        android:title="@string/smart_category_title"
+        android:persistent="false"
+        app:iconSpaceReserved="false">
+
+        <SwitchPreferenceCompat
+            android:key="button_smart_mute"
+            android:title="@string/smart_mute_title"
+            android:summary="@string/smart_mute_summary"
+            android:defaultValue="false" />
+
+    </PreferenceCategory>
 
 </PreferenceScreen>

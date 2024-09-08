@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +17,23 @@
 
 package com.android.dialer.simulator.impl;
 
-import android.annotation.TargetApi;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
-import android.support.annotation.MainThread;
 import android.telecom.Connection.RttTextStream;
+
+import androidx.annotation.MainThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.incallui.rtt.protocol.Constants;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 /** Chat bot to generate remote RTT chat messages. */
-@TargetApi(28)
 class RttChatBot {
 
   interface Callback {

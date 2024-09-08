@@ -16,16 +16,17 @@
 
 package com.android.voicemail.impl.sms;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.TelephonyManager;
 import android.telephony.VisualVoicemailSms;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.precall.PreCall;
@@ -39,7 +40,6 @@ import com.android.voicemail.impl.VvmLog;
  *
  * @see OmtpVvmCarrierConfigHelper#isLegacyModeEnabled()
  */
-@TargetApi(VERSION_CODES.O)
 public class LegacyModeSmsHandler {
 
   private static final String TAG = "LegacyModeSmsHandler";
@@ -134,6 +134,7 @@ public class LegacyModeSmsHandler {
     context.sendBroadcast(intent);
   }
 
+  @SuppressLint("MissingPermission")
   @Nullable
   private static String getVoicemailNumber(Context context, PhoneAccountHandle phoneAccountHandle) {
     TelephonyManager telephonyManager =

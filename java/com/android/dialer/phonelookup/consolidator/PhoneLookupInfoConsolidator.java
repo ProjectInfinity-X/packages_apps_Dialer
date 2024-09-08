@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +16,9 @@
  */
 package com.android.dialer.phonelookup.consolidator;
 
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.logging.ContactSource;
 import com.android.dialer.phonelookup.PhoneLookup;
@@ -26,6 +28,7 @@ import com.android.dialer.phonelookup.PhoneLookupInfo.Cp2Info.Cp2ContactInfo;
 import com.android.dialer.phonelookup.PhoneLookupInfo.PeopleApiInfo;
 import com.android.dialer.phonelookup.PhoneLookupInfo.PeopleApiInfo.InfoType;
 import com.google.common.collect.ImmutableList;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -89,7 +92,8 @@ public final class PhoneLookupInfoConsolidator {
   private final @NameSource int nameSource;
   private final PhoneLookupInfo phoneLookupInfo;
 
-  @Nullable private final Cp2ContactInfo firstDefaultCp2Contact;
+  @Nullable
+  private final Cp2ContactInfo firstDefaultCp2Contact;
   @Nullable private final Cp2ContactInfo firstExtendedCp2Contact;
 
   public PhoneLookupInfoConsolidator(PhoneLookupInfo phoneLookupInfo) {

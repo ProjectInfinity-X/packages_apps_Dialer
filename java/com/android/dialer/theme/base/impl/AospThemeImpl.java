@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,16 @@ package com.android.dialer.theme.base.impl;
 
 import android.content.Context;
 import android.content.res.TypedArray;
-import android.support.annotation.ColorInt;
-import android.support.annotation.StyleRes;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.StyleRes;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.theme.base.R;
 import com.android.dialer.theme.base.Theme;
+
 import javax.inject.Singleton;
 
 /** Utility for fetching */
@@ -45,6 +49,7 @@ public class AospThemeImpl implements Theme {
   private int colorBackgroundFloating = -1;
   private int colorTextOnUnthemedDarkBackground = -1;
   private int colorIconOnUnthemedDarkBackground = -1;
+  private int colorCallNotificationBackground = -1;
 
   public AospThemeImpl(Context context) {
 
@@ -69,6 +74,7 @@ public class AospThemeImpl implements Theme {
                   R.attr.colorIconSecondary,
                   R.attr.colorTextOnUnthemedDarkBackground,
                   R.attr.colorIconOnUnthemedDarkBackground,
+                  R.attr.colorCallNotificationBackground
                 });
     colorPrimary = array.getColor(/* index= */ 0, /* defValue= */ -1);
     colorPrimaryDark = array.getColor(/* index= */ 1, /* defValue= */ -1);
@@ -83,6 +89,7 @@ public class AospThemeImpl implements Theme {
     colorIconSecondary = array.getColor(/* index= */ 10, /* defValue= */ -1);
     colorTextOnUnthemedDarkBackground = array.getColor(/* index= */ 11, /* defValue= */ -1);
     colorIconOnUnthemedDarkBackground = array.getColor(/* index= */ 12, /* defValue= */ -1);
+    colorCallNotificationBackground = array.getColor(/* index= */ 13, /* defValue= */ -1);
     array.recycle();
   }
 
@@ -171,5 +178,11 @@ public class AospThemeImpl implements Theme {
   public @ColorInt int getColorIconOnUnthemedDarkBackground() {
     Assert.checkArgument(colorIconOnUnthemedDarkBackground != -1);
     return colorIconOnUnthemedDarkBackground;
+  }
+
+  @Override
+  public @ColorInt int getColorCallNotificationBackground() {
+    Assert.checkArgument(colorCallNotificationBackground != -1);
+    return colorCallNotificationBackground;
   }
 }

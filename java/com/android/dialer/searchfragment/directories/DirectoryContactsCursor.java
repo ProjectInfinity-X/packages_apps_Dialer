@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,12 +21,15 @@ import android.content.Context;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.database.MergeCursor;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
+
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.cp2.DirectoryUtils;
 import com.android.dialer.searchfragment.common.SearchCursor;
 import com.android.dialer.searchfragment.directories.DirectoriesCursorLoader.Directory;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -39,7 +43,6 @@ import java.util.List;
  * <p>This cursor merges them together with a header at the start of each cursor/list using {@link
  * Directory#getDisplayName()} as the header text.
  */
-@VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
 public final class DirectoryContactsCursor extends MergeCursor implements SearchCursor {
 
   /**
@@ -57,7 +60,6 @@ public final class DirectoryContactsCursor extends MergeCursor implements Search
    * empty, null or closed, this method returns null.
    */
   @Nullable
-  @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public static DirectoryContactsCursor newInstance(
       Context context, Cursor[] cursors, List<Directory> directories) {
     Assert.checkArgument(
@@ -96,7 +98,7 @@ public final class DirectoryContactsCursor extends MergeCursor implements Search
       cursorList.add(createHeaderCursor(context, directory.getDisplayName(), directory.getId()));
       cursorList.add(cursor);
     }
-    return cursorList.toArray(new Cursor[cursorList.size()]);
+    return cursorList.toArray(new Cursor[0]);
   }
 
   private static MatrixCursor createHeaderCursor(Context context, String name, long id) {

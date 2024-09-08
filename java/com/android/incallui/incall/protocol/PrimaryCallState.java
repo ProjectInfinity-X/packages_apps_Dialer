@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,20 @@
 package com.android.incallui.incall.protocol;
 
 import android.graphics.drawable.Drawable;
-import android.support.annotation.ColorInt;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
 import android.telecom.DisconnectCause;
 import android.text.TextUtils;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.assisteddialing.TransformationInfo;
 import com.android.dialer.common.Assert;
 import com.android.dialer.preferredsim.suggestion.SuggestionProvider;
 import com.android.incallui.call.state.DialerCallState;
 import com.android.incallui.videotech.utils.SessionModificationState;
 import com.google.auto.value.AutoValue;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Locale;

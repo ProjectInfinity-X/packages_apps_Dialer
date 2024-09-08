@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
  ~ Copyright (C) 2017 The Android Open Source Project
+ ~ Copyright (C) 2023 The LineageOS Project
  ~
  ~ Licensed under the Apache License, Version 2.0 (the "License");
  ~ you may not use this file except in compliance with the License.
@@ -19,7 +20,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-  <android.support.v7.widget.RecyclerView
+  <androidx.recyclerview.widget.RecyclerView
       android:id="@+id/recycler_view"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
@@ -42,7 +43,7 @@
         android:id="@+id/fast_scroller_container"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_toLeftOf="@+id/fast_scroller_scroll_bar"
+        android:layout_toStartOf="@+id/fast_scroller_scroll_bar"
         android:gravity="center"
         android:textSize="48sp"
         android:textColor="?android:attr/textColorPrimaryInverse"
@@ -53,9 +54,9 @@
         android:id="@+id/fast_scroller_scroll_bar"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginLeft="8dp"
-        android:layout_alignParentRight="true"
-        android:paddingRight="16dp"
+        android:layout_marginStart="8dp"
+        android:layout_alignParentEnd="true"
+        android:paddingEnd="16dp"
         android:src="@drawable/fast_scroller_scroll_bar" />
   </com.android.dialer.contactsfragment.FastScroller>
 

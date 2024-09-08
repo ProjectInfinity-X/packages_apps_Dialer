@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +19,12 @@ package com.android.dialer.calldetails;
 
 import android.content.Context;
 import android.content.Intent;
+
 import com.android.dialer.calldetails.CallDetailsEntryViewHolder.CallDetailsEntryListener;
 import com.android.dialer.calldetails.CallDetailsFooterViewHolder.DeleteCallDetailsListener;
 import com.android.dialer.calldetails.CallDetailsFooterViewHolder.ReportCallIdListener;
 import com.android.dialer.calldetails.CallDetailsHeaderViewHolder.CallDetailsHeaderListener;
+import com.android.dialer.callrecord.CallRecordingDataStore;
 import com.android.dialer.common.Assert;
 import com.android.dialer.dialercontact.DialerContact;
 import com.android.dialer.protos.ProtoParsers;
@@ -80,7 +83,8 @@ public final class OldCallDetailsActivity extends CallDetailsActivityCommon {
       CallDetailsEntryListener callDetailsEntryListener,
       CallDetailsHeaderListener callDetailsHeaderListener,
       ReportCallIdListener reportCallIdListener,
-      DeleteCallDetailsListener deleteCallDetailsListener) {
+      DeleteCallDetailsListener deleteCallDetailsListener,
+      CallRecordingDataStore callRecordingDataStore) {
     return new OldCallDetailsAdapter(
         /* context = */ this,
         contact,
@@ -88,7 +92,8 @@ public final class OldCallDetailsActivity extends CallDetailsActivityCommon {
         callDetailsEntryListener,
         callDetailsHeaderListener,
         reportCallIdListener,
-        deleteCallDetailsListener);
+        deleteCallDetailsListener,
+        callRecordingDataStore);
   }
 
   @Override

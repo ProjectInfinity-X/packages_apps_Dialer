@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ Copyright (C) 2017 The Android Open Source Project
+  ~ Copyright (C) 2023 The LineageOS Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -26,9 +27,7 @@
       android:id="@+id/toolbar"
       layout="@layout/toolbar_layout"/>
 
-  <android.support.design.widget.CoordinatorLayout
-      xmlns:android="http://schemas.android.com/apk/res/android"
-      xmlns:app="http://schemas.android.com/apk/res-auto"
+  <androidx.coordinatorlayout.widget.CoordinatorLayout
       android:id="@+id/coordinator_layout"
       android:layout_width="match_parent"
       android:layout_height="match_parent"
@@ -46,27 +45,23 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"/>
 
-    <ImageView
-        android:id="@+id/toolbar_shadow"
-        android:layout_width="match_parent"
-        android:layout_height="2dp"
-        android:scaleType="fitXY"
-        android:src="@drawable/search_shadow"
-        android:visibility="gone"/>
-
     <com.android.dialer.widget.DialerFloatingActionButton
+        style="@style/Widget.Material3.FloatingActionButton.Primary"
         android:id="@+id/fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_margin="16dp"
         android:layout_gravity="end|bottom"
-        android:src="@drawable/quantum_ic_dialpad_white_24"
+        android:forceDarkAllowed="false"
+        android:src="@drawable/quantum_ic_dialpad_vd_theme_24"
+        android:tint="@color/dialer_fab_icon_color"
+        app:tint="@color/dialer_fab_icon_color"
         android:contentDescription="@string/dialpad_button_content_description"
-        app:backgroundTint="?android:attr/colorAccent"/>
+        app:backgroundTint="@color/dialer_theme_color_light"/>
 
     <include android:id="@+id/promotion_bottom_sheet"
         layout="@layout/promotion_bottom_sheet"/>
-  </android.support.design.widget.CoordinatorLayout>
+  </androidx.coordinatorlayout.widget.CoordinatorLayout>
 
   <!-- BottomNavBar -->
   <include

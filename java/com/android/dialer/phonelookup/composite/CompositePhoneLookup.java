@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +18,10 @@
 package com.android.dialer.phonelookup.composite;
 
 import android.content.Context;
-import android.support.annotation.MainThread;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.Call;
+
+import androidx.annotation.MainThread;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.calllog.CallLogState;
 import com.android.dialer.common.LogUtil;
@@ -41,9 +43,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 import javax.inject.Inject;
 
 /**
@@ -60,7 +64,6 @@ public final class CompositePhoneLookup {
   private final CallLogState callLogState;
   private final ListeningExecutorService lightweightExecutorService;
 
-  @VisibleForTesting
   @Inject
   public CompositePhoneLookup(
       @ApplicationContext Context appContext,

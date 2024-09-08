@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,19 @@
 package com.android.dialer.searchfragment.directories;
 
 import android.content.Context;
-import android.content.CursorLoader;
 import android.database.Cursor;
 import android.database.MatrixCursor;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
+
+import androidx.annotation.NonNull;
+import androidx.loader.content.CursorLoader;
+
 import com.android.dialer.common.cp2.DirectoryUtils;
 import com.android.dialer.searchfragment.common.Projections;
 import com.android.dialer.searchfragment.directories.DirectoriesCursorLoader.Directory;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -141,8 +144,7 @@ public final class DirectoryContactsCursorLoader extends CursorLoader {
     return values;
   }
 
-  @VisibleForTesting
-  static Uri getContentFilterUri(String query, long directoryId) {
+  private static Uri getContentFilterUri(String query, long directoryId) {
     return ENTERPRISE_CONTENT_FILTER_URI
         .buildUpon()
         .appendPath(query)

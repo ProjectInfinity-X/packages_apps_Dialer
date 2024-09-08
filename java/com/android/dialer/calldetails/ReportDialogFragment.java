@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,24 +17,25 @@
 
 package com.android.dialer.calldetails;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.v4.util.Pair;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.util.Pair;
+import androidx.fragment.app.DialogFragment;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.SuccessListener;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService.CachedContactInfo;
 import com.android.dialer.phonenumbercache.PhoneNumberCache;
@@ -93,7 +95,7 @@ public class ReportDialogFragment extends DialogFragment {
   }
 
   private static void onShow(Context context, AlertDialog dialog) {
-    int buttonTextColor = ThemeComponent.get(context).theme().getColorPrimary();
+    int buttonTextColor = ThemeComponent.get(context).theme().getColorAccent();
     dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(buttonTextColor);
     dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(buttonTextColor);
   }
@@ -104,7 +106,7 @@ public class ReportDialogFragment extends DialogFragment {
     SuccessListener<CachedContactInfo> successListener = this::setCachedContactInfo;
     DialerExecutorComponent.get(getContext())
         .dialerExecutorFactory()
-        .createUiTaskBuilder(getFragmentManager(), "lookup_contact_info", worker)
+        .createUiTaskBuilder(getParentFragmentManager(), "lookup_contact_info", worker)
         .onSuccess(successListener)
         .build()
         .executeParallel(number);
@@ -126,7 +128,7 @@ public class ReportDialogFragment extends DialogFragment {
     SuccessListener<Pair<Context, Boolean>> successListener = this::onReportCallerId;
     DialerExecutorComponent.get(getContext())
         .dialerExecutorFactory()
-        .createUiTaskBuilder(getFragmentManager(), "report_caller_id", worker)
+        .createUiTaskBuilder(getParentFragmentManager(), "report_caller_id", worker)
         .onSuccess(successListener)
         .build()
         .executeParallel(getActivity());
@@ -147,10 +149,8 @@ public class ReportDialogFragment extends DialogFragment {
     Context context = output.first;
     boolean wasReport = output.second;
     if (wasReport) {
-      Logger.get(context).logImpression(DialerImpression.Type.CALLER_ID_REPORTED);
       Toast.makeText(context, R.string.report_caller_id_toast, Toast.LENGTH_SHORT).show();
     } else {
-      Logger.get(context).logImpression(DialerImpression.Type.CALLER_ID_REPORT_FAILED);
       Toast.makeText(context, R.string.report_caller_id_failed, Toast.LENGTH_SHORT).show();
     }
   }

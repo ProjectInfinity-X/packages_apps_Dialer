@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +17,15 @@
 
 package com.android.incallui;
 
-import android.annotation.TargetApi;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.app.Person;
 import android.content.Context;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.net.Uri;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.telecom.Call;
 import android.telecom.PhoneAccount;
 import android.telecom.VideoProfile;
@@ -36,8 +33,13 @@ import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.contacts.common.ContactsUtils;
 import com.android.contacts.common.compat.CallCompat;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.contactphoto.BitmapUtil;
 import com.android.dialer.contacts.ContactsComponent;
@@ -45,10 +47,11 @@ import com.android.dialer.notification.DialerNotificationManager;
 import com.android.dialer.notification.NotificationChannelId;
 import com.android.dialer.telecom.TelecomCallUtil;
 import com.android.dialer.theme.base.ThemeComponent;
+import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.DialerCallDelegate;
 import com.android.incallui.call.ExternalCallList;
-import com.android.incallui.latencyreport.LatencyReport;
+
 import java.util.Map;
 
 /**
@@ -75,12 +78,12 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
 
   private final Context context;
   private final ContactInfoCache contactInfoCache;
-  private Map<Call, NotificationInfo> notifications = new ArrayMap<>();
+  private final Map<Call, NotificationInfo> notifications = new ArrayMap<>();
   private int nextUniqueNotificationId;
 
   /** Initializes a new instance of the external call notifier. */
   public ExternalCallNotifier(
-      @NonNull Context context, @NonNull ContactInfoCache contactInfoCache) {
+          @NonNull Context context, @NonNull ContactInfoCache contactInfoCache) {
     this.context = context;
     this.contactInfoCache = contactInfoCache;
   }
@@ -128,7 +131,6 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
    * @param notificationId The notification ID associated with the external call which is to be
    *     pulled.
    */
-  @TargetApi(VERSION_CODES.N_MR1)
   public void pullExternalCall(int notificationId) {
     for (NotificationInfo info : notifications.values()) {
       if (info.getNotificationId() == notificationId
@@ -154,7 +156,6 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
             context,
             new DialerCallDelegateStub(),
             info.getCall(),
-            new LatencyReport(),
             false /* registerCallback */);
 
     contactInfoCache.findInfo(
@@ -220,7 +221,7 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
 
   /** Rebuild an existing or show a new notification given {@link NotificationInfo}. */
   private void postNotification(NotificationInfo info) {
-    Notification.Builder builder = new Notification.Builder(context);
+    Notification.Builder builder = new Notification.Builder(context, NotificationChannelId.DEFAULT);
     // Set notification as ongoing since calls are long-running versus a point-in-time notice.
     builder.setOngoing(true);
     // Make the notification prioritized over the other normal notifications.
@@ -234,14 +235,11 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
             isVideoCall
                 ? R.string.notification_external_video_call
                 : R.string.notification_external_call));
-    builder.setSmallIcon(R.drawable.quantum_ic_call_white_24);
+    builder.setSmallIcon(R.drawable.quantum_ic_call_vd_theme_24);
     builder.setContentTitle(info.getContentTitle());
     builder.setLargeIcon(info.getLargeIcon());
-    builder.setColor(ThemeComponent.get(context).theme().getColorPrimary());
-    builder.addPerson(info.getPersonReference());
-    if (BuildCompat.isAtLeastO()) {
-      builder.setChannelId(NotificationChannelId.DEFAULT);
-    }
+    builder.setColor(ThemeComponent.get(context).theme().getColorCallNotificationBackground());
+    builder.addPerson(new Person.Builder().setUri(info.getPersonReference()).build());
 
     // Where the external call supports being transferred to the local device, add an action
     // to the notification to initiate the call pull process.
@@ -257,26 +255,26 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
           NotificationBroadcastReceiver.EXTRA_NOTIFICATION_ID, info.getNotificationId());
       builder.addAction(
           new Notification.Action.Builder(
-                  R.drawable.quantum_ic_call_white_24,
+                  R.drawable.quantum_ic_call_vd_theme_24,
                   context.getString(
                       isVideoCall
                           ? R.string.notification_take_video_call
                           : R.string.notification_take_call),
-                  PendingIntent.getBroadcast(context, info.getNotificationId(), intent, 0))
+                  PendingIntent.getBroadcast(context, info.getNotificationId(), intent,
+                          PendingIntent.FLAG_IMMUTABLE))
               .build());
     }
 
-    /**
+    /*
      * This builder is used for the notification shown when the device is locked and the user has
      * set their notification settings to 'hide sensitive content' {@see
      * Notification.Builder#setPublicVersion}.
      */
     Notification.Builder publicBuilder = new Notification.Builder(context);
-    publicBuilder.setSmallIcon(R.drawable.quantum_ic_call_white_24);
-    publicBuilder.setColor(ThemeComponent.get(context).theme().getColorPrimary());
-    if (BuildCompat.isAtLeastO()) {
-      publicBuilder.setChannelId(NotificationChannelId.DEFAULT);
-    }
+    publicBuilder.setSmallIcon(R.drawable.quantum_ic_call_vd_theme_24);
+    publicBuilder.setColor(
+            ThemeComponent.get(context).theme().getColorCallNotificationBackground());
+    publicBuilder.setChannelId(NotificationChannelId.DEFAULT);
 
     builder.setPublicVersion(publicBuilder.build());
     Notification notification = builder.build();
@@ -450,10 +448,8 @@ public class ExternalCallNotifier implements ExternalCallList.ExternalCallListen
     summary.setPriority(Notification.PRIORITY_HIGH);
     summary.setGroup(GROUP_KEY);
     summary.setGroupSummary(true);
-    summary.setSmallIcon(R.drawable.quantum_ic_call_white_24);
-    if (BuildCompat.isAtLeastO()) {
-      summary.setChannelId(NotificationChannelId.DEFAULT);
-    }
+    summary.setSmallIcon(R.drawable.quantum_ic_call_vd_theme_24);
+    summary.setChannelId(NotificationChannelId.DEFAULT);
     DialerNotificationManager.notify(
         context, GROUP_SUMMARY_NOTIFICATION_TAG, GROUP_SUMMARY_NOTIFICATION_ID, summary.build());
   }

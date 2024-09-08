@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,18 @@
 package com.android.dialer.main.impl.bottomnav;
 
 import android.content.Context;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.LinearLayout;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
+import com.android.dialer.main.impl.MainActivity;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -37,12 +41,14 @@ public final class BottomNavBar extends LinearLayout {
   /** Index for each tab in the bottom nav. */
   @Retention(RetentionPolicy.SOURCE)
   @IntDef({
+    TabIndex.NONE,
     TabIndex.SPEED_DIAL,
     TabIndex.CALL_LOG,
     TabIndex.CONTACTS,
     TabIndex.VOICEMAIL,
   })
   public @interface TabIndex {
+    int NONE = -1;
     int SPEED_DIAL = 0;
     int CALL_LOG = 1;
     int CONTACTS = 2;
@@ -69,43 +75,19 @@ public final class BottomNavBar extends LinearLayout {
     contacts = findViewById(R.id.contacts_tab);
     voicemail = findViewById(R.id.voicemail_tab);
 
-    speedDial.setup(R.string.tab_title_speed_dial, R.drawable.quantum_ic_star_vd_theme_24);
-    callLog.setup(R.string.tab_title_call_history, R.drawable.quantum_ic_access_time_vd_theme_24);
-    contacts.setup(R.string.tab_title_contacts, R.drawable.quantum_ic_people_vd_theme_24);
-    voicemail.setup(R.string.tab_title_voicemail, R.drawable.quantum_ic_voicemail_vd_theme_24);
+    speedDial.setup(R.string.tab_title_speed_dial, R.drawable.quantum_ic_star_outline_vd_theme_24,
+            R.drawable.quantum_ic_star_vd_theme_24);
+    callLog.setup(R.string.tab_title_call_history, R.drawable.quantum_ic_access_time_vd_theme_24,
+            R.drawable.quantum_ic_clock_filled_vd_theme_24);
+    contacts.setup(R.string.tab_all_contacts, R.drawable.quantum_ic_people_outline_vd_theme_24,
+            R.drawable.quantum_ic_people_vd_theme_24);
+    voicemail.setup(R.string.tab_title_voicemail, R.drawable.quantum_ic_voicemail_vd_theme_24,
+            R.drawable.quantum_ic_voicemail_vd_theme_24);
 
-    speedDial.setOnClickListener(
-        v -> {
-          if (selectedTab != TabIndex.SPEED_DIAL) {
-            Logger.get(getContext())
-                .logImpression(DialerImpression.Type.MAIN_SWITCH_TAB_TO_FAVORITE);
-          }
-          selectTab(TabIndex.SPEED_DIAL);
-        });
-    callLog.setOnClickListener(
-        v -> {
-          if (selectedTab != TabIndex.CALL_LOG) {
-            Logger.get(getContext())
-                .logImpression(DialerImpression.Type.MAIN_SWITCH_TAB_TO_CALL_LOG);
-          }
-          selectTab(TabIndex.CALL_LOG);
-        });
-    contacts.setOnClickListener(
-        v -> {
-          if (selectedTab != TabIndex.CONTACTS) {
-            Logger.get(getContext())
-                .logImpression(DialerImpression.Type.MAIN_SWITCH_TAB_TO_CONTACTS);
-          }
-          selectTab(TabIndex.CONTACTS);
-        });
-    voicemail.setOnClickListener(
-        v -> {
-          if (selectedTab != TabIndex.VOICEMAIL) {
-            Logger.get(getContext())
-                .logImpression(DialerImpression.Type.MAIN_SWITCH_TAB_TO_VOICEMAIL);
-          }
-          selectTab(TabIndex.VOICEMAIL);
-        });
+    speedDial.setOnClickListener(v -> selectTab(TabIndex.SPEED_DIAL));
+    callLog.setOnClickListener(v -> selectTab(TabIndex.CALL_LOG));
+    contacts.setOnClickListener(v -> selectTab(TabIndex.CONTACTS));
+    voicemail.setOnClickListener(v -> selectTab(TabIndex.VOICEMAIL));
   }
 
   private void setSelected(View view) {

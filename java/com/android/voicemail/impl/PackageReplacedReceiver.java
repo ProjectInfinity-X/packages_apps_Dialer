@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +17,20 @@
 
 package com.android.voicemail.impl;
 
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
-import android.preference.PreferenceManager;
 import android.provider.CallLog.Calls;
 import android.provider.VoicemailContract.Voicemails;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
+
+import androidx.preference.PreferenceManager;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
@@ -38,6 +42,7 @@ import com.android.voicemail.VoicemailVersionConstants;
  */
 public class PackageReplacedReceiver extends BroadcastReceiver {
 
+  @SuppressLint({"MissingPermission", "UnsafeProtectedBroadcastReceiver"})
   @Override
   public void onReceive(Context context, Intent intent) {
     VvmLog.i("PackageReplacedReceiver.onReceive", "package replaced, starting activation");

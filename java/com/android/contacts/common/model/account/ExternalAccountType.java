@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,18 +28,20 @@ import android.content.res.TypedArray;
 import android.content.res.XmlResourceParser;
 import android.provider.ContactsContract.CommonDataKinds.Photo;
 import android.provider.ContactsContract.CommonDataKinds.StructuredName;
-import android.support.annotation.VisibleForTesting;
 import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.util.Xml;
+
 import com.android.contacts.common.model.dataitem.DataKind;
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.contacts.resources.R;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
 
 /** A general contacts account type descriptor. */
 public class ExternalAccountType extends BaseAccountType {
@@ -64,8 +67,6 @@ public class ExternalAccountType extends BaseAccountType {
   private static final String TAG_CONTACTS_DATA_KIND = "ContactsDataKind";
   private static final String TAG_EDIT_SCHEMA = "EditSchema";
 
-  private static final String ATTR_EDIT_CONTACT_ACTIVITY = "editContactActivity";
-  private static final String ATTR_CREATE_CONTACT_ACTIVITY = "createContactActivity";
   private static final String ATTR_INVITE_CONTACT_ACTIVITY = "inviteContactActivity";
   private static final String ATTR_INVITE_CONTACT_ACTION_LABEL = "inviteContactActionLabel";
   private static final String ATTR_VIEW_CONTACT_NOTIFY_SERVICE = "viewContactNotifyService";
@@ -80,10 +81,6 @@ public class ExternalAccountType extends BaseAccountType {
   private static final String ATTR_ACCOUNT_LABEL = "accountTypeLabel";
   private static final String ATTR_ACCOUNT_ICON = "accountTypeIcon";
 
-  private final boolean mIsExtension;
-
-  private String mEditContactActivityClassName;
-  private String mCreateContactActivityClassName;
   private String mInviteContactActivity;
   private String mInviteActionLabelAttribute;
   private int mInviteActionLabelResId;
@@ -97,8 +94,8 @@ public class ExternalAccountType extends BaseAccountType {
   private boolean mHasContactsMetadata;
   private boolean mHasEditSchema;
 
-  public ExternalAccountType(Context context, String resPackageName, boolean isExtension) {
-    this(context, resPackageName, isExtension, null);
+  public ExternalAccountType(Context context, String resPackageName) {
+    this(context, resPackageName, null);
   }
 
   /**
@@ -110,9 +107,7 @@ public class ExternalAccountType extends BaseAccountType {
   ExternalAccountType(
       Context context,
       String packageName,
-      boolean isExtension,
       XmlResourceParser injectedMetadata) {
-    this.mIsExtension = isExtension;
     this.resourcePackageName = packageName;
     this.syncAdapterPackageName = packageName;
 
@@ -160,7 +155,7 @@ public class ExternalAccountType extends BaseAccountType {
       }
     }
 
-    mExtensionPackageNames = new ArrayList<String>();
+    mExtensionPackageNames = new ArrayList<>();
     mInviteActionLabelResId =
         resolveExternalResId(
             context,
@@ -198,25 +193,23 @@ public class ExternalAccountType extends BaseAccountType {
   public static XmlResourceParser loadContactsXml(Context context, String resPackageName) {
     final PackageManager pm = context.getPackageManager();
     final Intent intent = new Intent(SYNC_META_DATA).setPackage(resPackageName);
-    final List<ResolveInfo> intentServices =
-        pm.queryIntentServices(intent, PackageManager.GET_SERVICES | PackageManager.GET_META_DATA);
+    final List<ResolveInfo> intentServices = pm.queryIntentServices(intent,
+            PackageManager.ResolveInfoFlags.of(PackageManager.GET_META_DATA));
 
-    if (intentServices != null) {
-      for (final ResolveInfo resolveInfo : intentServices) {
-        final ServiceInfo serviceInfo = resolveInfo.serviceInfo;
-        if (serviceInfo == null) {
-          continue;
-        }
-        for (String metadataName : METADATA_CONTACTS_NAMES) {
-          final XmlResourceParser parser = serviceInfo.loadXmlMetaData(pm, metadataName);
-          if (parser != null) {
-            LogUtil.d(
-                TAG,
-                String.format(
-                    "Metadata loaded from: %s, %s, %s",
-                    serviceInfo.packageName, serviceInfo.name, metadataName));
-            return parser;
-          }
+    for (final ResolveInfo resolveInfo : intentServices) {
+      final ServiceInfo serviceInfo = resolveInfo.serviceInfo;
+      if (serviceInfo == null) {
+        continue;
+      }
+      for (String metadataName : METADATA_CONTACTS_NAMES) {
+        final XmlResourceParser parser = serviceInfo.loadXmlMetaData(pm, metadataName);
+        if (parser != null) {
+          LogUtil.d(
+              TAG,
+              String.format(
+                  "Metadata loaded from: %s, %s, %s",
+                  serviceInfo.packageName, serviceInfo.name, metadataName));
+          return parser;
         }
       }
     }
@@ -241,8 +234,7 @@ public class ExternalAccountType extends BaseAccountType {
    * @param packageName name of the package containing the resource.
    * @param xmlAttributeName attribute name which the resource came from. Used for logging.
    */
-  @VisibleForTesting
-  static int resolveExternalResId(
+  private static int resolveExternalResId(
       Context context, String resourceName, String packageName, String xmlAttributeName) {
     if (TextUtils.isEmpty(resourceName)) {
       return -1; // Empty text is okay.
@@ -279,11 +271,6 @@ public class ExternalAccountType extends BaseAccountType {
   }
 
   @Override
-  public boolean isExtension() {
-    return mIsExtension;
-  }
-
-  @Override
   public boolean areContactsWritable() {
     return mHasEditSchema;
   }
@@ -291,16 +278,6 @@ public class ExternalAccountType extends BaseAccountType {
   /** Whether this account type has the android.provider.CONTACTS_STRUCTURE metadata xml. */
   public boolean hasContactsMetadata() {
     return mHasContactsMetadata;
-  }
-
-  @Override
-  public String getEditContactActivityClassName() {
-    return mEditContactActivityClassName;
-  }
-
-  @Override
-  public String getCreateContactActivityClassName() {
-    return mCreateContactActivityClassName;
   }
 
   @Override
@@ -365,11 +342,7 @@ public class ExternalAccountType extends BaseAccountType {
         String attr = parser.getAttributeName(i);
         String value = parser.getAttributeValue(i);
         LogUtil.d(TAG, attr + "=" + value);
-        if (ATTR_EDIT_CONTACT_ACTIVITY.equals(attr)) {
-          mEditContactActivityClassName = value;
-        } else if (ATTR_CREATE_CONTACT_ACTIVITY.equals(attr)) {
-          mCreateContactActivityClassName = value;
-        } else if (ATTR_INVITE_CONTACT_ACTIVITY.equals(attr)) {
+        if (ATTR_INVITE_CONTACT_ACTIVITY.equals(attr)) {
           mInviteContactActivity = value;
         } else if (ATTR_INVITE_CONTACT_ACTION_LABEL.equals(attr)) {
           mInviteActionLabelAttribute = value;
@@ -430,9 +403,7 @@ public class ExternalAccountType extends BaseAccountType {
           addKind(kind);
         }
       }
-    } catch (XmlPullParserException e) {
-      throw new DefinitionException("Problem reading XML", e);
-    } catch (IOException e) {
+    } catch (XmlPullParserException | IOException e) {
       throw new DefinitionException("Problem reading XML", e);
     }
   }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +17,15 @@
 
 package com.android.dialer.telecom;
 
-import android.Manifest;
 import android.Manifest.permission;
+import android.app.role.RoleManager;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.os.UserHandle;
 import android.provider.CallLog.Calls;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.content.ContextCompat;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -39,25 +33,33 @@ import android.telephony.SubscriptionInfo;
 import android.telephony.SubscriptionManager;
 import android.text.TextUtils;
 import android.util.Pair;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
+import androidx.core.content.ContextCompat;
+
 import com.android.dialer.common.LogUtil;
-import com.google.common.base.Optional;
+import com.android.dialer.util.PermissionsUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.Optional;
 
 /**
  * Performs permission checks before calling into TelecomManager. Each method is self-explanatory -
  * perform the required check and return the fallback default if the permission is missing,
  * otherwise return the value from TelecomManager.
  */
-@SuppressWarnings({"MissingPermission", "Guava"})
+@SuppressWarnings("MissingPermission")
 public abstract class TelecomUtil {
 
   private static final String TAG = "TelecomUtil";
   private static boolean warningLogged = false;
 
-  private static TelecomUtilImpl instance = new TelecomUtilImpl();
+  private static final TelecomUtilImpl instance = new TelecomUtilImpl();
 
   /**
    * Cache for {@link #isVoicemailNumber(Context, PhoneAccountHandle, String)}. Both
@@ -67,13 +69,8 @@ public abstract class TelecomUtil {
   private static final Map<Pair<PhoneAccountHandle, String>, Boolean> isVoicemailNumberCache =
       new ConcurrentHashMap<>();
 
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  public static void setInstanceForTesting(TelecomUtilImpl instanceForTesting) {
-    instance = instanceForTesting;
-  }
-
   public static void showInCallScreen(Context context, boolean showDialpad) {
-    if (hasReadPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
       try {
         getTelecomManager(context).showInCallScreen(showDialpad);
       } catch (SecurityException e) {
@@ -84,7 +81,7 @@ public abstract class TelecomUtil {
   }
 
   public static void silenceRinger(Context context) {
-    if (hasModifyPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasModifyPhoneStatePermissions(context)) {
       try {
         getTelecomManager(context).silenceRinger();
       } catch (SecurityException e) {
@@ -95,7 +92,7 @@ public abstract class TelecomUtil {
   }
 
   public static void cancelMissedCallsNotification(Context context) {
-    if (hasModifyPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasModifyPhoneStatePermissions(context)) {
       try {
         getTelecomManager(context).cancelMissedCallsNotification();
       } catch (SecurityException e) {
@@ -105,7 +102,7 @@ public abstract class TelecomUtil {
   }
 
   public static Uri getAdnUriForPhoneAccount(Context context, PhoneAccountHandle handle) {
-    if (hasModifyPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasModifyPhoneStatePermissions(context)) {
       try {
         return getTelecomManager(context).getAdnUriForPhoneAccount(handle);
       } catch (SecurityException e) {
@@ -117,7 +114,7 @@ public abstract class TelecomUtil {
 
   public static boolean handleMmi(
       Context context, String dialString, @Nullable PhoneAccountHandle handle) {
-    if (hasModifyPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasModifyPhoneStatePermissions(context)) {
       try {
         if (handle == null) {
           return getTelecomManager(context).handleMmi(dialString);
@@ -134,7 +131,7 @@ public abstract class TelecomUtil {
   @Nullable
   public static PhoneAccountHandle getDefaultOutgoingPhoneAccount(
       Context context, String uriScheme) {
-    if (hasReadPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
       return getTelecomManager(context).getDefaultOutgoingPhoneAccount(uriScheme);
     }
     return null;
@@ -145,9 +142,9 @@ public abstract class TelecomUtil {
   }
 
   public static List<PhoneAccountHandle> getCallCapablePhoneAccounts(Context context) {
-    if (hasReadPhoneStatePermission(context)) {
-      return Optional.fromNullable(getTelecomManager(context).getCallCapablePhoneAccounts())
-          .or(new ArrayList<>());
+    if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
+      return Optional.ofNullable(getTelecomManager(context).getCallCapablePhoneAccounts())
+          .orElse(new ArrayList<>());
     }
     return new ArrayList<>();
   }
@@ -197,24 +194,24 @@ public abstract class TelecomUtil {
    *     valid SIM. Absent otherwise.
    */
   public static Optional<SubscriptionInfo> getSubscriptionInfo(
-      @NonNull Context context, @NonNull PhoneAccountHandle phoneAccountHandle) {
+          @NonNull Context context, @NonNull PhoneAccountHandle phoneAccountHandle) {
     if (TextUtils.isEmpty(phoneAccountHandle.getId())) {
-      return Optional.absent();
+      return Optional.empty();
     }
-    if (!hasPermission(context, permission.READ_PHONE_STATE)) {
-      return Optional.absent();
+    if (!PermissionsUtil.hasReadPhoneStatePermissions(context)) {
+      return Optional.empty();
     }
     SubscriptionManager subscriptionManager = context.getSystemService(SubscriptionManager.class);
     List<SubscriptionInfo> subscriptionInfos = subscriptionManager.getActiveSubscriptionInfoList();
     if (subscriptionInfos == null) {
-      return Optional.absent();
+      return Optional.empty();
     }
     for (SubscriptionInfo info : subscriptionInfos) {
       if (phoneAccountHandle.getId().startsWith(info.getIccId())) {
         return Optional.of(info);
       }
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -245,7 +242,7 @@ public abstract class TelecomUtil {
       return isVoicemailNumberCache.get(cacheKey);
     }
     boolean result = false;
-    if (hasReadPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
       result = getTelecomManager(context).isVoiceMailNumber(accountHandle, number);
     }
     isVoicemailNumberCache.put(cacheKey, result);
@@ -254,7 +251,7 @@ public abstract class TelecomUtil {
 
   @Nullable
   public static String getVoicemailNumber(Context context, PhoneAccountHandle accountHandle) {
-    if (hasReadPhoneStatePermission(context)) {
+    if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
       return getTelecomManager(context).getVoiceMailNumber(accountHandle);
     }
     return null;
@@ -269,7 +266,7 @@ public abstract class TelecomUtil {
    *     due to a permission check.
    */
   public static boolean placeCall(Context context, Intent intent) {
-    if (hasCallPhonePermission(context)) {
+    if (PermissionsUtil.hasPhonePermissions(context)) {
       getTelecomManager(context).placeCall(intent.getData(), intent.getExtras());
       return true;
     }
@@ -284,31 +281,8 @@ public abstract class TelecomUtil {
 
   public static boolean hasReadWriteVoicemailPermissions(Context context) {
     return isDefaultDialer(context)
-        || (hasPermission(context, Manifest.permission.READ_VOICEMAIL)
-            && hasPermission(context, Manifest.permission.WRITE_VOICEMAIL));
-  }
-
-  /** @deprecated use {@link com.android.dialer.util.PermissionsUtil} */
-  @Deprecated
-  public static boolean hasModifyPhoneStatePermission(Context context) {
-    return isDefaultDialer(context)
-        || hasPermission(context, Manifest.permission.MODIFY_PHONE_STATE);
-  }
-
-  /** @deprecated use {@link com.android.dialer.util.PermissionsUtil} */
-  @Deprecated
-  public static boolean hasReadPhoneStatePermission(Context context) {
-    return isDefaultDialer(context) || hasPermission(context, Manifest.permission.READ_PHONE_STATE);
-  }
-
-  /** @deprecated use {@link com.android.dialer.util.PermissionsUtil} */
-  @Deprecated
-  public static boolean hasCallPhonePermission(Context context) {
-    return isDefaultDialer(context) || hasPermission(context, Manifest.permission.CALL_PHONE);
-  }
-
-  private static boolean hasPermission(Context context, String permission) {
-    return instance.hasPermission(context, permission);
+        || (PermissionsUtil.hasReadVoicemailPermissions(context)
+            && PermissionsUtil.hasWriteVoicemailPermissions(context));
   }
 
   private static TelecomManager getTelecomManager(Context context) {
@@ -343,11 +317,10 @@ public abstract class TelecomUtil {
   }
 
   /** Contains an implementation for {@link TelecomUtil} methods */
-  @VisibleForTesting()
-  public static class TelecomUtilImpl {
+  private static class TelecomUtilImpl {
 
     public boolean isInManagedCall(Context context) {
-      if (hasReadPhoneStatePermission(context)) {
+      if (PermissionsUtil.hasReadPhoneStatePermissions(context)) {
         // The TelecomManager#isInCall method returns true anytime the user is in a call.
         // Starting in O, the APIs include support for self-managed ConnectionServices so that other
         // apps like Duo can tell Telecom about its calls.  So, if the user is in a Duo call,
@@ -356,17 +329,14 @@ public abstract class TelecomUtil {
         // Dialer is launched.
         // Instead, Dialer should use TelecomManager#isInManagedCall, which only returns true if the
         // device is in a managed call which Dialer would know about.
-        if (VERSION.SDK_INT >= VERSION_CODES.O) {
-          return getTelecomManager(context).isInManagedCall();
-        } else {
-          return getTelecomManager(context).isInCall();
-        }
+        return getTelecomManager(context).isInManagedCall();
       }
       return false;
     }
 
     public boolean isInCall(Context context) {
-      return hasReadPhoneStatePermission(context) && getTelecomManager(context).isInCall();
+      return PermissionsUtil.hasReadPhoneStatePermissions(context) &&
+              getTelecomManager(context).isInCall();
     }
 
     public boolean hasPermission(Context context, String permission) {
@@ -375,19 +345,18 @@ public abstract class TelecomUtil {
     }
 
     public boolean isDefaultDialer(Context context) {
-      final boolean result =
-          TextUtils.equals(
-              context.getPackageName(), getTelecomManager(context).getDefaultDialerPackage());
-      if (result) {
-        warningLogged = false;
-      } else {
+      final RoleManager rm = (RoleManager) context.getSystemService(Context.ROLE_SERVICE);
+      if (rm == null || !rm.isRoleHeld(RoleManager.ROLE_DIALER)) {
         if (!warningLogged) {
           // Log only once to prevent spam.
           LogUtil.w(TAG, "Dialer is not currently set to be default dialer");
           warningLogged = true;
         }
+        return false;
       }
-      return result;
+
+      warningLogged = false;
+      return true;
     }
   }
 }

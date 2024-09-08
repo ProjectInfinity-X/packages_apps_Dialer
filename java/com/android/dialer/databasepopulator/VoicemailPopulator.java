@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,16 +20,16 @@ package com.android.dialer.databasepopulator;
 import android.content.ComponentName;
 import android.content.ContentValues;
 import android.content.Context;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.provider.VoicemailContract.Status;
 import android.provider.VoicemailContract.Voicemails;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.google.auto.value.AutoValue;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -111,16 +112,13 @@ public final class VoicemailPopulator {
         .delete(Voicemails.buildSourceUri(context.getPackageName()), null, null);
   }
 
-  @VisibleForTesting
-  public static void enableVoicemail(@NonNull Context context) {
+  private static void enableVoicemail(@NonNull Context context) {
     PhoneAccountHandle handle =
         new PhoneAccountHandle(new ComponentName(context, VoicemailPopulator.class), ACCOUNT_ID);
     componentName = handle.getComponentName().toString();
     ContentValues values = new ContentValues();
     values.put(Status.SOURCE_PACKAGE, handle.getComponentName().getPackageName());
-    if (VERSION.SDK_INT >= VERSION_CODES.N_MR1) {
-      values.put(Status.SOURCE_TYPE, "vvm_type_vvm3"); // mark populated voice mail as vvm3
-    }
+    values.put(Status.SOURCE_TYPE, "vvm_type_vvm3"); // mark populated voice mail as vvm3
     values.put(Status.PHONE_ACCOUNT_COMPONENT_NAME, handle.getComponentName().flattenToString());
     values.put(Status.PHONE_ACCOUNT_ID, handle.getId());
     values.put(Status.CONFIGURATION_STATE, Status.CONFIGURATION_STATE_OK);

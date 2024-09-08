@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,9 +18,9 @@ package com.android.dialer.app.calllog;
 
 import static com.android.dialer.app.DevicePolicyResources.NOTIFICATION_MISSED_WORK_CALL_TITLE;
 
+import android.annotation.SuppressLint;
 import android.app.BroadcastOptions;
 import android.app.Notification;
-import android.app.Notification.Builder;
 import android.app.PendingIntent;
 import android.app.admin.DevicePolicyManager;
 import android.content.ComponentName;
@@ -31,13 +32,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.provider.CallLog.Calls;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
-import android.support.v4.os.BuildCompat;
-import android.support.v4.os.UserManagerCompat;
-import android.support.v4.util.Pair;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
@@ -47,19 +41,21 @@ import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
 import android.util.ArraySet;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+import androidx.core.os.UserManagerCompat;
+import androidx.core.util.Pair;
+
 import com.android.contacts.common.ContactsUtils;
+import com.android.dialer.R;
 import com.android.dialer.app.MainComponent;
-import com.android.dialer.app.R;
 import com.android.dialer.app.calllog.CallLogNotificationsQueryHelper.NewCall;
 import com.android.dialer.app.contactinfo.ContactPhotoLoader;
 import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.callintent.CallIntentBuilder;
-import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
-import com.android.dialer.compat.android.provider.VoicemailCompat;
-import com.android.dialer.duo.DuoComponent;
-import com.android.dialer.enrichedcall.FuzzyPhoneNumberMatcher;
 import com.android.dialer.notification.DialerNotificationManager;
 import com.android.dialer.notification.NotificationChannelId;
 import com.android.dialer.notification.missedcalls.MissedCallConstants;
@@ -82,8 +78,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
   private final Context context;
   private final CallLogNotificationsQueryHelper callLogNotificationsQueryHelper;
 
-  @VisibleForTesting
-  MissedCallNotifier(
+  private MissedCallNotifier(
       Context context, CallLogNotificationsQueryHelper callLogNotificationsQueryHelper) {
     this.context = context;
     this.callLogNotificationsQueryHelper = callLogNotificationsQueryHelper;
@@ -109,7 +104,6 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
    * @param number the phone number of the most recent call to display if the call log cannot be
    *     accessed. May be null if unknown.
    */
-  @VisibleForTesting
   @WorkerThread
   void updateMissedCallNotification(int count, @Nullable String number) {
     LogUtil.enterBlock("MissedCallNotifier.updateMissedCallNotification");
@@ -167,9 +161,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
                   null,
                   null,
                   null,
-                  null,
-                  System.currentTimeMillis(),
-                  VoicemailCompat.TRANSCRIPTION_NOT_STARTED);
+                  System.currentTimeMillis());
 
       // TODO: look up caller ID that is not in contacts.
       ContactInfo contactInfo =
@@ -223,10 +215,8 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
             CallLogNotificationsService.createCancelAllMissedCallsPendingIntent(context))
         .setGroupSummary(useCallList)
         .setOnlyAlertOnce(useCallList)
-        .setPublicVersion(publicSummaryBuilder.build());
-    if (BuildCompat.isAtLeastO()) {
-      groupSummary.setChannelId(NotificationChannelId.MISSED_CALL);
-    }
+        .setPublicVersion(publicSummaryBuilder.build())
+        .setChannelId(NotificationChannelId.MISSED_CALL);
 
     Notification notification = groupSummary.build();
     configureLedOnNotification(notification);
@@ -291,10 +281,6 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
       if (phoneAccount == null) {
         continue;
       }
-      if (DuoComponent.get(context).getDuo().isDuoAccount(phoneAccountHandle)) {
-        iterator.remove();
-        continue;
-      }
       if (phoneAccount.hasCapabilities(PhoneAccount.CAPABILITY_SELF_MANAGED)) {
         LogUtil.i(
             "MissedCallNotifier.removeSelfManagedCalls",
@@ -306,28 +292,6 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
 
   private static String getNotificationTagForCall(@NonNull NewCall call) {
     return MissedCallNotificationTags.getNotificationTagForCallUri(call.callsUri);
-  }
-
-  @WorkerThread
-  public void insertPostCallNotification(@NonNull String number, @NonNull String note) {
-    Assert.isWorkerThread();
-    LogUtil.enterBlock("MissedCallNotifier.insertPostCallNotification");
-    List<NewCall> newCalls = callLogNotificationsQueryHelper.getNewMissedCalls();
-    if (newCalls != null && !newCalls.isEmpty()) {
-      for (NewCall call : newCalls) {
-        if (FuzzyPhoneNumberMatcher.matches(call.number, number.replace("tel:", ""))) {
-          LogUtil.i("MissedCallNotifier.insertPostCallNotification", "Notification updated");
-          // Update the first notification that matches our post call note sender.
-          DialerNotificationManager.notify(
-              context,
-              getNotificationTagForCall(call),
-              MissedCallConstants.NOTIFICATION_ID,
-              getNotificationForCall(call, note));
-          return;
-        }
-      }
-    }
-    LogUtil.i("MissedCallNotifier.insertPostCallNotification", "notification not found");
   }
 
   private Notification getNotificationForCall(
@@ -382,7 +346,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
           && !TextUtils.equals(call.number, context.getString(R.string.handle_restricted))) {
         builder.addAction(
             new Notification.Action.Builder(
-                    Icon.createWithResource(context, R.drawable.ic_phone_24dp),
+                    Icon.createWithResource(context, R.drawable.quantum_ic_phone_vd_theme_24),
                     context.getString(R.string.notification_missedCall_call_back),
                     createCallBackPendingIntent(call.number, call.callsUri))
                 .build());
@@ -390,7 +354,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
         if (!PhoneNumberHelper.isUriNumber(call.number)) {
           builder.addAction(
               new Notification.Action.Builder(
-                      Icon.createWithResource(context, R.drawable.quantum_ic_message_white_24),
+                      Icon.createWithResource(context, R.drawable.quantum_ic_message_vd_theme_24),
                       context.getString(R.string.notification_missedCall_message),
                       createSendSmsFromNotificationPendingIntent(call.number, call.callsUri))
                   .build());
@@ -404,7 +368,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
   }
 
   private Notification.Builder createNotificationBuilder() {
-    return new Notification.Builder(context)
+    return new Notification.Builder(context, NotificationChannelId.MISSED_CALL)
         .setGroup(MissedCallConstants.GROUP_KEY)
         .setSmallIcon(android.R.drawable.stat_notify_missed_call)
         .setColor(ThemeComponent.get(context).theme().getColorPrimary())
@@ -415,16 +379,14 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
   }
 
   private Notification.Builder createNotificationBuilder(@NonNull NewCall call) {
-    Builder builder =
+    Notification.Builder builder =
         createNotificationBuilder()
             .setWhen(call.dateMs)
             .setDeleteIntent(
                 CallLogNotificationsService.createCancelSingleMissedCallPendingIntent(
                     context, call.callsUri))
-            .setContentIntent(createCallLogPendingIntent(call.callsUri));
-    if (BuildCompat.isAtLeastO()) {
-      builder.setChannelId(NotificationChannelId.MISSED_CALL);
-    }
+            .setContentIntent(createCallLogPendingIntent(call.callsUri))
+            .setChannelId(NotificationChannelId.MISSED_CALL);
 
     return builder;
   }
@@ -472,7 +434,8 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
 
     // TODO (a bug): scroll to call
     contentIntent.setData(callUri);
-    return PendingIntent.getActivity(context, 0, contentIntent, PendingIntent.FLAG_UPDATE_CURRENT);
+    return PendingIntent.getActivity(context, 0, contentIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
   private PendingIntent createCallBackPendingIntent(String number, @NonNull Uri callUri) {
@@ -482,7 +445,8 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
     intent.setData(callUri);
     // Use FLAG_UPDATE_CURRENT to make sure any previous pending intent is updated with the new
     // extra.
-    return PendingIntent.getService(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    return PendingIntent.getService(context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
   private PendingIntent createSendSmsFromNotificationPendingIntent(
@@ -493,7 +457,8 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
     intent.setData(callUri);
     // Use FLAG_UPDATE_CURRENT to make sure any previous pending intent is updated with the new
     // extra.
-    return PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT);
+    return PendingIntent.getActivity(context, 0, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
   }
 
   /** Configures a notification to emit the blinky notification light. */
@@ -503,6 +468,7 @@ public class MissedCallNotifier implements Worker<Pair<Integer, String>, Void> {
   }
 
   /** Closes open system dialogs and the notification shade. */
+  @SuppressLint("MissingPermission")
   private void closeSystemDialogs(Context context) {
     final Intent intent = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS)
             .addFlags(Intent.FLAG_RECEIVER_FOREGROUND);

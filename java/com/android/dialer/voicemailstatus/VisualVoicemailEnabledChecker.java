@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +20,10 @@ package com.android.dialer.voicemailstatus;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.preference.PreferenceManager;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
+import androidx.preference.PreferenceManager;
+
 import com.android.dialer.database.CallLogQueryHandler;
 
 /**
@@ -42,34 +45,14 @@ public class VisualVoicemailEnabledChecker implements CallLogQueryHandler.Listen
 
   public static final String PREF_KEY_HAS_ACTIVE_VOICEMAIL_PROVIDER =
       "has_active_voicemail_provider";
-  private SharedPreferences prefs;
+  private final SharedPreferences prefs;
   private boolean hasActiveVoicemailProvider;
-  private CallLogQueryHandler callLogQueryHandler;
-  private Context context;
-  private Callback callback;
+  private final Callback callback;
 
   public VisualVoicemailEnabledChecker(Context context, @Nullable Callback callback) {
-    this.context = context;
     this.callback = callback;
-    prefs = PreferenceManager.getDefaultSharedPreferences(this.context);
+    prefs = PreferenceManager.getDefaultSharedPreferences(context);
     hasActiveVoicemailProvider = prefs.getBoolean(PREF_KEY_HAS_ACTIVE_VOICEMAIL_PROVIDER, false);
-  }
-
-  /**
-   * @return whether visual voicemail is enabled. Result is cached, call asyncUpdate() to update the
-   *     result.
-   */
-  public boolean isVisualVoicemailEnabled() {
-    return hasActiveVoicemailProvider;
-  }
-
-  /**
-   * Perform an async query into the system to check the status of visual voicemail. If the status
-   * has changed, Callback.onVisualVoicemailEnabledStatusChanged() will be called.
-   */
-  public void asyncUpdate() {
-    callLogQueryHandler = new CallLogQueryHandler(context, context.getContentResolver(), this);
-    callLogQueryHandler.fetchVoicemailStatus();
   }
 
   @Override

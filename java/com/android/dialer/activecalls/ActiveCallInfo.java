@@ -16,14 +16,16 @@
 
 package com.android.dialer.activecalls;
 
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.Nullable;
+
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
+
+import java.util.Optional;
 
 /** Info of an active call */
 @AutoValue
-@SuppressWarnings("Guava")
 public abstract class ActiveCallInfo {
 
   /** The {@link PhoneAccountHandle} the call is made with */
@@ -38,7 +40,7 @@ public abstract class ActiveCallInfo {
   public abstract static class Builder {
 
     public Builder setPhoneAccountHandle(@Nullable PhoneAccountHandle phoneAccountHandle) {
-      return setPhoneAccountHandle(Optional.fromNullable(phoneAccountHandle));
+      return setPhoneAccountHandle(Optional.ofNullable(phoneAccountHandle));
     }
 
     public abstract Builder setPhoneAccountHandle(Optional<PhoneAccountHandle> phoneAccountHandle);

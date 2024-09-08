@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,16 +25,17 @@ import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.CommonDataKinds.StructuredPostal;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.RawContacts;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.content.ContextCompat;
 import android.util.ArrayMap;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
+
+import androidx.core.content.ContextCompat;
+
 import com.android.contacts.common.model.dataitem.DataKind;
 import com.android.dialer.contacts.resources.R;
+
 import java.text.Collator;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -49,13 +51,8 @@ public abstract class AccountType {
 
   private static final String TAG = "AccountType";
   /** {@link Comparator} to sort by {@link DataKind#weight}. */
-  private static Comparator<DataKind> sWeightComparator =
-      new Comparator<DataKind>() {
-        @Override
-        public int compare(DataKind object1, DataKind object2) {
-          return object1.weight - object2.weight;
-        }
-      };
+  private final static Comparator<DataKind> sWeightComparator =
+          Comparator.comparingInt(object -> object.weight);
   /** The {@link RawContacts#ACCOUNT_TYPE} these constraints apply to. */
   public String accountType = null;
   /** The {@link RawContacts#DATA_SET} these constraints apply to. */
@@ -84,9 +81,9 @@ public abstract class AccountType {
   public int iconRes;
   protected boolean mIsInitialized;
   /** Set of {@link DataKind} supported by this source. */
-  private ArrayList<DataKind> mKinds = new ArrayList<>();
+  private final ArrayList<DataKind> mKinds = new ArrayList<>();
   /** Lookup map of {@link #mKinds} on {@link DataKind#mimeType}. */
-  private Map<String, DataKind> mMimeKinds = new ArrayMap<>();
+  private final Map<String, DataKind> mMimeKinds = new ArrayMap<>();
 
   /**
    * Return a string resource loaded from the given package (or the current package if {@code
@@ -95,8 +92,7 @@ public abstract class AccountType {
    *
    * <p>(The behavior is undefined if the resource or package doesn't exist.)
    */
-  @VisibleForTesting
-  static CharSequence getResourceText(
+  private static CharSequence getResourceText(
       Context context, String packageName, int resId, String defaultValue) {
     if (resId != -1 && packageName != null) {
       final PackageManager pm = context.getPackageManager();
@@ -139,36 +135,12 @@ public abstract class AccountType {
     return true;
   }
 
-  public boolean isExtension() {
-    return false;
-  }
-
   /**
    * @return True if contacts can be created and edited using this app. If false, there could still
    *     be an external editor as provided by {@link #getEditContactActivityClassName()} or {@link
    *     #getCreateContactActivityClassName()}
    */
   public abstract boolean areContactsWritable();
-
-  /**
-   * Returns an optional custom edit activity.
-   *
-   * <p>Only makes sense for non-embedded account types. The activity class should reside in the
-   * sync adapter package as determined by {@link #syncAdapterPackageName}.
-   */
-  public String getEditContactActivityClassName() {
-    return null;
-  }
-
-  /**
-   * Returns an optional custom new contact activity.
-   *
-   * <p>Only makes sense for non-embedded account types. The activity class should reside in the
-   * sync adapter package as determined by {@link #syncAdapterPackageName}.
-   */
-  public String getCreateContactActivityClassName() {
-    return null;
-  }
 
   /**
    * Returns an optional custom invite contact activity.
@@ -234,7 +206,7 @@ public abstract class AccountType {
    * the account.
    */
   public List<String> getExtensionPackageNames() {
-    return new ArrayList<String>();
+    return new ArrayList<>();
   }
 
   /**
@@ -264,13 +236,6 @@ public abstract class AccountType {
 
   /** Whether or not groups created under this account type have editable membership lists. */
   public abstract boolean isGroupMembershipEditable();
-
-  /** Return list of {@link DataKind} supported, sorted by {@link DataKind#weight}. */
-  public ArrayList<DataKind> getSortedDataKinds() {
-    // TODO: optimize by marking if already sorted
-    Collections.sort(mKinds, sWeightComparator);
-    return mKinds;
-  }
 
   /** Find the {@link DataKind} for a specific MIME-type, if it's handled by this data source. */
   public DataKind getKindForMimetype(String mimeType) {
@@ -320,8 +285,8 @@ public abstract class AccountType {
    */
   public static class EditType {
 
-    public int rawValue;
-    public int labelRes;
+    public final int rawValue;
+    public final int labelRes;
     public boolean secondary;
     /**
      * The number of entries allowed for the type. -1 if not specified.
@@ -412,8 +377,8 @@ public abstract class AccountType {
    */
   public static final class EditField {
 
-    public String column;
-    public int titleRes;
+    public final String column;
+    public final int titleRes;
     public int inputType;
     public int minLines;
     public boolean optional;

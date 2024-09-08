@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,6 +19,7 @@ package com.android.voicemail.impl.protocol;
 
 import android.content.Context;
 import android.telecom.PhoneAccountHandle;
+
 import com.android.voicemail.impl.OmtpConstants;
 import com.android.voicemail.impl.sms.OmtpCvvmMessageSender;
 import com.android.voicemail.impl.sms.OmtpMessageSender;
@@ -29,9 +31,9 @@ import com.android.voicemail.impl.sms.OmtpMessageSender;
  */
 public class CvvmProtocol extends VisualVoicemailProtocol {
 
-  private static String IMAP_CHANGE_TUI_PWD_FORMAT = "CHANGE_TUI_PWD PWD=%1$s OLD_PWD=%2$s";
-  private static String IMAP_CHANGE_VM_LANG_FORMAT = "CHANGE_VM_LANG Lang=%1$s";
-  private static String IMAP_CLOSE_NUT = "CLOSE_NUT";
+  private static final String IMAP_CHANGE_TUI_PWD_FORMAT = "CHANGE_TUI_PWD PWD=%1$s OLD_PWD=%2$s";
+  private static final String IMAP_CHANGE_VM_LANG_FORMAT = "CHANGE_VM_LANG Lang=%1$s";
+  private static final String IMAP_CLOSE_NUT = "CLOSE_NUT";
 
   @Override
   public OmtpMessageSender createMessageSender(
@@ -45,14 +47,13 @@ public class CvvmProtocol extends VisualVoicemailProtocol {
 
   @Override
   public String getCommand(String command) {
-    if (command == OmtpConstants.IMAP_CHANGE_TUI_PWD_FORMAT) {
-      return IMAP_CHANGE_TUI_PWD_FORMAT;
-    }
-    if (command == OmtpConstants.IMAP_CLOSE_NUT) {
-      return IMAP_CLOSE_NUT;
-    }
-    if (command == OmtpConstants.IMAP_CHANGE_VM_LANG_FORMAT) {
-      return IMAP_CHANGE_VM_LANG_FORMAT;
+    switch (command) {
+      case OmtpConstants.IMAP_CHANGE_TUI_PWD_FORMAT:
+        return IMAP_CHANGE_TUI_PWD_FORMAT;
+      case OmtpConstants.IMAP_CLOSE_NUT:
+        return IMAP_CLOSE_NUT;
+      case OmtpConstants.IMAP_CHANGE_VM_LANG_FORMAT:
+        return IMAP_CHANGE_VM_LANG_FORMAT;
     }
     return super.getCommand(command);
   }

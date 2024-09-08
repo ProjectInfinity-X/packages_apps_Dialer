@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,33 +17,37 @@
 
 package com.android.dialer.app.settings;
 
-import android.app.Fragment;
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.drawable.Icon;
 import android.os.Bundle;
-import android.preference.Preference;
-import android.preference.PreferenceActivity;
-import android.preference.PreferenceFragment;
-import android.preference.PreferenceScreen;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
+
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceScreen;
+
+import com.android.dialer.R;
+
 import java.util.List;
 
 /**
  * Preference screen that lists SIM phone accounts to select from, and forwards the selected account
- * to {@link #PARAM_TARGET_FRAGMENT}. Can only be used in a {@link PreferenceActivity}
+ * to {@link #PARAM_TARGET_FRAGMENT}.
  */
-public class PhoneAccountSelectionFragment extends PreferenceFragment {
+public class PhoneAccountSelectionFragment extends PreferenceFragmentCompat {
 
-  /** The {@link PreferenceFragment} to launch after the account is selected. */
+  /** The {@link PreferenceFragmentCompat} to launch after the account is selected. */
   public static final String PARAM_TARGET_FRAGMENT = "target_fragment";
 
   /**
    * The arguments bundle to pass to the {@link #PARAM_TARGET_FRAGMENT}
    *
-   * @see Fragment#getArguments()
+   * @see PreferenceFragmentCompat#getArguments()
    */
   public static final String PARAM_ARGUMENTS = "arguments";
 
@@ -52,8 +57,7 @@ public class PhoneAccountSelectionFragment extends PreferenceFragment {
   public static final String PARAM_PHONE_ACCOUNT_HANDLE_KEY = "phone_account_handle_key";
 
   /**
-   * The title of the {@link #PARAM_TARGET_FRAGMENT} once it is launched with {@link
-   * PreferenceActivity#startWithFragment(String, Bundle, Fragment, int)}, as a string resource ID.
+   * The title of the {@link #PARAM_TARGET_FRAGMENT} once it is launched, as a string resource ID.
    */
   public static final String PARAM_TARGET_TITLE_RES = "target_title_res";
 
@@ -72,6 +76,11 @@ public class PhoneAccountSelectionFragment extends PreferenceFragment {
     titleRes = getArguments().getInt(PARAM_TARGET_TITLE_RES, 0);
   }
 
+  @Override
+  public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
+
+  }
+
   final class AccountPreference extends Preference {
     private final PhoneAccountHandle phoneAccountHandle;
 
@@ -84,30 +93,35 @@ public class PhoneAccountSelectionFragment extends PreferenceFragment {
       Icon icon = phoneAccount.getIcon();
       if (icon != null) {
         setIcon(icon.loadDrawable(context));
+      } else {
+        setIconSpaceReserved(false);
       }
-    }
-
-    @VisibleForTesting
-    void click() {
-      onClick();
     }
 
     @Override
     protected void onClick() {
       super.onClick();
-      PreferenceActivity preferenceActivity = (PreferenceActivity) getActivity();
+      Fragment fragment = getChildFragmentManager()
+              .getFragmentFactory()
+              .instantiate(getActivity().getClassLoader(), targetFragment);
       arguments.putParcelable(phoneAccountHandleKey, phoneAccountHandle);
-      preferenceActivity.startWithFragment(targetFragment, arguments, null, 0, titleRes, 0);
+      fragment.setArguments(arguments);
+      getParentFragmentManager().beginTransaction()
+              .replace(R.id.content_frame, fragment)
+              .addToBackStack(null)
+              .commit();
+      setTitle(titleRes);
     }
   }
 
+  @SuppressLint("MissingPermission")
   @Override
   public void onResume() {
     super.onResume();
-    setPreferenceScreen(getPreferenceManager().createPreferenceScreen(getContext()));
+    setPreferenceScreen(getPreferenceManager().createPreferenceScreen(requireContext()));
     PreferenceScreen screen = getPreferenceScreen();
 
-    TelecomManager telecomManager = getContext().getSystemService(TelecomManager.class);
+    TelecomManager telecomManager = requireContext().getSystemService(TelecomManager.class);
 
     List<PhoneAccountHandle> accountHandles = telecomManager.getCallCapablePhoneAccounts();
 

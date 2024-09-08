@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,18 +20,20 @@ package com.android.dialer.postcall;
 import android.Manifest.permission;
 import android.content.Context;
 import android.content.Intent;
-import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.app.AppCompatActivity;
 import android.telephony.SmsManager;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.widget.DialerToolbar;
 import com.android.dialer.widget.MessageFragment;
@@ -41,12 +44,18 @@ public class PostCallActivity extends AppCompatActivity implements MessageFragme
   public static final String KEY_PHONE_NUMBER = "phone_number";
   public static final String KEY_MESSAGE = "message";
   public static final String KEY_RCS_POST_CALL = "rcs_post_call";
-  private static final int REQUEST_CODE_SEND_SMS = 1;
+
+  private final ActivityResultLauncher<String> smsPermissionLauncher =
+          registerForActivityResult(new ActivityResultContracts.RequestPermission(),
+                  grantResult -> {
+            PermissionsUtil.permissionRequested(this, permission.SEND_SMS);
+            onMessageFragmentSendMessage(getIntent().getStringExtra(KEY_MESSAGE));
+          });
 
   private boolean useRcs;
 
   public static Intent newIntent(
-      @NonNull Context context, @NonNull String number, boolean isRcsPostCall) {
+          @NonNull Context context, @NonNull String number, boolean isRcsPostCall) {
     Intent intent = new Intent(Assert.isNotNull(context), PostCallActivity.class);
     intent.putExtra(KEY_PHONE_NUMBER, Assert.isNotNull(number));
     intent.putExtra(KEY_RCS_POST_CALL, isRcsPostCall);
@@ -91,12 +100,11 @@ public class PostCallActivity extends AppCompatActivity implements MessageFragme
 
     if (useRcs) {
       LogUtil.i("PostCallActivity.onMessageFragmentSendMessage", "sending post call Rcs.");
-      getEnrichedCallManager().sendPostCallNote(number, message);
       PostCall.onMessageSent(this, number);
       finish();
     } else if (PermissionsUtil.hasPermission(this, permission.SEND_SMS)) {
       LogUtil.i("PostCallActivity.sendMessage", "Sending post call SMS.");
-      SmsManager smsManager = SmsManager.getDefault();
+      SmsManager smsManager = getSystemService(SmsManager.class);
       smsManager.sendMultipartTextMessage(
           number, null, smsManager.divideMessage(message), null, null);
       PostCall.onMessageSent(this, number);
@@ -104,7 +112,7 @@ public class PostCallActivity extends AppCompatActivity implements MessageFragme
     } else if (PermissionsUtil.isFirstRequest(this, permission.SEND_SMS)
         || shouldShowRequestPermissionRationale(permission.SEND_SMS)) {
       LogUtil.i("PostCallActivity.sendMessage", "Requesting SMS_SEND permission.");
-      requestPermissions(new String[] {permission.SEND_SMS}, REQUEST_CODE_SEND_SMS);
+      smsPermissionLauncher.launch(permission.SEND_SMS);
     } else {
       LogUtil.i(
           "PostCallActivity.sendMessage", "Permission permanently denied, sending to settings.");
@@ -114,26 +122,5 @@ public class PostCallActivity extends AppCompatActivity implements MessageFragme
       intent.setData(Uri.parse("package:" + this.getPackageName()));
       startActivity(intent);
     }
-  }
-
-  @Override
-  public void onMessageFragmentAfterTextChange(String message) {}
-
-  @Override
-  public void onRequestPermissionsResult(
-      int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-    if (permissions.length > 0 && permissions[0].equals(permission.SEND_SMS)) {
-      PermissionsUtil.permissionRequested(this, permissions[0]);
-    }
-    if (requestCode == REQUEST_CODE_SEND_SMS
-        && grantResults.length > 0
-        && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-      onMessageFragmentSendMessage(getIntent().getStringExtra(KEY_MESSAGE));
-    }
-  }
-
-  @NonNull
-  private EnrichedCallManager getEnrichedCallManager() {
-    return EnrichedCallComponent.get(this).getEnrichedCallManager();
   }
 }

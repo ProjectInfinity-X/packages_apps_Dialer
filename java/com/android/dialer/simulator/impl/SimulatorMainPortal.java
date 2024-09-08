@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +18,13 @@
 package com.android.dialer.simulator.impl;
 
 import android.content.Context;
-import android.support.v7.app.AppCompatActivity;
 import android.telecom.TelecomManager;
 import android.telecom.VideoProfile;
 import android.view.ActionProvider;
+
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.enrichedcall.simulator.EnrichedCallSimulatorActivity;
 import com.android.dialer.simulator.Simulator;
 import com.android.dialer.simulator.SimulatorComponent;
 import com.google.common.collect.ImmutableMap;
@@ -102,11 +104,6 @@ public class SimulatorMainPortal {
                     .put("Clean database", () -> SimulatorUtils.cleanDatabase(context))
                     .put("clear preferred SIM", () -> SimulatorUtils.clearPreferredSim(context))
                     .put("Sync voicemail", () -> SimulatorUtils.syncVoicemail(context))
-                    .put("Share persistent log", () -> SimulatorUtils.sharePersistentLog(context))
-                    .put(
-                        "Enriched call simulator",
-                        () ->
-                            context.startActivity(EnrichedCallSimulatorActivity.newIntent(context)))
                     .put(
                         "Enable simulator mode",
                         () -> {
@@ -159,12 +156,6 @@ public class SimulatorMainPortal {
                     () ->
                         new SimulatorVoiceCall(context)
                             .addCustomizedOutgoingCall(this.callerId, this.presentation))
-                .put(
-                    "Incoming enriched call",
-                    () -> new SimulatorVoiceCall(context).incomingEnrichedCall())
-                .put(
-                    "Outgoing enriched call",
-                    () -> new SimulatorVoiceCall(context).outgoingEnrichedCall())
                 .put(
                     "Spam incoming call",
                     () -> new SimulatorVoiceCall(context).addSpamIncomingCall())

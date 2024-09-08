@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023-2024 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,19 +17,29 @@
 
 package com.android.incallui.incall.impl;
 
+import android.Manifest;
 import android.Manifest.permission;
 import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.content.Context;
 import android.content.pm.PackageManager;
+
+import java.util.Timer;
+import java.util.TimerTask;
+import android.graphics.Bitmap;
+import android.graphics.Color;
+import android.graphics.drawable.Drawable;
+import android.graphics.Insets;
+import android.view.WindowManager;
+import android.graphics.drawable.BitmapDrawable;
 import android.os.Bundle;
 import android.os.Handler;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.content.ContextCompat;
+import android.os.Looper;
+import android.graphics.drawable.GradientDrawable;
+import android.animation.ValueAnimator;
+import com.android.incallui.call.state.DialerCallState;
+import android.util.Log;
+import android.view.animation.DecelerateInterpolator;
 import android.telecom.CallAudioState;
 import android.telephony.TelephonyManager;
 import android.transition.TransitionManager;
@@ -38,22 +49,30 @@ import android.view.View.OnAttachStateChangeListener;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityEvent;
 import android.widget.ImageView;
-import android.widget.RelativeLayout;
 import android.widget.Toast;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.multimedia.MultimediaData;
-import com.android.dialer.strictmode.StrictModeUtils;
 import com.android.dialer.widget.LockableViewPager;
 import com.android.incallui.audioroute.AudioRouteSelectorDialogFragment;
 import com.android.incallui.audioroute.AudioRouteSelectorDialogFragment.AudioRouteSelectorPresenter;
 import com.android.incallui.contactgrid.ContactGridManager;
 import com.android.incallui.hold.OnHoldFragment;
+import com.android.incallui.incall.impl.ButtonController.CallRecordButtonController;
 import com.android.incallui.incall.impl.ButtonController.SpeakerButtonController;
 import com.android.incallui.incall.impl.ButtonController.UpgradeToRttButtonController;
 import com.android.incallui.incall.impl.InCallButtonGridFragment.OnButtonGridCreatedListener;
@@ -69,8 +88,11 @@ import com.android.incallui.incall.protocol.PrimaryCallState;
 import com.android.incallui.incall.protocol.PrimaryCallState.ButtonState;
 import com.android.incallui.incall.protocol.PrimaryInfo;
 import com.android.incallui.incall.protocol.SecondaryInfo;
+
 import java.util.ArrayList;
 import java.util.List;
+import android.view.WindowManager;
+import com.android.incallui.incall.protocol.ContactPhotoType;
 
 /** Fragment that shows UI for an ongoing voice call. */
 public class InCallFragment extends Fragment
@@ -80,7 +102,7 @@ public class InCallFragment extends Fragment
         AudioRouteSelectorPresenter,
         OnButtonGridCreatedListener {
 
-  private List<ButtonController> buttonControllers = new ArrayList<>();
+  private final List<ButtonController> buttonControllers = new ArrayList<>();
   private View endCallButton;
   private InCallPaginator paginator;
   private LockableViewPager pager;
@@ -89,15 +111,37 @@ public class InCallFragment extends Fragment
   private InCallScreenDelegate inCallScreenDelegate;
   private InCallButtonUiDelegate inCallButtonUiDelegate;
   private InCallButtonGridFragment inCallButtonGridFragment;
-  @Nullable private ButtonChooser buttonChooser;
+  @Nullable
+  private ButtonChooser buttonChooser;
   private SecondaryInfo savedSecondaryInfo;
   private int voiceNetworkType;
   private int phoneType;
   private boolean stateRestored;
+  private boolean userDeniedBluetooth;
+
+  private final ActivityResultLauncher<String[]> permissionLauncher = registerForActivityResult(
+          new ActivityResultContracts.RequestMultiplePermissions(),
+          grantResults -> {
+            boolean allGranted = grantResults.values().stream().allMatch(x -> x);
+            if (allGranted) {
+              inCallButtonUiDelegate.callRecordClicked(true);
+            }
+          });
+
+  private final ActivityResultLauncher<String[]> bluetoothPermissionLauncher =
+          registerForActivityResult(
+                  new ActivityResultContracts.RequestMultiplePermissions(),
+                  grantResults -> {
+                    boolean allGranted = grantResults.values().stream().allMatch(x -> x);
+                    inCallButtonUiDelegate.showAudioRouteSelector();
+                    if (!allGranted) {
+                      userDeniedBluetooth = true;
+                    }
+                  });
 
   // Add animation to educate users. If a call has enriched calling attachments then we'll
   // initially show the attachment page. After a delay seconds we'll animate to the button grid.
-  private final Handler handler = new Handler();
+  private final Handler handler = new Handler(Looper.getMainLooper());
   private final Runnable pagerRunnable =
       new Runnable() {
         @Override
@@ -117,7 +161,8 @@ public class InCallFragment extends Fragment
         || id == InCallButtonIds.BUTTON_MERGE
         || id == InCallButtonIds.BUTTON_MANAGE_VOICE_CONFERENCE
         || id == InCallButtonIds.BUTTON_SWAP_SIM
-        || id == InCallButtonIds.BUTTON_UPGRADE_TO_RTT;
+        || id == InCallButtonIds.BUTTON_UPGRADE_TO_RTT
+        || id == InCallButtonIds.BUTTON_RECORD_CALL;
   }
 
   @Override
@@ -128,6 +173,9 @@ public class InCallFragment extends Fragment
     }
   }
 
+    Timer timer = new Timer();
+    TimerTask timerTask;
+
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
@@ -135,10 +183,11 @@ public class InCallFragment extends Fragment
         FragmentUtils.getParent(this, InCallButtonUiDelegateFactory.class)
             .newInCallButtonUiDelegate();
     if (savedInstanceState != null) {
-      inCallButtonUiDelegate.onRestoreInstanceState(savedInstanceState);
       stateRestored = true;
     }
   }
+
+  private ImageView avatarImageView;
 
   @Nullable
   @Override
@@ -149,14 +198,21 @@ public class InCallFragment extends Fragment
       @Nullable Bundle bundle) {
     LogUtil.i("InCallFragment.onCreateView", null);
     getActivity().setTheme(R.style.Theme_InCallScreen);
+        Window window = getActivity().getWindow();
+	window.setFlags(WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS, WindowManager.LayoutParams.FLAG_LAYOUT_NO_LIMITS);
+        window.setStatusBarColor(Color.TRANSPARENT);
+        window.setNavigationBarColor(Color.TRANSPARENT);
+        window.setNavigationBarContrastEnforced(false);
+        window.setDecorFitsSystemWindows(false);
+        window.getDecorView().setSystemUiVisibility(WindowManager.LayoutParams.FLAG_DRAWS_SYSTEM_BAR_BACKGROUNDS);
+
     // Bypass to avoid StrictModeResourceMismatchViolation
-    final View view =
-        StrictModeUtils.bypass(
-            () -> layoutInflater.inflate(R.layout.frag_incall_voice, viewGroup, false));
+    final View view = layoutInflater.inflate(R.layout.frag_incall_voice, viewGroup, false);
+    avatarImageView = (ImageView) view.findViewById(R.id.contactgrid_avatar);
     contactGridManager =
         new ContactGridManager(
             view,
-            (ImageView) view.findViewById(R.id.contactgrid_avatar),
+            avatarImageView,
             getResources().getDimensionPixelSize(R.dimen.incall_avatar_size),
             true /* showAnonymousAvatar */);
     contactGridManager.onMultiWindowModeChanged(getActivity().isInMultiWindowMode());
@@ -189,8 +245,9 @@ public class InCallFragment extends Fragment
           @Override
           public void onViewAttachedToWindow(View v) {
             View container = v.findViewById(R.id.incall_ui_container);
-            int topInset = v.getRootWindowInsets().getSystemWindowInsetTop();
-            int bottomInset = v.getRootWindowInsets().getSystemWindowInsetBottom();
+            Insets insets = v.getRootWindowInsets().getInsets(WindowInsets.Type.systemBars());
+            int topInset = insets.top;
+            int bottomInset = insets.bottom;
             if (topInset != container.getPaddingTop()) {
               TransitionManager.beginDelayedTransition(((ViewGroup) container.getParent()));
               container.setPadding(0, topInset, 0, bottomInset);
@@ -200,6 +257,7 @@ public class InCallFragment extends Fragment
           @Override
           public void onViewDetachedFromWindow(View v) {}
         });
+    view.setFitsSystemWindows(false);
     return view;
   }
 
@@ -232,6 +290,7 @@ public class InCallFragment extends Fragment
         new ButtonController.ManageConferenceButtonController(inCallScreenDelegate));
     buttonControllers.add(
         new ButtonController.SwitchToSecondaryButtonController(inCallScreenDelegate));
+    buttonControllers.add(new ButtonController.CallRecordButtonController(inCallButtonUiDelegate));
 
     inCallScreenDelegate.onInCallScreenDelegateInit(this);
     inCallScreenDelegate.onInCallScreenReady();
@@ -250,21 +309,13 @@ public class InCallFragment extends Fragment
   }
 
   @Override
-  public void onSaveInstanceState(Bundle outState) {
-    super.onSaveInstanceState(outState);
-    inCallButtonUiDelegate.onSaveInstanceState(outState);
-  }
-
-  @Override
   public void onClick(View view) {
     if (view == endCallButton) {
       LogUtil.i("InCallFragment.onClick", "end call button clicked");
-      Logger.get(getContext())
-          .logImpression(DialerImpression.Type.IN_CALL_DIALPAD_HANG_UP_BUTTON_PRESSED);
       inCallScreenDelegate.onEndCallClicked();
     } else {
       LogUtil.e("InCallFragment.onClick", "unknown view: " + view);
-      Assert.fail();
+      Assert.createAssertionFailException("");
     }
   }
 
@@ -273,19 +324,6 @@ public class InCallFragment extends Fragment
     LogUtil.i("InCallFragment.setPrimary", primaryInfo.toString());
     setAdapterMedia(primaryInfo.multimediaData(), primaryInfo.showInCallButtonGrid());
     contactGridManager.setPrimary(primaryInfo);
-
-    if (primaryInfo.shouldShowLocation()) {
-      // Hide the avatar to make room for location
-      contactGridManager.setAvatarHidden(true);
-
-      // Need to let the dialpad move up a little further when location info is being shown
-      View dialpadView = getView().findViewById(R.id.incall_dialpad_container);
-      ViewGroup.LayoutParams params = dialpadView.getLayoutParams();
-      if (params instanceof RelativeLayout.LayoutParams) {
-        ((RelativeLayout.LayoutParams) params).removeRule(RelativeLayout.BELOW);
-      }
-      dialpadView.setLayoutParams(params);
-    }
   }
 
   private void setAdapterMedia(MultimediaData multimediaData, boolean showInCallButtonGrid) {
@@ -420,10 +458,6 @@ public class InCallFragment extends Fragment
         show);
     if (isSupportedButton(buttonId)) {
       getButtonController(buttonId).setAllowed(show);
-      if (buttonId == InCallButtonIds.BUTTON_UPGRADE_TO_VIDEO && show) {
-        Logger.get(getContext())
-            .logImpression(DialerImpression.Type.UPGRADE_TO_VIDEO_CALL_BUTTON_SHOWN);
-      }
     }
   }
 
@@ -467,6 +501,23 @@ public class InCallFragment extends Fragment
   }
 
   @Override
+  public void setCallRecordingState(boolean isRecording) {
+    ((CallRecordButtonController) getButtonController(InCallButtonIds.BUTTON_RECORD_CALL))
+        .setRecordingState(isRecording);
+  }
+
+  @Override
+  public void setCallRecordingDuration(long durationMs) {
+    ((CallRecordButtonController) getButtonController(InCallButtonIds.BUTTON_RECORD_CALL))
+        .setRecordingDuration(durationMs);
+  }
+
+  @Override
+  public void requestCallRecordingPermissions(String[] permissions) {
+    permissionLauncher.launch(permissions);
+  }
+
+  @Override
   public void updateButtonStates() {
     // When the incall screen is ready, this method is called from #setSecondary, even though the
     // incall button ui is not ready yet. This method is called again once the incall button ui is
@@ -495,19 +546,28 @@ public class InCallFragment extends Fragment
   }
 
   @Override
-  public void updateInCallButtonUiColors(@ColorInt int color) {
-    inCallButtonGridFragment.updateButtonColor(color);
-  }
-
-  @Override
   public Fragment getInCallButtonUiFragment() {
     return this;
   }
 
   @Override
   public void showAudioRouteSelector() {
-    AudioRouteSelectorDialogFragment.newInstance(inCallButtonUiDelegate.getCurrentAudioState())
-        .show(getChildFragmentManager(), null);
+    String[] permissions = new String[]{Manifest.permission.BLUETOOTH_CONNECT};
+    if (hasAllPermissions(permissions) || userDeniedBluetooth) {
+      AudioRouteSelectorDialogFragment.newInstance(inCallButtonUiDelegate.getCurrentAudioState())
+              .show(getChildFragmentManager(), null);
+    } else {
+      bluetoothPermissionLauncher.launch(permissions);
+    }
+  }
+
+  private boolean hasAllPermissions(String[] permissions) {
+    for (String p : permissions) {
+      if (requireContext().checkSelfPermission(p) != PackageManager.PERMISSION_GRANTED) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @Override
@@ -526,7 +586,7 @@ public class InCallFragment extends Fragment
         return buttonController;
       }
     }
-    Assert.fail();
+    Assert.createAssertionFailException("");
     return null;
   }
 

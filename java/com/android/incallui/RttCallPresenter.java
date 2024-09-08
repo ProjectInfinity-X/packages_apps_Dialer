@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +17,11 @@
 
 package com.android.incallui;
 
-import android.annotation.TargetApi;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.telecom.Call.RttCall;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.ThreadUtil;
 import com.android.dialer.rtt.RttTranscript;
@@ -30,13 +31,13 @@ import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.rtt.protocol.RttCallScreen;
 import com.android.incallui.rtt.protocol.RttCallScreenDelegate;
+
 import java.io.IOException;
 
 /**
  * Logic related to the {@link RttCallScreen} and for managing changes to the RTT calling surfaces
  * based on other user interface events and incoming events.
  */
-@TargetApi(28)
 public class RttCallPresenter implements RttCallScreenDelegate, InCallStateListener {
 
   private RttCallScreen rttCallScreen;

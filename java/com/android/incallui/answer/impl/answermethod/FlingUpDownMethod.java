@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,17 +30,6 @@ import android.graphics.PorterDuff.Mode;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.Trace;
-import android.support.annotation.ColorInt;
-import android.support.annotation.FloatRange;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.graphics.ColorUtils;
-import android.support.v4.view.animation.FastOutLinearInInterpolator;
-import android.support.v4.view.animation.FastOutSlowInInterpolator;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
-import android.support.v4.view.animation.PathInterpolatorCompat;
 import android.view.LayoutInflater;
 import android.view.MotionEvent;
 import android.view.View;
@@ -52,6 +42,19 @@ import android.view.animation.DecelerateInterpolator;
 import android.view.animation.Interpolator;
 import android.widget.ImageView;
 import android.widget.TextView;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.FloatRange;
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
+import androidx.core.view.animation.PathInterpolatorCompat;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
+
+import com.android.dialer.R;
 import com.android.dialer.common.DpUtil;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.MathUtil;
@@ -60,8 +63,8 @@ import com.android.dialer.util.ViewUtil;
 import com.android.incallui.answer.impl.answermethod.FlingUpDownTouchHandler.OnProgressChangedListener;
 import com.android.incallui.answer.impl.classifier.FalsingManager;
 import com.android.incallui.answer.impl.hint.AnswerHint;
-import com.android.incallui.answer.impl.hint.AnswerHintFactory;
-import com.android.incallui.answer.impl.hint.PawImageLoaderImpl;
+import com.android.incallui.answer.impl.hint.EmptyAnswerHint;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -98,7 +101,6 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
       AnimationState.COMPLETED
     }
   )
-  @VisibleForTesting
   @interface AnimationState {
 
     int NONE = 0;
@@ -240,9 +242,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
 
     touchHandler = FlingUpDownTouchHandler.attach(view, this, falsingManager);
 
-    answerHint =
-        new AnswerHintFactory(new PawImageLoaderImpl())
-            .create(getContext(), ANIMATE_DURATION_LONG_MILLIS, BOUNCE_ANIMATION_DELAY);
+    answerHint = new EmptyAnswerHint();
     answerHint.onCreateView(
         layoutInflater,
         (ViewGroup) view.findViewById(R.id.hint_container),
@@ -338,7 +338,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     } else if (getParent().isRttCall()) {
       contactPuckIcon.setImageResource(R.drawable.quantum_ic_rtt_vd_theme_24);
     } else {
-      contactPuckIcon.setImageResource(R.drawable.quantum_ic_call_white_24);
+      contactPuckIcon.setImageResource(R.drawable.quantum_ic_call_vd_theme_24);
     }
 
     int size =
@@ -518,8 +518,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     contactPuckIcon.animate().alpha(shouldShowPhotoInPuck() ? 0 : alpha);
   }
 
-  @VisibleForTesting
-  void setAnimationState(@AnimationState int state) {
+  private void setAnimationState(@AnimationState int state) {
     if (state != AnimationState.HINT && animationState == state) {
       return;
     }
@@ -551,12 +550,6 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
         endAnimation();
       }
     }
-  }
-
-  @AnimationState
-  @VisibleForTesting
-  int getAnimationState() {
-    return animationState;
   }
 
   private void updateAnimationState() {
@@ -694,8 +687,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     lockEntryAnim.start();
   }
 
-  @VisibleForTesting
-  void onEntryAnimationDone() {
+  private void onEntryAnimationDone() {
     LogUtil.i("FlingUpDownMethod.onEntryAnimationDone", "Swipe entry anim ends.");
     if (animationState == AnimationState.ENTRY) {
       setAnimationState(AnimationState.BOUNCE);
@@ -769,19 +761,29 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     rejectTextShow.setStartDelay(SWIPE_TO_DECLINE_FADE_IN_DELAY_MILLIS);
 
     // reject hint text translate in
-    Animator rejectTextTranslate =
+    Animator rejectTextTranslateIn =
         ObjectAnimator.ofFloat(
             swipeToRejectText,
             View.TRANSLATION_Y,
             DpUtil.dpToPx(getContext(), HINT_REJECT_FADE_TRANSLATION_Y_DP),
             0f);
-    rejectTextTranslate.setInterpolator(new FastOutSlowInInterpolator());
-    rejectTextTranslate.setDuration(ANIMATE_DURATION_NORMAL_MILLIS);
+    rejectTextTranslateIn.setInterpolator(new FastOutSlowInInterpolator());
+    rejectTextTranslateIn.setDuration(ANIMATE_DURATION_NORMAL_MILLIS);
 
     // reject hint text fade out
     Animator rejectTextHide = ObjectAnimator.ofFloat(swipeToRejectText, View.ALPHA, 0f);
     rejectTextHide.setInterpolator(new FastOutLinearInInterpolator());
     rejectTextHide.setDuration(ANIMATE_DURATION_SHORT_MILLIS);
+
+    // reject hint text translate out
+    Animator rejectTextTranslateOut =
+        ObjectAnimator.ofFloat(
+            swipeToRejectText,
+            View.TRANSLATION_Y,
+            0f,
+            DpUtil.dpToPx(getContext(), HINT_REJECT_FADE_TRANSLATION_Y_DP));
+    rejectTextTranslateOut.setInterpolator(new FastOutSlowInInterpolator());
+    rejectTextTranslateOut.setDuration(ANIMATE_DURATION_NORMAL_MILLIS);
 
     Interpolator curve =
         PathInterpolatorCompat.create(
@@ -817,6 +819,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     breatheAnimation
         .play(textUp)
         .with(rejectTextHide)
+        .with(rejectTextTranslateOut)
         .with(puckUp)
         .with(puckScaleUp)
         .after(167 /* delay */);
@@ -827,7 +830,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
         .with(textDown)
         .with(puckScaleDown)
         .with(rejectTextShow)
-        .with(rejectTextTranslate)
+        .with(rejectTextTranslateIn)
         .after(puckUp);
 
     // Add vibration animation to the animator set.
@@ -895,8 +898,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     lockSettleAnim.start();
   }
 
-  @VisibleForTesting
-  void onSettleAnimationDone() {
+  private void onSettleAnimationDone() {
     if (afterSettleAnimationState != AnimationState.NONE) {
       int nextState = afterSettleAnimationState;
       afterSettleAnimationState = AnimationState.NONE;
@@ -1043,7 +1045,6 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     rejectHintHide.start();
   }
 
-  @VisibleForTesting
   void onHintAnimationDone(boolean canceled) {
     if (!canceled && animationState == AnimationState.HINT) {
       setAnimationState(AnimationState.BOUNCE);
@@ -1147,8 +1148,8 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
     private static final long RAMP_DOWN_END_MS = RAMP_DOWN_BEGIN_MS + RAMP_DOWN_DURATION_MS;
     private static final long RAMP_TOTAL_TIME_MS = RAMP_DOWN_END_MS;
     private final float ampMax;
-    private final float freqMax = 80;
-    private Interpolator sliderInterpolator = new FastOutSlowInInterpolator();
+    private static final float FREQ_MAX = 80;
+    private final Interpolator sliderInterpolator = new FastOutSlowInInterpolator();
 
     VibrateInterpolator(Context context) {
       ampMax = DpUtil.dpToPx(context, 1 /* dp */);
@@ -1178,7 +1179,7 @@ public class FlingUpDownMethod extends AnswerMethod implements OnProgressChanged
       }
 
       float ampNormalized = ampMax * slider;
-      float freqNormalized = freqMax * slider;
+      float freqNormalized = FREQ_MAX * slider;
 
       return (float) (ampNormalized * Math.sin(time * freqNormalized));
     }

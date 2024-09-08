@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +21,22 @@ import android.content.Context;
 import android.hardware.display.DisplayManager;
 import android.hardware.display.DisplayManager.DisplayListener;
 import android.os.PowerManager;
-import android.support.annotation.Nullable;
 import android.view.Display;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
 
 /** The normal PROXIMITY_SCREEN_OFF_WAKE_LOCK provided by the OS. */
 public class SystemProximityWakeLock implements AnswerProximityWakeLock, DisplayListener {
 
-  private static final String TAG = "SystemProximityWakeLock";
+  private static final String TAG = "SystemProximity:WakeLock";
 
   private final Context context;
   private final PowerManager.WakeLock wakeLock;
 
-  @Nullable private ScreenOnListener listener;
+  @Nullable
+  private ScreenOnListener listener;
 
   public SystemProximityWakeLock(Context context) {
     this.context = context;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,14 +23,16 @@ import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.text.TextUtils;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.database.Selection;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
+
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * {@link SpeedDialEntryDao} implemented as an SQLite database.
@@ -42,7 +45,7 @@ public final class SpeedDialEntryDatabaseHelper extends SQLiteOpenHelper
   /**
    * If the pinned position is absent, then we need to write an impossible value in the table like
    * -1 so that it doesn't default to 0. When we read this value from the table, we'll translate it
-   * to Optional.absent() in the resulting {@link SpeedDialEntry}.
+   * to Optional.empty() in the resulting {@link SpeedDialEntry}.
    */
   private static final int PINNED_POSITION_ABSENT = -1;
 
@@ -125,14 +128,14 @@ public final class SpeedDialEntryDatabaseHelper extends SQLiteOpenHelper
               Channel.builder()
                   .setNumber(number)
                   .setPhoneType(cursor.getInt(POSITION_PHONE_TYPE))
-                  .setLabel(Optional.fromNullable(cursor.getString(POSITION_PHONE_LABEL)).or(""))
+                  .setLabel(Optional.ofNullable(cursor.getString(POSITION_PHONE_LABEL)).orElse(""))
                   .setTechnology(cursor.getInt(POSITION_PHONE_TECHNOLOGY))
                   .build();
         }
 
         Optional<Integer> pinnedPosition = Optional.of(cursor.getInt(POSITION_PINNED_POSITION));
-        if (pinnedPosition.or(PINNED_POSITION_ABSENT) == PINNED_POSITION_ABSENT) {
-          pinnedPosition = Optional.absent();
+        if (pinnedPosition.orElse(PINNED_POSITION_ABSENT) == PINNED_POSITION_ABSENT) {
+          pinnedPosition = Optional.empty();
         }
 
         SpeedDialEntry entry =
@@ -243,7 +246,7 @@ public final class SpeedDialEntryDatabaseHelper extends SQLiteOpenHelper
     if (includeId) {
       values.put(ID, entry.id());
     }
-    values.put(PINNED_POSITION, entry.pinnedPosition().or(PINNED_POSITION_ABSENT));
+    values.put(PINNED_POSITION, entry.pinnedPosition().orElse(PINNED_POSITION_ABSENT));
     values.put(CONTACT_ID, entry.contactId());
     values.put(LOOKUP_KEY, entry.lookupKey());
     if (entry.defaultChannel() != null) {

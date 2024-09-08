@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,6 +28,7 @@ import android.net.Uri;
 import android.provider.ContactsContract.PhoneLookup;
 import android.provider.ContactsContract.PinnedPositions;
 import android.text.TextUtils;
+
 import com.android.dialer.util.PermissionsUtil;
 
 /**
@@ -50,15 +52,12 @@ public class UndemoteOutgoingCallReceiver extends BroadcastReceiver {
       if (TextUtils.isEmpty(number)) {
         return;
       }
-      new Thread() {
-        @Override
-        public void run() {
-          final long id = getContactIdFromPhoneNumber(context, number);
-          if (id != NO_CONTACT_FOUND) {
-            undemoteContactWithId(context, id);
-          }
+      new Thread(() -> {
+        final long id = getContactIdFromPhoneNumber(context, number);
+        if (id != NO_CONTACT_FOUND) {
+          undemoteContactWithId(context, id);
         }
-      }.start();
+      }).start();
     }
   }
 
@@ -95,8 +94,7 @@ public class UndemoteOutgoingCallReceiver extends BroadcastReceiver {
     }
     try {
       if (cursor.moveToFirst()) {
-        final long id = cursor.getLong(0);
-        return id;
+        return cursor.getLong(0);
       } else {
         return NO_CONTACT_FOUND;
       }

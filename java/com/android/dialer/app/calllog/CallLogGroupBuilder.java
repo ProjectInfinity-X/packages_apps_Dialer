@@ -16,23 +16,21 @@
 
 package com.android.dialer.app.calllog;
 
-import android.content.Context;
 import android.database.Cursor;
 import android.provider.CallLog.Calls;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
+
+import androidx.annotation.Nullable;
+
 import com.android.contacts.common.util.DateUtils;
 import com.android.dialer.calllogutils.CallbackActionHelper;
 import com.android.dialer.calllogutils.CallbackActionHelper.CallbackAction;
 import com.android.dialer.compat.telephony.TelephonyManagerCompat;
-import com.android.dialer.inject.ApplicationContext;
 import com.android.dialer.phonenumbercache.CallLogQuery;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 
 import java.time.ZoneId;
-import java.util.Objects;
 
 /**
  * Groups together calls in the call log. The primary grouping attempts to group together calls to
@@ -59,12 +57,10 @@ public class CallLogGroupBuilder {
   /** Instance of the time object used for time calculations. */
   private static final ZoneId TIME_ZONE = ZoneId.systemDefault();
 
-  private final Context appContext;
   /** The object on which the groups are created. */
   private final GroupCreator groupCreator;
 
-  public CallLogGroupBuilder(@ApplicationContext Context appContext, GroupCreator groupCreator) {
-    this.appContext = appContext;
+  public CallLogGroupBuilder(GroupCreator groupCreator) {
     this.groupCreator = groupCreator;
   }
 
@@ -101,9 +97,7 @@ public class CallLogGroupBuilder {
     String groupNumber = cursor.getString(CallLogQuery.NUMBER);
     String groupAccountComponentName = cursor.getString(CallLogQuery.ACCOUNT_COMPONENT_NAME);
     int groupFeatures = cursor.getInt(CallLogQuery.FEATURES);
-    int groupCallbackAction =
-        CallbackActionHelper.getCallbackAction(
-            appContext, groupNumber, groupFeatures, groupAccountComponentName);
+    int groupCallbackAction = CallbackActionHelper.getCallbackAction(groupNumber, groupFeatures);
     groupCreator.setCallbackAction(firstRowId, groupCallbackAction);
 
     // Instantiate other group values to those of the first call in the cursor.
@@ -131,9 +125,7 @@ public class CallLogGroupBuilder {
       callFeatures = cursor.getInt(CallLogQuery.FEATURES);
       accountComponentName = cursor.getString(CallLogQuery.ACCOUNT_COMPONENT_NAME);
       accountId = cursor.getString(CallLogQuery.ACCOUNT_ID);
-      callbackAction =
-          CallbackActionHelper.getCallbackAction(
-              appContext, number, callFeatures, accountComponentName);
+      callbackAction = CallbackActionHelper.getCallbackAction(number, callFeatures);
 
       final boolean isSameNumber = equalNumbers(groupNumber, number);
       final boolean isSamePostDialDigits = groupPostDialDigits.equals(numberPostDialDigits);
@@ -195,10 +187,9 @@ public class CallLogGroupBuilder {
    * Returns true when the two input numbers can be considered identical enough for caller ID
    * purposes and put in a call log group.
    */
-  @VisibleForTesting
-  boolean equalNumbers(@Nullable String number1, @Nullable String number2) {
+  private boolean equalNumbers(@Nullable String number1, @Nullable String number2) {
     if (PhoneNumberHelper.isUriNumber(number1) || PhoneNumberHelper.isUriNumber(number2)) {
-      return compareSipAddresses(number1, number2);
+      return PhoneNumberHelper.compareSipAddresses(number1, number2);
     }
 
     // PhoneNumberUtils.compare(String, String) ignores special characters such as '#'. For example,
@@ -215,37 +206,6 @@ public class CallLogGroupBuilder {
 
   private boolean isSameAccount(String name1, String name2, String id1, String id2) {
     return TextUtils.equals(name1, name2) && TextUtils.equals(id1, id2);
-  }
-
-  @VisibleForTesting
-  boolean compareSipAddresses(@Nullable String number1, @Nullable String number2) {
-    if (number1 == null || number2 == null) {
-      return Objects.equals(number1, number2);
-    }
-
-    int index1 = number1.indexOf('@');
-    final String userinfo1;
-    final String rest1;
-    if (index1 != -1) {
-      userinfo1 = number1.substring(0, index1);
-      rest1 = number1.substring(index1);
-    } else {
-      userinfo1 = number1;
-      rest1 = "";
-    }
-
-    int index2 = number2.indexOf('@');
-    final String userinfo2;
-    final String rest2;
-    if (index2 != -1) {
-      userinfo2 = number2.substring(0, index2);
-      rest2 = number2.substring(index2);
-    } else {
-      userinfo2 = number2;
-      rest2 = "";
-    }
-
-    return userinfo1.equals(userinfo2) && rest1.equalsIgnoreCase(rest2);
   }
 
   /**

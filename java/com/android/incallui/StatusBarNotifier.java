@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +23,6 @@ import static com.android.dialer.app.DevicePolicyResources.NOTIFICATION_INCOMING
 import static com.android.dialer.app.DevicePolicyResources.NOTIFICATION_ONGOING_WORK_CALL_TITLE;
 import static com.android.dialer.app.DevicePolicyResources.NOTIFICATION_WIFI_WORK_CALL_LABEL;
 import static com.android.incallui.NotificationBroadcastReceiver.ACTION_ACCEPT_VIDEO_UPGRADE_REQUEST;
-import static com.android.incallui.NotificationBroadcastReceiver.ACTION_ANSWER_SPEAKEASY_CALL;
 import static com.android.incallui.NotificationBroadcastReceiver.ACTION_ANSWER_VIDEO_INCOMING_CALL;
 import static com.android.incallui.NotificationBroadcastReceiver.ACTION_ANSWER_VOICE_INCOMING_CALL;
 import static com.android.incallui.NotificationBroadcastReceiver.ACTION_DECLINE_INCOMING_CALL;
@@ -32,8 +32,10 @@ import static com.android.incallui.NotificationBroadcastReceiver.ACTION_TURN_OFF
 import static com.android.incallui.NotificationBroadcastReceiver.ACTION_TURN_ON_SPEAKER;
 
 import android.Manifest;
+import android.annotation.SuppressLint;
 import android.app.Notification;
 import android.app.PendingIntent;
+import android.app.Person;
 import android.app.admin.DevicePolicyManager;
 import android.content.Context;
 import android.content.Intent;
@@ -44,16 +46,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Icon;
 import android.media.AudioAttributes;
 import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.os.Trace;
-import android.support.annotation.ColorRes;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
-import android.support.annotation.StringRes;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.os.BuildCompat;
 import android.telecom.Call.Details;
 import android.telecom.CallAudioState;
 import android.telecom.PhoneAccount;
@@ -62,22 +55,26 @@ import android.telecom.VideoProfile;
 import android.text.BidiFormatter;
 import android.text.Spannable;
 import android.text.SpannableString;
-import android.text.Spanned;
 import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
 import android.text.style.ForegroundColorSpan;
+
+import androidx.annotation.ColorRes;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
+import androidx.annotation.StringRes;
+import androidx.core.content.res.ResourcesCompat;
+
 import com.android.contacts.common.ContactsUtils;
 import com.android.contacts.common.ContactsUtils.UserType;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.android.dialer.contactphoto.BitmapUtil;
 import com.android.dialer.contacts.ContactsComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
-import com.android.dialer.enrichedcall.Session;
 import com.android.dialer.lettertile.LetterTileDrawable;
 import com.android.dialer.lettertile.LetterTileDrawable.ContactType;
-import com.android.dialer.multimedia.MultimediaData;
 import com.android.dialer.notification.NotificationChannelId;
 import com.android.dialer.oem.MotorolaUtils;
 import com.android.dialer.theme.base.ThemeComponent;
@@ -85,7 +82,7 @@ import com.android.dialer.util.DrawableConverter;
 import com.android.incallui.ContactInfoCache.ContactCacheEntry;
 import com.android.incallui.ContactInfoCache.ContactInfoCacheCallback;
 import com.android.incallui.InCallPresenter.InCallState;
-import com.android.incallui.async.PausableExecutorImpl;
+import com.android.incallui.async.PausableExecutor;
 import com.android.incallui.audiomode.AudioModeProvider;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
@@ -95,15 +92,13 @@ import com.android.incallui.call.state.DialerCallState;
 import com.android.incallui.ringtone.DialerRingtoneManager;
 import com.android.incallui.ringtone.InCallTonePlayer;
 import com.android.incallui.ringtone.ToneGeneratorFactory;
-import com.android.incallui.speakeasy.SpeakEasyComponent;
 import com.android.incallui.videotech.utils.SessionModificationState;
-import com.google.common.base.Optional;
+
 import java.util.Objects;
 
 /** This class adds Notifications to the status bar for the in-call experience. */
 public class StatusBarNotifier
     implements InCallPresenter.InCallStateListener,
-        EnrichedCallManager.StateChangedListener,
         ContactInfoCacheCallback {
 
   private static final int NOTIFICATION_ID = 1;
@@ -141,7 +136,7 @@ public class StatusBarNotifier
     this.contactInfoCache = contactInfoCache;
     dialerRingtoneManager =
         new DialerRingtoneManager(
-            new InCallTonePlayer(new ToneGeneratorFactory(), new PausableExecutorImpl()),
+            new InCallTonePlayer(new ToneGeneratorFactory(), new PausableExecutor()),
             CallList.getInstance());
     currentNotification = NOTIFICATION_NONE;
     Trace.endSection();
@@ -175,7 +170,7 @@ public class StatusBarNotifier
    */
   private static PendingIntent createNotificationPendingIntent(Context context, String action) {
     final Intent intent = new Intent(action, null, context, NotificationBroadcastReceiver.class);
-    return PendingIntent.getBroadcast(context, 0, intent, 0);
+    return PendingIntent.getBroadcast(context, 0, intent, PendingIntent.FLAG_IMMUTABLE);
   }
 
   /** Creates notifications according to the state we receive from {@link InCallPresenter}. */
@@ -183,12 +178,6 @@ public class StatusBarNotifier
   @RequiresPermission(Manifest.permission.READ_PHONE_STATE)
   public void onStateChange(InCallState oldState, InCallState newState, CallList callList) {
     LogUtil.d("StatusBarNotifier.onStateChange", "%s->%s", oldState, newState);
-    updateNotification();
-  }
-
-  @Override
-  public void onEnrichedCallStateChanged() {
-    LogUtil.enterBlock("StatusBarNotifier.onEnrichedCallStateChanged");
     updateNotification();
   }
 
@@ -297,20 +286,10 @@ public class StatusBarNotifier
     if (callState == DialerCallState.INCOMING
         || callState == DialerCallState.CALL_WAITING
         || isVideoUpgradeRequest) {
-      if (ConfigProviderComponent.get(context)
-          .getConfigProvider()
-          .getBoolean("quiet_incoming_call_if_ui_showing", true)) {
         notificationType =
             InCallPresenter.getInstance().isShowingInCallUi()
                 ? NOTIFICATION_INCOMING_CALL_QUIET
                 : NOTIFICATION_INCOMING_CALL;
-      } else {
-        boolean alreadyActive =
-            callList.getActiveOrBackgroundCall() != null
-                && InCallPresenter.getInstance().isShowingInCallUi();
-        notificationType =
-            alreadyActive ? NOTIFICATION_INCOMING_CALL_QUIET : NOTIFICATION_INCOMING_CALL;
-      }
     } else {
       notificationType = NOTIFICATION_IN_CALL;
     }
@@ -340,7 +319,7 @@ public class StatusBarNotifier
     Notification.Builder publicBuilder = new Notification.Builder(context);
     publicBuilder
         .setSmallIcon(iconResId)
-        .setColor(ThemeComponent.get(context).theme().getColorPrimary())
+        .setColor(ThemeComponent.get(context).theme().getColorCallNotificationBackground())
         // Hide work call state for the lock screen notification
         .setContentTitle(getContentString(call, ContactsUtils.USER_TYPE_CURRENT));
     setNotificationWhen(call, callState, publicBuilder);
@@ -356,15 +335,11 @@ public class StatusBarNotifier
     LogUtil.i("StatusBarNotifier.buildAndSendNotification", "notificationType=" + notificationType);
     switch (notificationType) {
       case NOTIFICATION_INCOMING_CALL:
-        if (BuildCompat.isAtLeastO()) {
-          builder.setChannelId(NotificationChannelId.INCOMING_CALL);
-        }
+        builder.setChannelId(NotificationChannelId.INCOMING_CALL);
         // Set the intent as a full screen intent as well if a call is incoming
         configureFullScreenIntent(builder, createLaunchPendingIntent(true /* isFullScreen */));
         // Set the notification category and bump the priority for incoming calls
         builder.setCategory(Notification.CATEGORY_CALL);
-        // This will be ignored on O+ and handled by the channel
-        builder.setPriority(Notification.PRIORITY_MAX);
         if (currentNotification != NOTIFICATION_INCOMING_CALL) {
           LogUtil.i(
               "StatusBarNotifier.buildAndSendNotification",
@@ -375,16 +350,12 @@ public class StatusBarNotifier
         }
         break;
       case NOTIFICATION_INCOMING_CALL_QUIET:
-        if (BuildCompat.isAtLeastO()) {
-          builder.setChannelId(NotificationChannelId.ONGOING_CALL);
-        }
+        builder.setChannelId(NotificationChannelId.ONGOING_CALL);
         break;
       case NOTIFICATION_IN_CALL:
-        if (BuildCompat.isAtLeastO()) {
-          publicBuilder.setColorized(true);
-          builder.setColorized(true);
-          builder.setChannelId(NotificationChannelId.ONGOING_CALL);
-        }
+        publicBuilder.setColorized(true);
+        builder.setColorized(true);
+        builder.setChannelId(NotificationChannelId.ONGOING_CALL);
         break;
       default:
         break;
@@ -395,7 +366,7 @@ public class StatusBarNotifier
     builder.setSmallIcon(iconResId);
     builder.setContentTitle(contentTitle);
     builder.setLargeIcon(largeIcon);
-    builder.setColor(InCallPresenter.getInstance().getThemeColorManager().getPrimaryColor());
+    builder.setColor(ThemeComponent.get(context).theme().getColorCallNotificationBackground());
 
     if (isVideoUpgradeRequest) {
       builder.setUsesChronometer(false);
@@ -435,7 +406,6 @@ public class StatusBarNotifier
     TelecomAdapter.getInstance().startForegroundNotification(NOTIFICATION_ID, notification);
 
     Trace.endSection();
-    call.getLatencyReport().onNotificationShown();
     currentNotification = notificationType;
     Trace.endSection();
   }
@@ -456,7 +426,6 @@ public class StatusBarNotifier
         addVideoCallAction(builder);
       } else {
         addAnswerAction(builder);
-        addSpeakeasyAnswerAction(builder, call);
       }
     }
   }
@@ -557,7 +526,6 @@ public class StatusBarNotifier
   }
 
   /** Returns the main string to use in the notification. */
-  @VisibleForTesting
   @Nullable
   String getContentTitle(ContactCacheEntry contactInfo, DialerCall call) {
     if (call.isConferenceCall()) {
@@ -583,10 +551,14 @@ public class StatusBarNotifier
     // Query {@link Contacts#CONTENT_LOOKUP_URI} directly with work lookup key is not allowed.
     // So, do not pass {@link Contacts#CONTENT_LOOKUP_URI} to NotificationManager to avoid
     // NotificationManager using it.
+    String uri = null;
     if (contactInfo.lookupUri != null && contactInfo.userType != ContactsUtils.USER_TYPE_WORK) {
-      builder.addPerson(contactInfo.lookupUri.toString());
+      uri = contactInfo.lookupUri.toString();
     } else if (!TextUtils.isEmpty(call.getNumber())) {
-      builder.addPerson(Uri.fromParts(PhoneAccount.SCHEME_TEL, call.getNumber(), null).toString());
+      uri = Uri.fromParts(PhoneAccount.SCHEME_TEL, call.getNumber(), null).toString();
+    }
+    if (uri != null) {
+      builder.addPerson(new Person.Builder().setUri(uri).build());
     }
   }
 
@@ -621,7 +593,8 @@ public class StatusBarNotifier
     }
 
     if (call.isSpam()) {
-      Drawable drawable = resources.getDrawable(R.drawable.blocked_contact, context.getTheme());
+      Drawable drawable = ResourcesCompat.getDrawable(resources, R.drawable.blocked_contact,
+              context.getTheme());
       largeIcon = DrawableConverter.drawableToBitmap(drawable);
     }
     Trace.endSection();
@@ -643,8 +616,7 @@ public class StatusBarNotifier
    * Returns the appropriate icon res Id to display based on the call for which we want to display
    * information.
    */
-  @VisibleForTesting
-  public int getIconToDisplay(DialerCall call) {
+  private int getIconToDisplay(DialerCall call) {
     // Even if both lines are in use, we only show a single item in
     // the expanded Notifications UI.  It's labeled "Ongoing call"
     // (or "On hold" if there's only one call, and it's on hold.)
@@ -658,21 +630,10 @@ public class StatusBarNotifier
             == SessionModificationState.RECEIVED_UPGRADE_TO_VIDEO_REQUEST
         || call.isVideoCall()) {
       return R.drawable.quantum_ic_videocam_vd_white_24;
-    } else if (call.hasProperty(PROPERTY_HIGH_DEF_AUDIO)
-        && MotorolaUtils.shouldShowHdIconInNotification(context)) {
-      // Normally when a call is ongoing the status bar displays an icon of a phone. This is a
-      // helpful hint for users so they know how to get back to the call. For Sprint HD calls, we
-      // replace this icon with an icon of a phone with a HD badge. This is a carrier requirement.
-      return R.drawable.ic_hd_call;
     } else if (call.hasProperty(Details.PROPERTY_HAS_CDMA_VOICE_PRIVACY)) {
       return R.drawable.quantum_ic_phone_locked_vd_theme_24;
     }
-    // If ReturnToCall is enabled, use the static icon. The animated one will show in the bubble.
-    if (ReturnToCallController.isEnabled(context)) {
-      return R.drawable.quantum_ic_call_vd_theme_24;
-    } else {
-      return R.drawable.on_going_call;
-    }
+    return R.drawable.on_going_call;
   }
 
   /** Returns the message to use with the notification. */
@@ -707,8 +668,6 @@ public class StatusBarNotifier
     if (isIncomingOrWaiting) {
       if (call.isSpam()) {
         message = context.getString(R.string.notification_incoming_spam_call);
-      } else if (shouldShowEnrichedCallNotification(call.getEnrichedCallSession())) {
-        message = context.getString(getECIncomingCallText(call.getEnrichedCallSession()));
       } else if (call.hasProperty(Details.PROPERTY_WIFI)) {
         message = context.getString(R.string.notification_incoming_call_wifi_template, wifiBrand);
       } else if (call.getAccountHandle() != null && hasMultiplePhoneAccounts(call)) {
@@ -764,75 +723,6 @@ public class StatusBarNotifier
     }
   }
 
-  private boolean shouldShowEnrichedCallNotification(Session session) {
-    if (session == null) {
-      return false;
-    }
-    return session.getMultimediaData().hasData() || session.getMultimediaData().isImportant();
-  }
-
-  private int getECIncomingCallText(Session session) {
-    int resId;
-    MultimediaData data = session.getMultimediaData();
-    boolean hasImage = data.hasImageData();
-    boolean hasSubject = !TextUtils.isEmpty(data.getText());
-    boolean hasMap = data.getLocation() != null;
-    if (data.isImportant()) {
-      if (hasMap) {
-        if (hasImage) {
-          if (hasSubject) {
-            resId = R.string.important_notification_incoming_call_with_photo_message_location;
-          } else {
-            resId = R.string.important_notification_incoming_call_with_photo_location;
-          }
-        } else if (hasSubject) {
-          resId = R.string.important_notification_incoming_call_with_message_location;
-        } else {
-          resId = R.string.important_notification_incoming_call_with_location;
-        }
-      } else if (hasImage) {
-        if (hasSubject) {
-          resId = R.string.important_notification_incoming_call_with_photo_message;
-        } else {
-          resId = R.string.important_notification_incoming_call_with_photo;
-        }
-      } else if (hasSubject) {
-        resId = R.string.important_notification_incoming_call_with_message;
-      } else {
-        resId = R.string.important_notification_incoming_call;
-      }
-      if (context.getString(resId).length() > 50) {
-        resId = R.string.important_notification_incoming_call_attachments;
-      }
-    } else {
-      if (hasMap) {
-        if (hasImage) {
-          if (hasSubject) {
-            resId = R.string.notification_incoming_call_with_photo_message_location;
-          } else {
-            resId = R.string.notification_incoming_call_with_photo_location;
-          }
-        } else if (hasSubject) {
-          resId = R.string.notification_incoming_call_with_message_location;
-        } else {
-          resId = R.string.notification_incoming_call_with_location;
-        }
-      } else if (hasImage) {
-        if (hasSubject) {
-          resId = R.string.notification_incoming_call_with_photo_message;
-        } else {
-          resId = R.string.notification_incoming_call_with_photo;
-        }
-      } else {
-        resId = R.string.notification_incoming_call_with_message;
-      }
-    }
-    if (context.getString(resId).length() > 50) {
-      resId = R.string.notification_incoming_call_attachments;
-    }
-    return resId;
-  }
-
   private CharSequence getMultiSimIncomingText(DialerCall call) {
     PhoneAccount phoneAccount =
         context.getSystemService(TelecomManager.class).getPhoneAccount(call.getAccountHandle());
@@ -874,13 +764,11 @@ public class StatusBarNotifier
 
   private Spannable getActionText(@StringRes int stringRes, @ColorRes int colorRes) {
     Spannable spannable = new SpannableString(context.getText(stringRes));
-    if (VERSION.SDK_INT >= VERSION_CODES.N_MR1) {
-      // This will only work for cases where the Notification.Builder has a fullscreen intent set
-      // Notification.Builder that does not have a full screen intent will take the color of the
-      // app and the following leads to a no-op.
-      spannable.setSpan(
-          new ForegroundColorSpan(context.getColor(colorRes)), 0, spannable.length(), 0);
-    }
+    // This will only work for cases where the Notification.Builder has a fullscreen intent set
+    // Notification.Builder that does not have a full screen intent will take the color of the
+    // app and the following leads to a no-op.
+    spannable.setSpan(
+        new ForegroundColorSpan(context.getColor(colorRes)), 0, spannable.length(), 0);
     return spannable;
   }
 
@@ -892,51 +780,9 @@ public class StatusBarNotifier
         createNotificationPendingIntent(context, ACTION_ANSWER_VOICE_INCOMING_CALL);
     builder.addAction(
         new Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.quantum_ic_call_white_24),
+                Icon.createWithResource(context, R.drawable.quantum_ic_call_vd_theme_24),
                 getActionText(
                     R.string.notification_action_answer, R.color.notification_action_accept),
-                answerVoicePendingIntent)
-            .build());
-  }
-
-  private void addSpeakeasyAnswerAction(Notification.Builder builder, DialerCall call) {
-    if (!call.isSpeakEasyEligible()) {
-      return;
-    }
-
-    if (!ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean("enable_speakeasy_notification_button", false)) {
-      return;
-    }
-
-    if (!SpeakEasyComponent.get(context).speakEasyCallManager().isAvailable(context)) {
-      return;
-    }
-
-    Optional<Integer> buttonText = SpeakEasyComponent.get(context).speakEasyTextResource();
-    if (!buttonText.isPresent()) {
-      return;
-    }
-
-    LogUtil.d("StatusBarNotifier.addSpeakeasyAnswerAction", "showing button");
-    PendingIntent answerVoicePendingIntent =
-        createNotificationPendingIntent(context, ACTION_ANSWER_SPEAKEASY_CALL);
-
-    Spannable spannable = new SpannableString(context.getText(buttonText.get()));
-    // TODO(erfanian): Migrate these color values to somewhere more permanent in subsequent
-    // implementation.
-    spannable.setSpan(
-        new ForegroundColorSpan(
-            context.getColor(R.color.DO_NOT_USE_OR_I_WILL_BREAK_YOU_text_span_tertiary_button)),
-        0,
-        spannable.length(),
-        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-    builder.addAction(
-        new Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.quantum_ic_call_white_24),
-                spannable,
                 answerVoicePendingIntent)
             .build());
   }
@@ -949,7 +795,7 @@ public class StatusBarNotifier
         createNotificationPendingIntent(context, ACTION_DECLINE_INCOMING_CALL);
     builder.addAction(
         new Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.quantum_ic_close_white_24),
+                Icon.createWithResource(context, R.drawable.quantum_ic_close_vd_theme_24),
                 getActionText(
                     R.string.notification_action_dismiss, R.color.notification_action_dismiss),
                 declinePendingIntent)
@@ -964,7 +810,7 @@ public class StatusBarNotifier
         createNotificationPendingIntent(context, ACTION_HANG_UP_ONGOING_CALL);
     builder.addAction(
         new Notification.Action.Builder(
-                Icon.createWithResource(context, R.drawable.quantum_ic_call_end_white_24),
+                Icon.createWithResource(context, R.drawable.quantum_ic_call_end_vd_theme_24),
                 context.getText(R.string.notification_action_end_call),
                 hangupPendingIntent)
             .build());
@@ -1096,7 +942,7 @@ public class StatusBarNotifier
     // and clicks the notification's expanded view.  It's also used to
     // launch the InCallActivity immediately when when there's an incoming
     // call (see the "fullScreenIntent" field below).
-    return PendingIntent.getActivity(context, requestCode, intent, 0);
+    return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_IMMUTABLE);
   }
 
   private void setStatusBarCallListener(StatusBarCallListener listener) {
@@ -1134,7 +980,7 @@ public class StatusBarNotifier
 
   private class StatusBarCallListener implements DialerCallListener {
 
-    private DialerCall dialerCall;
+    private final DialerCall dialerCall;
 
     StatusBarCallListener(DialerCall dialerCall) {
       this.dialerCall = dialerCall;
@@ -1173,13 +1019,11 @@ public class StatusBarNotifier
     @Override
     public void onInternationalCallOnWifi() {}
 
-    @Override
-    public void onEnrichedCallSessionUpdate() {}
-
     /**
      * Responds to changes in the session modification state for the call by dismissing the status
      * bar notification as required.
      */
+    @SuppressLint("MissingPermission")
     @Override
     public void onDialerCallSessionModificationStateChange() {
       if (dialerCall.getVideoTech().getSessionModificationState()

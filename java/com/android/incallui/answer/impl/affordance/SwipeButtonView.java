@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -26,18 +27,22 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.Nullable;
 import android.util.AttributeSet;
 import android.view.View;
 import android.view.ViewAnimationUtils;
 import android.view.animation.Interpolator;
-import android.widget.ImageView;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.widget.AppCompatImageView;
+
+import com.android.dialer.R;
 import com.android.incallui.answer.impl.utils.FlingAnimationUtils;
 import com.android.incallui.answer.impl.utils.Interpolators;
 
 /** Button that allows swiping to trigger */
-public class SwipeButtonView extends ImageView {
+public class SwipeButtonView extends AppCompatImageView {
 
   private static final long CIRCLE_APPEAR_DURATION = 80;
   private static final long CIRCLE_DISAPPEAR_MAX_DURATION = 200;
@@ -59,9 +64,9 @@ public class SwipeButtonView extends ImageView {
   private ValueAnimator scaleAnimator;
   private float circleStartValue;
   private boolean circleWillBeHidden;
-  private int[] tempPoint = new int[2];
+  private final int[] tempPoint = new int[2];
   private float tmageScale = 1f;
-  private int circleColor;
+  private final int circleColor;
   private View previewView;
   private float circleStartRadius;
   private float maxCircleSize;
@@ -70,28 +75,28 @@ public class SwipeButtonView extends ImageView {
   private boolean finishing;
   private boolean launchingAffordance;
 
-  private AnimatorListenerAdapter clipEndListener =
+  private final AnimatorListenerAdapter clipEndListener =
       new AnimatorListenerAdapter() {
         @Override
         public void onAnimationEnd(Animator animation) {
           previewClipper = null;
         }
       };
-  private AnimatorListenerAdapter circleEndListener =
+  private final AnimatorListenerAdapter circleEndListener =
       new AnimatorListenerAdapter() {
         @Override
         public void onAnimationEnd(Animator animation) {
           circleAnimator = null;
         }
       };
-  private AnimatorListenerAdapter scaleEndListener =
+  private final AnimatorListenerAdapter scaleEndListener =
       new AnimatorListenerAdapter() {
         @Override
         public void onAnimationEnd(Animator animation) {
           scaleAnimator = null;
         }
       };
-  private AnimatorListenerAdapter alphaEndListener =
+  private final AnimatorListenerAdapter alphaEndListener =
       new AnimatorListenerAdapter() {
         @Override
         public void onAnimationEnd(Animator animation) {
@@ -108,11 +113,7 @@ public class SwipeButtonView extends ImageView {
   }
 
   public SwipeButtonView(Context context, AttributeSet attrs, int defStyleAttr) {
-    this(context, attrs, defStyleAttr, 0);
-  }
-
-  public SwipeButtonView(Context context, AttributeSet attrs, int defStyleAttr, int defStyleRes) {
-    super(context, attrs, defStyleAttr, defStyleRes);
+    super(context, attrs, defStyleAttr);
     circlePaint = new Paint();
     circlePaint.setAntiAlias(true);
     circleColor = 0xffffffff;
@@ -158,7 +159,7 @@ public class SwipeButtonView extends ImageView {
     float alpha = circleRadius / minBackgroundRadius;
     alpha = Math.min(1.0f, alpha);
     int color = (int) colorInterpolator.evaluate(alpha, normalColor, inverseColor);
-    drawable.setColorFilter(color, PorterDuff.Mode.SRC_ATOP);
+    drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_ATOP));
   }
 
   private void drawBackgroundCircle(Canvas canvas) {
@@ -332,15 +333,11 @@ public class SwipeButtonView extends ImageView {
     circleAnimator = animator;
     circleStartValue = this.circleRadius;
     circleWillBeHidden = circleRadius == 0.0f;
-    animator.addUpdateListener(
-        new ValueAnimator.AnimatorUpdateListener() {
-          @Override
-          public void onAnimationUpdate(ValueAnimator animation) {
-            SwipeButtonView.this.circleRadius = (float) animation.getAnimatedValue();
-            updateIconColor();
-            invalidate();
-          }
-        });
+    animator.addUpdateListener(animation -> {
+      SwipeButtonView.this.circleRadius = (float) animation.getAnimatedValue();
+      updateIconColor();
+      invalidate();
+    });
     animator.addListener(circleEndListener);
     return animator;
   }
@@ -373,14 +370,10 @@ public class SwipeButtonView extends ImageView {
     } else {
       ValueAnimator animator = ValueAnimator.ofFloat(tmageScale, imageScale);
       scaleAnimator = animator;
-      animator.addUpdateListener(
-          new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-              tmageScale = (float) animation.getAnimatedValue();
-              invalidate();
-            }
-          });
+      animator.addUpdateListener(animation -> {
+        tmageScale = (float) animation.getAnimatedValue();
+        invalidate();
+      });
       animator.addListener(scaleEndListener);
       if (interpolator == null) {
         interpolator =
@@ -442,17 +435,13 @@ public class SwipeButtonView extends ImageView {
       int currentAlpha = getImageAlpha();
       ValueAnimator animator = ValueAnimator.ofInt(currentAlpha, endAlpha);
       alphaAnimator = animator;
-      animator.addUpdateListener(
-          new ValueAnimator.AnimatorUpdateListener() {
-            @Override
-            public void onAnimationUpdate(ValueAnimator animation) {
-              int alpha = (int) animation.getAnimatedValue();
-              if (background != null) {
-                background.mutate().setAlpha(alpha);
-              }
-              setImageAlpha(alpha);
-            }
-          });
+      animator.addUpdateListener(animation -> {
+        int alpha1 = (int) animation.getAnimatedValue();
+        if (background != null) {
+          background.mutate().setAlpha(alpha1);
+        }
+        setImageAlpha(alpha1);
+      });
       animator.addListener(alphaEndListener);
       if (interpolator == null) {
         interpolator =

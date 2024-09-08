@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,8 +21,10 @@ import android.database.ContentObserver;
 import android.database.Cursor;
 import android.database.DataSetObserver;
 import android.os.Handler;
-import android.support.v7.widget.RecyclerView;
+import android.os.Looper;
 import android.util.SparseIntArray;
+
+import androidx.recyclerview.widget.RecyclerView;
 
 /**
  * Maintains a list that groups items into groups of consecutive elements which are disjoint, that
@@ -32,8 +35,8 @@ import android.util.SparseIntArray;
  */
 abstract class GroupingListAdapter extends RecyclerView.Adapter {
 
-  protected ContentObserver changeObserver =
-      new ContentObserver(new Handler()) {
+  protected final ContentObserver changeObserver =
+      new ContentObserver(new Handler(Looper.getMainLooper())) {
         @Override
         public boolean deliverSelfNotifications() {
           return true;
@@ -44,7 +47,7 @@ abstract class GroupingListAdapter extends RecyclerView.Adapter {
           onContentChanged();
         }
       };
-  protected DataSetObserver dataSetObserver =
+  protected final DataSetObserver dataSetObserver =
       new DataSetObserver() {
         @Override
         public void onChanged() {

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,23 +19,21 @@ package com.android.dialer.precall.impl;
 
 import android.app.Activity;
 import android.content.Context;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
-import android.telephony.PhoneNumberUtils;
+import android.telephony.TelephonyManager;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentActivity;
+
 import com.android.contacts.common.widget.SelectPhoneAccountDialogFragment;
-import com.android.contacts.common.widget.SelectPhoneAccountDialogFragment.SelectPhoneAccountListener;
 import com.android.contacts.common.widget.SelectPhoneAccountDialogOptions;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
-import com.android.dialer.logging.DialerImpression.Type;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCallAction;
 import com.android.dialer.precall.PreCallCoordinator;
 import com.android.dialer.precall.PreCallCoordinator.PendingAction;
@@ -42,14 +41,16 @@ import com.android.dialer.preferredsim.PreferredAccountRecorder;
 import com.android.dialer.preferredsim.PreferredAccountWorker;
 import com.android.dialer.preferredsim.suggestion.SuggestionProvider;
 import com.android.dialer.preferredsim.suggestion.SuggestionProvider.Suggestion;
+
 import java.util.List;
+
 import javax.inject.Inject;
 
 /** PreCallAction to select which phone account to call with. Ignored if there's only one account */
 @SuppressWarnings("MissingPermission")
 public class CallingAccountSelector implements PreCallAction {
 
-  @VisibleForTesting static final String TAG_CALLING_ACCOUNT_SELECTOR = "CallingAccountSelector";
+  private static final String TAG_CALLING_ACCOUNT_SELECTOR = "CallingAccountSelector";
 
   private SelectPhoneAccountDialogFragment selectPhoneAccountDialogFragment;
 
@@ -64,25 +65,18 @@ public class CallingAccountSelector implements PreCallAction {
 
   @Override
   public boolean requiresUi(Context context, CallIntentBuilder builder) {
-    if (!ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean("precall_calling_account_selector_enabled", true)) {
-      return false;
-    }
-
     if (builder.getPhoneAccountHandle() != null) {
       return false;
     }
-    if (PhoneNumberUtils.isEmergencyNumber(builder.getUri().getSchemeSpecificPart())) {
+
+    TelephonyManager telephonyManager = context.getSystemService(TelephonyManager.class);
+    if (telephonyManager.isEmergencyNumber(builder.getUri().getSchemeSpecificPart())) {
       return false;
     }
 
     TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
     List<PhoneAccountHandle> accounts = telecomManager.getCallCapablePhoneAccounts();
-    if (accounts.size() <= 1) {
-      return false;
-    }
-    return true;
+    return accounts.size() > 1;
   }
 
   @Override
@@ -105,7 +99,6 @@ public class CallingAccountSelector implements PreCallAction {
             null,
             null,
             null);
-        Logger.get(coordinator.getActivity()).logImpression(Type.DUAL_SIM_SELECTION_VOICEMAIL);
         break;
       case PhoneAccount.SCHEME_TEL:
         processPreferredAccount(coordinator);
@@ -161,9 +154,9 @@ public class CallingAccountSelector implements PreCallAction {
               coordinator,
               pendingAction,
               result.getDialogOptionsBuilder().get().build(),
-              result.getDataId().orNull(),
+              result.getDataId().orElse(null),
               phoneNumber,
-              result.getSuggestion().orNull());
+              result.getSuggestion().orElse(null));
         },
         (throwable) -> {
           throw new RuntimeException(throwable);
@@ -188,7 +181,8 @@ public class CallingAccountSelector implements PreCallAction {
                 pendingAction,
                 new PreferredAccountRecorder(number, suggestion, dataId)));
     selectPhoneAccountDialogFragment.show(
-        coordinator.getActivity().getFragmentManager(), TAG_CALLING_ACCOUNT_SELECTOR);
+        ((FragmentActivity) coordinator.getActivity()).getSupportFragmentManager(),
+            TAG_CALLING_ACCOUNT_SELECTOR);
   }
 
   @MainThread
@@ -200,7 +194,8 @@ public class CallingAccountSelector implements PreCallAction {
     }
   }
 
-  private class SelectedListener extends SelectPhoneAccountListener {
+  private class SelectedListener extends
+          SelectPhoneAccountDialogFragment.SelectPhoneAccountListener {
 
     private final PreCallCoordinator coordinator;
     private final PreCallCoordinator.PendingAction listener;

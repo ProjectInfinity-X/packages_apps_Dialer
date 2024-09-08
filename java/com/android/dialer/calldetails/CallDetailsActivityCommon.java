@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,42 +19,37 @@ package com.android.dialer.calldetails;
 
 import android.Manifest.permission;
 import android.annotation.SuppressLint;
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
-import android.support.annotation.CallSuper;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.Toolbar;
 import android.view.View;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.RequiresPermission;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.appcompat.widget.Toolbar;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.dialer.R;
 import com.android.dialer.assisteddialing.ui.AssistedDialingSettingActivity;
 import com.android.dialer.calldetails.CallDetailsEntries.CallDetailsEntry;
 import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.callintent.CallIntentBuilder;
+import com.android.dialer.callrecord.CallRecordingDataStore;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.FailureListener;
 import com.android.dialer.common.concurrent.DialerExecutor.SuccessListener;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.common.concurrent.UiListener;
+import com.android.dialer.common.concurrent.SupportUiListener;
 import com.android.dialer.common.database.Selection;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
-import com.android.dialer.enrichedcall.historyquery.proto.HistoryResult;
 import com.android.dialer.glidephotomanager.PhotoInfo;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
-import com.android.dialer.logging.UiAction;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.postcall.PostCall;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.rtt.RttTranscriptActivity;
@@ -64,11 +60,10 @@ import com.google.common.collect.ImmutableSet;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
-import java.util.Map;
 
 /**
  * Contains common logic shared between {@link OldCallDetailsActivity} and {@link
@@ -77,7 +72,6 @@ import java.util.Map;
 abstract class CallDetailsActivityCommon extends AppCompatActivity {
 
   public static final String EXTRA_PHONE_NUMBER = "phone_number";
-  public static final String EXTRA_HAS_ENRICHED_CALL_DATA = "has_enriched_call_data";
   public static final String EXTRA_CAN_REPORT_CALLER_ID = "can_report_caller_id";
   public static final String EXTRA_CAN_SUPPORT_ASSISTED_DIALING = "can_support_assisted_dialing";
 
@@ -89,13 +83,11 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
       new DeleteCallDetailsListener(this);
   private final CallDetailsFooterViewHolder.ReportCallIdListener reportCallIdListener =
       new ReportCallIdListener(this);
-  private final EnrichedCallManager.HistoricalDataChangedListener
-      enrichedCallHistoricalDataChangedListener =
-          new EnrichedCallHistoricalDataChangedListener(this);
 
   private CallDetailsAdapterCommon adapter;
   private CallDetailsEntries callDetailsEntries;
-  private UiListener<ImmutableSet<String>> checkRttTranscriptAvailabilityListener;
+  private SupportUiListener<ImmutableSet<String>> checkRttTranscriptAvailabilityListener;
+  private CallRecordingDataStore callRecordingDataStore;
 
   /**
    * Handles the intent that launches {@link OldCallDetailsActivity} or {@link CallDetailsActivity},
@@ -108,7 +100,8 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
       CallDetailsEntryViewHolder.CallDetailsEntryListener callDetailsEntryListener,
       CallDetailsHeaderViewHolder.CallDetailsHeaderListener callDetailsHeaderListener,
       CallDetailsFooterViewHolder.ReportCallIdListener reportCallIdListener,
-      CallDetailsFooterViewHolder.DeleteCallDetailsListener deleteCallDetailsListener);
+      CallDetailsFooterViewHolder.DeleteCallDetailsListener deleteCallDetailsListener,
+      CallRecordingDataStore callRecordingDataStore);
 
   /** Returns the phone number of the call details. */
   protected abstract String getNumber();
@@ -121,38 +114,27 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
     setContentView(R.layout.call_details_activity);
     Toolbar toolbar = findViewById(R.id.toolbar);
     toolbar.setTitle(R.string.call_details);
-    toolbar.setNavigationOnClickListener(
-        v -> {
-          PerformanceReport.recordClick(UiAction.Type.CLOSE_CALL_DETAIL_WITH_CANCEL_BUTTON);
-          finish();
-        });
+    toolbar.setNavigationOnClickListener(v -> finish());
     checkRttTranscriptAvailabilityListener =
         DialerExecutorComponent.get(this)
-            .createUiListener(getFragmentManager(), "Query RTT transcript availability");
+            .createUiListener(getSupportFragmentManager(), "Query RTT transcript availability");
+    callRecordingDataStore = new CallRecordingDataStore();
     handleIntent(getIntent());
     setupRecyclerViewForEntries();
   }
 
   @Override
   @CallSuper
+  protected void onDestroy() {
+    super.onDestroy();
+    callRecordingDataStore.close();
+  }
+
+  @Override
+  @CallSuper
   protected void onResume() {
     super.onResume();
-
-    // Some calls may not be recorded (eg. from quick contact),
-    // so we should restart recording after these calls. (Recorded call is stopped)
-    PostCall.restartPerformanceRecordingIfARecentCallExist(this);
-    if (!PerformanceReport.isRecording()) {
-      PerformanceReport.startRecording();
-    }
-
     PostCall.promptUserForMessageIfNecessary(this, findViewById(R.id.recycler_view));
-
-    EnrichedCallComponent.get(this)
-        .getEnrichedCallManager()
-        .registerHistoricalDataChangedListener(enrichedCallHistoricalDataChangedListener);
-    EnrichedCallComponent.get(this)
-        .getEnrichedCallManager()
-        .requestAllHistoricalData(getNumber(), callDetailsEntries);
   }
 
   protected void loadRttTranscriptAvailability() {
@@ -184,10 +166,6 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
   @CallSuper
   protected void onPause() {
     super.onPause();
-
-    EnrichedCallComponent.get(this)
-        .getEnrichedCallManager()
-        .unregisterHistoricalDataChangedListener(enrichedCallHistoricalDataChangedListener);
   }
 
   @Override
@@ -205,23 +183,16 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
             callDetailsEntryListener,
             callDetailsHeaderListener,
             reportCallIdListener,
-            deleteCallDetailsListener);
+            deleteCallDetailsListener,
+            callRecordingDataStore);
 
     RecyclerView recyclerView = findViewById(R.id.recycler_view);
     recyclerView.setLayoutManager(new LinearLayoutManager(this));
     recyclerView.setAdapter(adapter);
-    PerformanceReport.logOnScrollStateChange(recyclerView);
   }
 
   final CallDetailsAdapterCommon getAdapter() {
     return adapter;
-  }
-
-  @Override
-  @CallSuper
-  public void onBackPressed() {
-    PerformanceReport.recordClick(UiAction.Type.PRESS_ANDROID_BACK_BUTTON);
-    super.onBackPressed();
   }
 
   @MainThread
@@ -265,6 +236,9 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
       context
           .getContentResolver()
           .delete(Calls.CONTENT_URI, selection.getSelection(), selection.getSelectionArgs());
+      context
+          .getContentResolver()
+          .notifyChange(Calls.CONTENT_URI, null);
       return null;
     }
 
@@ -311,29 +285,14 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
 
     @Override
     public void placeImsVideoCall(String phoneNumber) {
-      Logger.get(getActivity())
-          .logImpression(DialerImpression.Type.CALL_DETAILS_IMS_VIDEO_CALL_BACK);
       PreCall.start(
           getActivity(),
           new CallIntentBuilder(phoneNumber, CallInitiationType.Type.CALL_DETAILS)
-              .setIsVideoCall(true));
-    }
-
-    @Override
-    public void placeDuoVideoCall(String phoneNumber) {
-      Logger.get(getActivity())
-          .logImpression(DialerImpression.Type.CALL_DETAILS_LIGHTBRINGER_CALL_BACK);
-      PreCall.start(
-          getActivity(),
-          new CallIntentBuilder(phoneNumber, CallInitiationType.Type.CALL_DETAILS)
-              .setIsDuoCall(true)
               .setIsVideoCall(true));
     }
 
     @Override
     public void placeVoiceCall(String phoneNumber, String postDialDigits) {
-      Logger.get(getActivity()).logImpression(DialerImpression.Type.CALL_DETAILS_VOICE_CALL_BACK);
-
       boolean canSupportedAssistedDialing =
           getActivity()
               .getIntent()
@@ -366,7 +325,7 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
       DialerExecutorComponent.get(getActivity().getApplicationContext())
           .dialerExecutorFactory()
           .createUiTaskBuilder(
-              getActivity().getFragmentManager(),
+              getActivity().getSupportFragmentManager(),
               "CallDetailsActivityCommon.createAssistedDialerNumberParserTask",
               new AssistedDialingNumberParseWorker())
           .onSuccess(successListener)
@@ -406,7 +365,6 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
     @Override
     public void delete() {
       CallDetailsActivityCommon activity = getActivity();
-      Logger.get(activity).logImpression(DialerImpression.Type.USER_DELETED_CALL_LOG_ITEM);
       DialerExecutorComponent.get(activity)
           .dialerExecutorFactory()
           .createNonUiTaskBuilder(new DeleteCallsWorker(activity))
@@ -414,13 +372,6 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
               unused -> {
                 Intent data = new Intent();
                 data.putExtra(EXTRA_PHONE_NUMBER, activity.getNumber());
-                for (CallDetailsEntry entry : activity.getCallDetailsEntries().getEntriesList()) {
-                  if (entry.getHistoryResultsCount() > 0) {
-                    data.putExtra(EXTRA_HAS_ENRICHED_CALL_DATA, true);
-                    break;
-                  }
-                }
-
                 activity.setResult(RESULT_OK, data);
                 activity.finish();
               })
@@ -435,16 +386,16 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
 
   private static final class ReportCallIdListener
       implements CallDetailsFooterViewHolder.ReportCallIdListener {
-    private final WeakReference<Activity> activityWeakReference;
+    private final WeakReference<AppCompatActivity> activityWeakReference;
 
-    ReportCallIdListener(Activity activity) {
+    ReportCallIdListener(AppCompatActivity activity) {
       this.activityWeakReference = new WeakReference<>(activity);
     }
 
     @Override
     public void reportCallId(String number) {
       ReportDialogFragment.newInstance(number)
-          .show(getActivity().getFragmentManager(), null /* tag */);
+          .show(getActivity().getSupportFragmentManager(), null /* tag */);
     }
 
     @Override
@@ -452,72 +403,8 @@ abstract class CallDetailsActivityCommon extends AppCompatActivity {
       return getActivity().getIntent().getExtras().getBoolean(EXTRA_CAN_REPORT_CALLER_ID, false);
     }
 
-    private Activity getActivity() {
+    private AppCompatActivity getActivity() {
       return Preconditions.checkNotNull(activityWeakReference.get());
-    }
-  }
-
-  private static final class EnrichedCallHistoricalDataChangedListener
-      implements EnrichedCallManager.HistoricalDataChangedListener {
-    private final WeakReference<CallDetailsActivityCommon> activityWeakReference;
-
-    EnrichedCallHistoricalDataChangedListener(CallDetailsActivityCommon activity) {
-      this.activityWeakReference = new WeakReference<>(activity);
-    }
-
-    @Override
-    public void onHistoricalDataChanged() {
-      CallDetailsActivityCommon activity = getActivity();
-      Map<CallDetailsEntry, List<HistoryResult>> mappedResults =
-          getAllHistoricalData(activity.getNumber(), activity.callDetailsEntries);
-
-      activity.setCallDetailsEntries(
-          generateAndMapNewCallDetailsEntriesHistoryResults(
-              activity.getNumber(), activity.callDetailsEntries, mappedResults));
-    }
-
-    private CallDetailsActivityCommon getActivity() {
-      return Preconditions.checkNotNull(activityWeakReference.get());
-    }
-
-    @NonNull
-    private Map<CallDetailsEntry, List<HistoryResult>> getAllHistoricalData(
-        @Nullable String number, @NonNull CallDetailsEntries entries) {
-      if (number == null) {
-        return Collections.emptyMap();
-      }
-
-      Map<CallDetailsEntry, List<HistoryResult>> historicalData =
-          EnrichedCallComponent.get(getActivity())
-              .getEnrichedCallManager()
-              .getAllHistoricalData(number, entries);
-      if (historicalData == null) {
-        return Collections.emptyMap();
-      }
-      return historicalData;
-    }
-
-    private static CallDetailsEntries generateAndMapNewCallDetailsEntriesHistoryResults(
-        @Nullable String number,
-        @NonNull CallDetailsEntries callDetailsEntries,
-        @NonNull Map<CallDetailsEntry, List<HistoryResult>> mappedResults) {
-      if (number == null) {
-        return callDetailsEntries;
-      }
-      CallDetailsEntries.Builder mutableCallDetailsEntries = CallDetailsEntries.newBuilder();
-      for (CallDetailsEntry entry : callDetailsEntries.getEntriesList()) {
-        CallDetailsEntry.Builder newEntry = CallDetailsEntry.newBuilder().mergeFrom(entry);
-        List<HistoryResult> results = mappedResults.get(entry);
-        if (results != null) {
-          newEntry.addAllHistoryResults(mappedResults.get(entry));
-          LogUtil.v(
-              "CallDetailsActivityCommon.generateAndMapNewCallDetailsEntriesHistoryResults",
-              "mapped %d results",
-              newEntry.getHistoryResultsList().size());
-        }
-        mutableCallDetailsEntries.addEntries(newEntry.build());
-      }
-      return mutableCallDetailsEntries.build();
     }
   }
 }

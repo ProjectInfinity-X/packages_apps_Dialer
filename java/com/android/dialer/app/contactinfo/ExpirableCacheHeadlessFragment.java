@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +18,11 @@
 package com.android.dialer.app.contactinfo;
 
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AppCompatActivity;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
 import com.android.dialer.phonenumbercache.ContactInfo;
 import com.android.dialer.util.ExpirableCache;
 
@@ -34,15 +36,11 @@ public class ExpirableCacheHeadlessFragment extends Fragment {
   private static final String FRAGMENT_TAG = "ExpirableCacheHeadlessFragment";
   private static final int CONTACT_INFO_CACHE_SIZE = 100;
 
-  private ExpirableCache<NumberWithCountryIso, ContactInfo> retainedCache;
+  private final ExpirableCache<NumberWithCountryIso, ContactInfo> retainedCache =
+      ExpirableCache.create(CONTACT_INFO_CACHE_SIZE);
 
   @NonNull
-  public static ExpirableCacheHeadlessFragment attach(@NonNull AppCompatActivity parentActivity) {
-    return attach(parentActivity.getSupportFragmentManager());
-  }
-
-  @NonNull
-  private static ExpirableCacheHeadlessFragment attach(FragmentManager fragmentManager) {
+  public static ExpirableCacheHeadlessFragment attach(FragmentManager fragmentManager) {
     ExpirableCacheHeadlessFragment fragment =
         (ExpirableCacheHeadlessFragment) fragmentManager.findFragmentByTag(FRAGMENT_TAG);
     if (fragment == null) {
@@ -57,7 +55,6 @@ public class ExpirableCacheHeadlessFragment extends Fragment {
   @Override
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    retainedCache = ExpirableCache.create(CONTACT_INFO_CACHE_SIZE);
     setRetainInstance(true);
   }
 

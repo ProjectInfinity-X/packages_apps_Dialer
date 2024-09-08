@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +18,17 @@
 package com.android.dialer.assisteddialing;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
-import com.android.dialer.strictmode.StrictModeUtils;
 import com.google.i18n.phonenumbers.NumberParseException;
 import com.google.i18n.phonenumbers.PhoneNumberUtil;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
 import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber.CountryCodeSource;
+
 import java.util.Locale;
 import java.util.Optional;
 
@@ -55,7 +55,7 @@ final class Constraints {
     }
 
     this.countryCodeProvider = countryCodeProvider;
-    this.phoneNumberUtil = StrictModeUtils.bypass(() -> PhoneNumberUtil.getInstance());
+    this.phoneNumberUtil = PhoneNumberUtil.getInstance();
   }
 
   /**
@@ -144,18 +144,13 @@ final class Constraints {
    */
   private Optional<PhoneNumber> parsePhoneNumber(
       @NonNull String numberToParse, @NonNull String userHomeCountryCode) {
-    return StrictModeUtils.bypass(
-        () -> {
-          try {
-            return Optional.of(
-                phoneNumberUtil.parseAndKeepRawInput(numberToParse, userHomeCountryCode));
-          } catch (NumberParseException e) {
-            Logger.get(context)
-                .logImpression(DialerImpression.Type.ASSISTED_DIALING_CONSTRAINT_PARSING_FAILURE);
-            LogUtil.i("Constraints.parsePhoneNumber", "could not parse the number");
-            return Optional.empty();
-          }
-        });
+    try {
+      return Optional.of(
+          phoneNumberUtil.parseAndKeepRawInput(numberToParse, userHomeCountryCode));
+    } catch (NumberParseException e) {
+      LogUtil.i("Constraints.parsePhoneNumber", "could not parse the number");
+      return Optional.empty();
+    }
   }
 
   /** Returns a boolean indicating if the provided number is already internationally formatted. */
@@ -164,8 +159,6 @@ final class Constraints {
     if (parsedPhoneNumber.get().hasCountryCode()
         && parsedPhoneNumber.get().getCountryCodeSource()
             != CountryCodeSource.FROM_DEFAULT_COUNTRY) {
-      Logger.get(context)
-          .logImpression(DialerImpression.Type.ASSISTED_DIALING_CONSTRAINT_NUMBER_HAS_COUNTRY_CODE);
       LogUtil.i(
           "Constraints.isNotInternationalNumber", "phone number already provided the country code");
       return false;
@@ -183,8 +176,6 @@ final class Constraints {
 
     if (parsedPhoneNumber.get().hasExtension()
         && !TextUtils.isEmpty(parsedPhoneNumber.get().getExtension())) {
-      Logger.get(context)
-          .logImpression(DialerImpression.Type.ASSISTED_DIALING_CONSTRAINT_NUMBER_HAS_EXTENSION);
       LogUtil.i("Constraints.doesNotHaveExtension", "phone number has an extension");
       return false;
     }
@@ -193,8 +184,7 @@ final class Constraints {
 
   /** Returns a boolean indicating if the provided number is considered to be a valid number. */
   private boolean isValidNumber(@NonNull Optional<PhoneNumber> parsedPhoneNumber) {
-    boolean result =
-        StrictModeUtils.bypass(() -> phoneNumberUtil.isValidNumber(parsedPhoneNumber.get()));
+    boolean result = phoneNumberUtil.isValidNumber(parsedPhoneNumber.get());
     LogUtil.i("Constraints.isValidNumber", String.valueOf(result));
 
     return result;
@@ -204,9 +194,7 @@ final class Constraints {
   private boolean isNotEmergencyNumber(@NonNull String numberToCheck, @NonNull Context context) {
     // isEmergencyNumber may depend on network state, so also use isLocalEmergencyNumber when
     // roaming and out of service.
-    boolean result =
-        !PhoneNumberUtils.isEmergencyNumber(numberToCheck)
-            && !PhoneNumberHelper.isLocalEmergencyNumber(context, numberToCheck);
+    boolean result = !PhoneNumberHelper.isEmergencyNumber(context, numberToCheck);
     LogUtil.i("Constraints.isNotEmergencyNumber", String.valueOf(result));
     return result;
   }

@@ -17,10 +17,11 @@
 package com.android.incallui.videotech;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
-import com.android.dialer.logging.DialerImpression;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.incallui.video.protocol.VideoCallScreen;
 import com.android.incallui.video.protocol.VideoCallScreenDelegate;
 import com.android.incallui.videotech.utils.SessionModificationState;
@@ -86,8 +87,6 @@ public interface VideoTech {
    */
   void becomePrimary();
 
-  com.android.dialer.logging.VideoTech.Type getVideoTechType();
-
   /** Listener for video call events. */
   interface VideoTechListener {
 
@@ -102,7 +101,5 @@ public interface VideoTech {
     void onVideoUpgradeRequestReceived();
 
     void onUpgradedToVideo(boolean switchToSpeaker);
-
-    void onImpressionLoggingNeeded(DialerImpression.Type impressionType);
   }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,12 +29,16 @@ import android.graphics.Paint.Align;
 import android.graphics.Rect;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.telecom.TelecomManager;
 import android.text.TextUtils;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
@@ -49,7 +54,8 @@ public class LetterTileDrawable extends Drawable {
    * #TYPE_BUSINESS}, and voicemail contacts should use {@link #TYPE_VOICEMAIL}.
    */
   @Retention(RetentionPolicy.SOURCE)
-  @IntDef({TYPE_PERSON, TYPE_BUSINESS, TYPE_VOICEMAIL, TYPE_GENERIC_AVATAR, TYPE_SPAM})
+  @IntDef({TYPE_PERSON, TYPE_BUSINESS, TYPE_VOICEMAIL, TYPE_GENERIC_AVATAR, TYPE_SPAM,
+          TYPE_CONFERENCE})
   public @interface ContactType {}
 
   /** Contact type constants */
@@ -80,10 +86,6 @@ public class LetterTileDrawable extends Drawable {
 
   public static final int SHAPE_RECTANGLE = 2;
 
-  /** 54% opacity */
-  private static final int ALPHA = 138;
-  /** 100% opacity */
-  private static final int SPAM_ALPHA = 255;
   /** Default icon scale for vector drawable. */
   private static final float VECTOR_ICON_SCALE = 0.7f;
 
@@ -94,7 +96,8 @@ public class LetterTileDrawable extends Drawable {
   private final char[] firstChar = new char[1];
 
   /** Letter tile */
-  @NonNull private final TypedArray colors;
+  @NonNull
+  private final TypedArray colors;
 
   private final int spamColor;
   private final int defaultColor;
@@ -118,18 +121,17 @@ public class LetterTileDrawable extends Drawable {
 
   public LetterTileDrawable(final Resources res) {
     colors = res.obtainTypedArray(R.array.letter_tile_colors);
-    spamColor = res.getColor(R.color.spam_contact_background);
-    defaultColor = res.getColor(R.color.letter_tile_default_color);
-    tileFontColor = res.getColor(R.color.letter_tile_font_color);
+    spamColor = res.getColor(R.color.spam_contact_background, null);
+    defaultColor = res.getColor(R.color.letter_tile_default_color, null);
+    tileFontColor = res.getColor(R.color.letter_tile_font_color, null);
     letterToTileRatio = res.getFraction(R.dimen.letter_to_tile_ratio, 1, 1);
-    defaultPersonAvatar =
-        res.getDrawable(R.drawable.product_logo_avatar_anonymous_white_color_120, null);
+    defaultPersonAvatar = res.getDrawable(R.drawable.quantum_ic_person_vd_theme_24, null);
     defaultBusinessAvatar = res.getDrawable(R.drawable.quantum_ic_business_vd_theme_24, null);
     defaultVoicemailAvatar = res.getDrawable(R.drawable.quantum_ic_voicemail_vd_theme_24, null);
     defaultSpamAvatar = res.getDrawable(R.drawable.quantum_ic_report_vd_theme_24, null);
     defaultConferenceAvatar = res.getDrawable(R.drawable.quantum_ic_group_vd_theme_24, null);
 
-    paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
+    paint.setTypeface(Typeface.create("@*android:string/config_headlineFontFamilyMedium", Typeface.NORMAL));
     paint.setTextAlign(Align.CENTER);
     paint.setAntiAlias(true);
     paint.setFilterBitmap(true);
@@ -169,12 +171,9 @@ public class LetterTileDrawable extends Drawable {
       case TYPE_PERSON:
       case TYPE_GENERIC_AVATAR:
       default:
+        scale = VECTOR_ICON_SCALE;
         return defaultPersonAvatar;
     }
-  }
-
-  private static boolean isEnglishLetter(final char c) {
-    return ('A' <= c && c <= 'Z') || ('a' <= c && c <= 'z');
   }
 
   @Override
@@ -216,9 +215,8 @@ public class LetterTileDrawable extends Drawable {
       // Scale text by canvas bounds and user selected scaling factor
       paint.setTextSize(scale * letterToTileRatio * minDimension);
       paint.getTextBounds(firstChar, 0, 1, rect);
-      paint.setTypeface(Typeface.create("sans-serif", Typeface.NORMAL));
+      paint.setTypeface(Typeface.create("@*android:string/config_bodyFontFamily", Typeface.NORMAL));
       paint.setColor(tileFontColor);
-      paint.setAlpha(ALPHA);
 
       // Draw the letter in the canvas, vertically shifted up or down by the user-defined
       // offset
@@ -238,7 +236,6 @@ public class LetterTileDrawable extends Drawable {
       }
 
       drawable.setBounds(getScaledBounds(scale, offset));
-      drawable.setAlpha(drawable == defaultSpamAvatar ? SPAM_ALPHA : ALPHA);
       drawable.draw(canvas);
     }
   }
@@ -335,7 +332,8 @@ public class LetterTileDrawable extends Drawable {
 
   private LetterTileDrawable setLetterAndColorFromContactDetails(
       final String displayName, final String identifier) {
-    if (!TextUtils.isEmpty(displayName) && isEnglishLetter(displayName.charAt(0))) {
+    if (displayName != null && !TextUtils.isEmpty(displayName)
+            && Character.isLetter(displayName.charAt(0))) {
       letter = Character.toUpperCase(displayName.charAt(0));
     } else {
       letter = null;

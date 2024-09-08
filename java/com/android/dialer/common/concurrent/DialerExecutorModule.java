@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 package com.android.dialer.common.concurrent;
 
 import android.os.AsyncTask;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.BackgroundExecutor;
 import com.android.dialer.common.concurrent.Annotations.LightweightExecutor;
@@ -26,14 +28,16 @@ import com.android.dialer.common.concurrent.Annotations.UiParallel;
 import com.android.dialer.common.concurrent.Annotations.UiSerial;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import dagger.Binds;
-import dagger.Module;
-import dagger.Provides;
+
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.ThreadFactory;
+
 import javax.inject.Singleton;
+
+import dagger.Binds;
+import dagger.Module;
+import dagger.Provides;
 
 /** Module which provides concurrency bindings. */
 @Module
@@ -56,16 +60,13 @@ public abstract class DialerExecutorModule {
   static ExecutorService provideNonUiThreadPool() {
     return Executors.newFixedThreadPool(
         5,
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable runnable) {
-            LogUtil.i("DialerExecutorModule.newThread", "creating low priority thread");
-            Thread thread = new Thread(runnable, "DialerExecutors-LowPriority");
-            // Java thread priority 4 corresponds to Process.THREAD_PRIORITY_BACKGROUND (10)
-            thread.setPriority(4);
-            return thread;
-          }
-        });
+            runnable -> {
+              LogUtil.i("DialerExecutorModule.newThread", "creating low priority thread");
+              Thread thread = new Thread(runnable, "DialerExecutors-LowPriority");
+              // Java thread priority 4 corresponds to Process.THREAD_PRIORITY_BACKGROUND (10)
+              thread.setPriority(4);
+              return thread;
+            });
   }
 
   @Provides
@@ -73,16 +74,13 @@ public abstract class DialerExecutorModule {
   @NonUiSerial
   static ScheduledExecutorService provideNonUiSerialExecutorService() {
     return Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable runnable) {
-            LogUtil.i("NonUiTaskBuilder.newThread", "creating serial thread");
-            Thread thread = new Thread(runnable, "DialerExecutors-LowPriority-Serial");
-            // Java thread priority 4 corresponds to Process.THREAD_PRIORITY_BACKGROUND (10)
-            thread.setPriority(4);
-            return thread;
-          }
-        });
+            runnable -> {
+              LogUtil.i("NonUiTaskBuilder.newThread", "creating serial thread");
+              Thread thread = new Thread(runnable, "DialerExecutors-LowPriority-Serial");
+              // Java thread priority 4 corresponds to Process.THREAD_PRIORITY_BACKGROUND (10)
+              thread.setPriority(4);
+              return thread;
+            });
   }
 
   @Provides
@@ -96,16 +94,13 @@ public abstract class DialerExecutorModule {
   @UiSerial
   static ScheduledExecutorService provideUiSerialExecutorService() {
     return Executors.newSingleThreadScheduledExecutor(
-        new ThreadFactory() {
-          @Override
-          public Thread newThread(Runnable runnable) {
-            LogUtil.i("DialerExecutorModule.newThread", "creating serial thread");
-            Thread thread = new Thread(runnable, "DialerExecutors-HighPriority-Serial");
-            // Java thread priority 5 corresponds to Process.THREAD_PRIORITY_DEFAULT (0)
-            thread.setPriority(5);
-            return thread;
-          }
-        });
+            runnable -> {
+              LogUtil.i("DialerExecutorModule.newThread", "creating serial thread");
+              Thread thread = new Thread(runnable, "DialerExecutors-HighPriority-Serial");
+              // Java thread priority 5 corresponds to Process.THREAD_PRIORITY_DEFAULT (0)
+              thread.setPriority(5);
+              return thread;
+            });
   }
 
   @Provides

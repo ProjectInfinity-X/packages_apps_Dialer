@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +19,13 @@ package com.android.dialer.smartdial.util;
 
 import android.content.Context;
 import android.content.SharedPreferences;
-import android.preference.PreferenceManager;
-import android.support.annotation.VisibleForTesting;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.preference.PreferenceManager;
+
 import com.android.dialer.smartdial.map.CompositeSmartDialMap;
+
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Set;
@@ -62,8 +65,6 @@ public class SmartDialPrefix {
   /** Set of supported country codes in front of the phone number. */
   private static Set<String> countryCodes = null;
 
-  private static boolean nanpInitialized = false;
-
   /** Initializes the Nanp settings, and finds out whether user is in a NANP region. */
   public static void initializeNanpSettings(Context context) {
     final TelephonyManager manager =
@@ -85,7 +86,6 @@ public class SmartDialPrefix {
     }
     /** Queries the NANP country list to find out whether user is in a NANP region. */
     userInNanpRegion = isCountryNanp(userSimCountryCode);
-    nanpInitialized = true;
   }
 
   /**
@@ -299,7 +299,7 @@ public class SmartDialPrefix {
   }
 
   private static Set<String> initCountryCodes() {
-    final HashSet<String> result = new HashSet<String>();
+    final HashSet<String> result = new HashSet<>();
     result.add("1");
     result.add("7");
     result.add("20");
@@ -526,8 +526,7 @@ public class SmartDialPrefix {
    * @see <a href="https://en.wikipedia.org/wiki/North_American_Numbering_Plan">
    *     https://en.wikipedia.org/wiki/North_American_Numbering_Plan</a>
    */
-  @VisibleForTesting
-  public static boolean isCountryNanp(String country) {
+  private static boolean isCountryNanp(String country) {
     if (TextUtils.isEmpty(country)) {
       return false;
     }
@@ -538,7 +537,7 @@ public class SmartDialPrefix {
   }
 
   private static Set<String> initNanpCountries() {
-    final HashSet<String> result = new HashSet<String>();
+    final HashSet<String> result = new HashSet<>();
     result.add("US"); // United States
     result.add("CA"); // Canada
     result.add("AS"); // American Samoa
@@ -564,21 +563,6 @@ public class SmartDialPrefix {
     result.add("TC"); // Turks and Caicos Islands
     result.add("VI"); // U.S. Virgin Islands
     return result;
-  }
-
-  /**
-   * Returns whether the user is in a region that uses Nanp format based on the sim location.
-   *
-   * @return Whether user is in Nanp region.
-   */
-  public static boolean getUserInNanpRegion() {
-    return userInNanpRegion;
-  }
-
-  /** Explicitly setting the user Nanp to the given boolean */
-  @VisibleForTesting
-  public static void setUserInNanpRegion(boolean userInNanpRegion) {
-    SmartDialPrefix.userInNanpRegion = userInNanpRegion;
   }
 
   /** Class to record phone number parsing information. */

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -21,19 +22,17 @@ import android.content.ContentValues;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.database.Cursor;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
 import android.provider.VoicemailContract;
 import android.provider.VoicemailContract.Voicemails;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresApi;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.ArraySet;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.calllog.database.AnnotatedCallLogDatabaseHelper;
 import com.android.dialer.calllog.database.contract.AnnotatedCallLogContract.AnnotatedCallLog;
@@ -43,8 +42,6 @@ import com.android.dialer.calllog.observer.MarkDirtyObserver;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.BackgroundExecutor;
-import com.android.dialer.compat.android.provider.VoicemailCompat;
-import com.android.dialer.duo.Duo;
 import com.android.dialer.inject.ApplicationContext;
 import com.android.dialer.phonenumberproto.DialerPhoneNumberUtil;
 import com.android.dialer.storage.Unencrypted;
@@ -54,10 +51,11 @@ import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
-import java.util.ArrayList;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.Set;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -69,17 +67,16 @@ import javax.inject.Singleton;
 @SuppressWarnings("MissingPermission")
 public class SystemCallLogDataSource implements CallLogDataSource {
 
-  @VisibleForTesting
-  static final String PREF_LAST_TIMESTAMP_PROCESSED = "systemCallLogLastTimestampProcessed";
+  private static final String PREF_LAST_TIMESTAMP_PROCESSED = "systemCallLogLastTimestampProcessed";
 
   private final Context appContext;
   private final ListeningExecutorService backgroundExecutorService;
   private final MarkDirtyObserver markDirtyObserver;
   private final SharedPreferences sharedPreferences;
   private final AnnotatedCallLogDatabaseHelper annotatedCallLogDatabaseHelper;
-  private final Duo duo;
 
-  @Nullable private Long lastTimestampProcessed;
+  @Nullable
+  private Long lastTimestampProcessed;
   private boolean isCallLogContentObserverRegistered = false;
 
   @Inject
@@ -88,14 +85,12 @@ public class SystemCallLogDataSource implements CallLogDataSource {
       @BackgroundExecutor ListeningExecutorService backgroundExecutorService,
       MarkDirtyObserver markDirtyObserver,
       @Unencrypted SharedPreferences sharedPreferences,
-      AnnotatedCallLogDatabaseHelper annotatedCallLogDatabaseHelper,
-      Duo duo) {
+      AnnotatedCallLogDatabaseHelper annotatedCallLogDatabaseHelper) {
     this.appContext = appContext;
     this.backgroundExecutorService = backgroundExecutorService;
     this.markDirtyObserver = markDirtyObserver;
     this.sharedPreferences = sharedPreferences;
     this.annotatedCallLogDatabaseHelper = annotatedCallLogDatabaseHelper;
-    this.duo = duo;
   }
 
   @Override
@@ -269,7 +264,6 @@ public class SystemCallLogDataSource implements CallLogDataSource {
       int countryIsoColumn = cursor.getColumnIndexOrThrow(Calls.COUNTRY_ISO);
       int durationsColumn = cursor.getColumnIndexOrThrow(Calls.DURATION);
       int dataUsageColumn = cursor.getColumnIndexOrThrow(Calls.DATA_USAGE);
-      int transcriptionColumn = cursor.getColumnIndexOrThrow(Calls.TRANSCRIPTION);
       int voicemailUriColumn = cursor.getColumnIndexOrThrow(Calls.VOICEMAIL_URI);
       int isReadColumn = cursor.getColumnIndexOrThrow(Calls.IS_READ);
       int newColumn = cursor.getColumnIndexOrThrow(Calls.NEW);
@@ -302,7 +296,6 @@ public class SystemCallLogDataSource implements CallLogDataSource {
         String countryIso = cursor.getString(countryIsoColumn);
         int duration = cursor.getInt(durationsColumn);
         int dataUsage = cursor.getInt(dataUsageColumn);
-        String transcription = cursor.getString(transcriptionColumn);
         String voicemailUri = cursor.getString(voicemailUriColumn);
         int isRead = cursor.getInt(isReadColumn);
         int isNew = cursor.getInt(newColumn);
@@ -311,11 +304,6 @@ public class SystemCallLogDataSource implements CallLogDataSource {
         String phoneAccountId = cursor.getString(phoneAccountIdColumn);
         int features = cursor.getInt(featuresColumn);
         String postDialDigits = cursor.getString(postDialDigitsColumn);
-
-        // Exclude Duo audio calls.
-        if (isDuoAudioCall(phoneAccountComponentName, features)) {
-          continue;
-        }
 
         ContentValues contentValues = new ContentValues();
         contentValues.put(AnnotatedCallLog.TIMESTAMP, date);
@@ -347,12 +335,9 @@ public class SystemCallLogDataSource implements CallLogDataSource {
         contentValues.put(AnnotatedCallLog.FEATURES, features);
         contentValues.put(AnnotatedCallLog.DURATION, duration);
         contentValues.put(AnnotatedCallLog.DATA_USAGE, dataUsage);
-        contentValues.put(AnnotatedCallLog.TRANSCRIPTION, transcription);
         contentValues.put(AnnotatedCallLog.VOICEMAIL_URI, voicemailUri);
 
         contentValues.put(AnnotatedCallLog.CALL_MAPPING_ID, String.valueOf(date));
-
-        setTranscriptionState(cursor, contentValues);
 
         if (existingAnnotatedCallLogIds.contains(id)) {
           mutations.update(id, contentValues);
@@ -363,34 +348,7 @@ public class SystemCallLogDataSource implements CallLogDataSource {
     }
   }
 
-  /**
-   * Returns true if the phone account component name and the features belong to a Duo audio call.
-   *
-   * <p>Characteristics of a Duo audio call are as follows.
-   *
-   * <ul>
-   *   <li>The phone account is {@link Duo#isDuoAccount(String)}; and
-   *   <li>The features don't include {@link Calls#FEATURES_VIDEO}.
-   * </ul>
-   *
-   * <p>It is the caller's responsibility to ensure the phone account component name and the
-   * features come from the same call log entry.
-   */
-  private boolean isDuoAudioCall(@Nullable String phoneAccountComponentName, int features) {
-    return duo.isDuoAccount(phoneAccountComponentName)
-        && ((features & Calls.FEATURES_VIDEO) != Calls.FEATURES_VIDEO);
-  }
-
-  private void setTranscriptionState(Cursor cursor, ContentValues contentValues) {
-    if (VERSION.SDK_INT >= VERSION_CODES.O) {
-      int transcriptionStateColumn =
-          cursor.getColumnIndexOrThrow(VoicemailCompat.TRANSCRIPTION_STATE);
-      int transcriptionState = cursor.getInt(transcriptionStateColumn);
-      contentValues.put(VoicemailCompat.TRANSCRIPTION_STATE, transcriptionState);
-    }
-  }
-
-  private static final String[] PROJECTION_PRE_O =
+  private static final String[] PROJECTION =
       new String[] {
         Calls._ID,
         Calls.DATE,
@@ -401,7 +359,6 @@ public class SystemCallLogDataSource implements CallLogDataSource {
         Calls.COUNTRY_ISO,
         Calls.DURATION,
         Calls.DATA_USAGE,
-        Calls.TRANSCRIPTION,
         Calls.VOICEMAIL_URI,
         Calls.IS_READ,
         Calls.NEW,
@@ -412,20 +369,8 @@ public class SystemCallLogDataSource implements CallLogDataSource {
         Calls.POST_DIAL_DIGITS
       };
 
-  @RequiresApi(VERSION_CODES.O)
-  private static final String[] PROJECTION_O_AND_LATER;
-
-  static {
-    List<String> projectionList = new ArrayList<>(Arrays.asList(PROJECTION_PRE_O));
-    projectionList.add(VoicemailCompat.TRANSCRIPTION_STATE);
-    PROJECTION_O_AND_LATER = projectionList.toArray(new String[projectionList.size()]);
-  }
-
   private String[] getProjection() {
-    if (VERSION.SDK_INT >= VERSION_CODES.O) {
-      return PROJECTION_O_AND_LATER;
-    }
-    return PROJECTION_PRE_O;
+      return PROJECTION;
   }
 
   private static void handleDeletes(

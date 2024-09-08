@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +20,9 @@ package com.android.incallui;
 import android.content.Context;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
-import android.telecom.PhoneAccount;
+
 import com.android.contacts.common.util.MaterialColorMapUtils;
+import com.android.dialer.R;
 import com.android.dialer.theme.base.ThemeComponent;
 
 public class InCallUIMaterialColorMapUtils extends MaterialColorMapUtils {
@@ -41,7 +43,6 @@ public class InCallUIMaterialColorMapUtils extends MaterialColorMapUtils {
   /**
    * {@link Resources#getColor(int) used for compatibility
    */
-  @SuppressWarnings("deprecation")
   public static MaterialPalette getDefaultPrimaryAndSecondaryColors(Context context) {
     final int primaryColor = ThemeComponent.get(context).theme().getColorPrimary();
     final int secondaryColor = ThemeComponent.get(context).theme().getColorPrimaryDark();
@@ -55,17 +56,6 @@ public class InCallUIMaterialColorMapUtils extends MaterialColorMapUtils {
    */
   @Override
   public MaterialPalette calculatePrimaryAndSecondaryColor(int color) {
-    if (color == PhoneAccount.NO_HIGHLIGHT_COLOR) {
-      return getDefaultPrimaryAndSecondaryColors(context);
-    }
-
-    for (int i = 0; i < primaryColors.length(); i++) {
-      if (primaryColors.getColor(i, 0) == color) {
-        return new MaterialPalette(primaryColors.getColor(i, 0), secondaryColors.getColor(i, 0));
-      }
-    }
-
-    // The color isn't in the list, so use the superclass to find an approximate color.
-    return super.calculatePrimaryAndSecondaryColor(color);
+    return getDefaultPrimaryAndSecondaryColors(context);
   }
 }

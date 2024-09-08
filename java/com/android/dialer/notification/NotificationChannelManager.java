@@ -16,23 +16,23 @@
 
 package com.android.dialer.notification;
 
-import android.annotation.TargetApi;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.media.AudioAttributes;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.telecom.PhoneAccountHandle;
 import android.util.ArraySet;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
+
 import java.util.Set;
 
 /** Creates all notification channels for Dialer. */
-@TargetApi(VERSION_CODES.O)
 public final class NotificationChannelManager {
 
   /**
@@ -51,7 +51,6 @@ public final class NotificationChannelManager {
    *       <ul>
    */
   public static void initChannels(@NonNull Context context) {
-    Assert.checkArgument(BuildCompat.isAtLeastO());
     Assert.isNotNull(context);
 
     NotificationManager notificationManager = context.getSystemService(NotificationManager.class);
@@ -89,8 +88,7 @@ public final class NotificationChannelManager {
 
   @NonNull
   public static String getVoicemailChannelId(
-      @NonNull Context context, @Nullable PhoneAccountHandle handle) {
-    Assert.checkArgument(BuildCompat.isAtLeastO());
+          @NonNull Context context, @Nullable PhoneAccountHandle handle) {
     Assert.isNotNull(context);
     return VoicemailChannelUtils.getChannelId(context, handle);
   }
@@ -119,7 +117,7 @@ public final class NotificationChannelManager {
         new NotificationChannel(
             NotificationChannelId.INCOMING_CALL,
             context.getText(R.string.notification_channel_incoming_call),
-            NotificationManager.IMPORTANCE_MAX);
+            NotificationManager.IMPORTANCE_HIGH);
     channel.setShowBadge(false);
     channel.enableLights(true);
     channel.enableVibration(false);

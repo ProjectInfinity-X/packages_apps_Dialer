@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,16 @@
 package com.android.incallui.videotech.ims;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.Call;
 import android.telecom.Call.Details;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.VideoProfile;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.LoggingBindings;
 import com.android.dialer.util.CallUtil;
 import com.android.incallui.video.protocol.VideoCallScreen;
 import com.android.incallui.video.protocol.VideoCallScreenDelegate;
@@ -36,10 +36,9 @@ import com.android.incallui.videotech.utils.SessionModificationState;
 
 /** ViLTE implementation */
 public class ImsVideoTech implements VideoTech {
-  private final LoggingBindings logger;
   private final Call call;
   private final VideoTechListener listener;
-  @VisibleForTesting ImsVideoCallCallback callback;
+  private ImsVideoCallCallback callback;
   private @SessionModificationState int sessionModificationState =
       SessionModificationState.NO_REQUEST;
   private int previousVideoState = VideoProfile.STATE_AUDIO_ONLY;
@@ -52,8 +51,7 @@ public class ImsVideoTech implements VideoTech {
   // unpause() will send the incorrect VideoProfile.
   private boolean transmissionStopped = false;
 
-  public ImsVideoTech(LoggingBindings logger, VideoTechListener listener, Call call) {
-    this.logger = logger;
+  public ImsVideoTech(VideoTechListener listener, Call call) {
     this.listener = listener;
     this.call = call;
   }
@@ -129,7 +127,7 @@ public class ImsVideoTech implements VideoTech {
     }
 
     if (callback == null) {
-      callback = new ImsVideoCallCallback(logger, call, this, listener, context);
+      callback = new ImsVideoCallCallback(call, this, listener, context);
       call.getVideoCall().registerCallback(callback);
     }
 
@@ -182,7 +180,6 @@ public class ImsVideoTech implements VideoTech {
         .sendSessionModifyRequest(
             new VideoProfile(unpausedVideoState | VideoProfile.STATE_BIDIRECTIONAL));
     setSessionModificationState(SessionModificationState.WAITING_FOR_UPGRADE_TO_VIDEO_RESPONSE);
-    logger.logImpression(DialerImpression.Type.IMS_VIDEO_UPGRADE_REQUESTED);
   }
 
   @Override
@@ -193,14 +190,12 @@ public class ImsVideoTech implements VideoTech {
     call.getVideoCall().sendSessionModifyResponse(new VideoProfile(requestedVideoState));
     // Telecom manages audio route for us
     listener.onUpgradedToVideo(false /* switchToSpeaker */);
-    logger.logImpression(DialerImpression.Type.IMS_VIDEO_REQUEST_ACCEPTED);
   }
 
   @Override
   public void acceptVideoRequestAsAudio() {
     LogUtil.enterBlock("ImsVideoTech.acceptVideoRequestAsAudio");
     call.getVideoCall().sendSessionModifyResponse(new VideoProfile(VideoProfile.STATE_AUDIO_ONLY));
-    logger.logImpression(DialerImpression.Type.IMS_VIDEO_REQUEST_ACCEPTED_AS_AUDIO);
   }
 
   @Override
@@ -209,7 +204,6 @@ public class ImsVideoTech implements VideoTech {
     call.getVideoCall()
         .sendSessionModifyResponse(new VideoProfile(call.getDetails().getVideoState()));
     setSessionModificationState(SessionModificationState.NO_REQUEST);
-    logger.logImpression(DialerImpression.Type.IMS_VIDEO_REQUEST_DECLINED);
   }
 
   @Override
@@ -245,7 +239,7 @@ public class ImsVideoTech implements VideoTech {
 
   @Override
   public void pause() {
-    if (call.getState() != Call.STATE_ACTIVE) {
+    if (call.getDetails().getState() != Call.STATE_ACTIVE) {
       LogUtil.i("ImsVideoTech.pause", "not pausing because call is not active");
       return;
     }
@@ -279,7 +273,7 @@ public class ImsVideoTech implements VideoTech {
 
   @Override
   public void unpause() {
-    if (call.getState() != Call.STATE_ACTIVE) {
+    if (call.getDetails().getState() != Call.STATE_ACTIVE) {
       LogUtil.i("ImsVideoTech.unpause", "not unpausing because call is not active");
       return;
     }
@@ -329,13 +323,6 @@ public class ImsVideoTech implements VideoTech {
 
   @Override
   public void becomePrimary() {
-    listener.onImpressionLoggingNeeded(
-        DialerImpression.Type.UPGRADE_TO_VIDEO_CALL_BUTTON_SHOWN_FOR_IMS);
-  }
-
-  @Override
-  public com.android.dialer.logging.VideoTech.Type getVideoTechType() {
-    return com.android.dialer.logging.VideoTech.Type.IMS_VIDEO_TECH;
   }
 
   private boolean canPause() {

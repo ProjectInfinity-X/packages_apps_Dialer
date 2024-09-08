@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,19 +19,8 @@ package com.android.dialer.searchfragment.list;
 
 import static android.Manifest.permission.ACCESS_FINE_LOCATION;
 
-import android.app.Fragment;
-import android.app.LoaderManager.LoaderCallbacks;
-import android.content.Intent;
-import android.content.Loader;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.os.Bundle;
-import android.preference.PreferenceManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v7.widget.LinearLayoutManager;
-import android.support.v7.widget.RecyclerView;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -41,9 +31,20 @@ import android.view.ViewGroup;
 import android.view.animation.Interpolator;
 import android.widget.FrameLayout;
 import android.widget.FrameLayout.LayoutParams;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.loader.app.LoaderManager;
+import androidx.loader.content.Loader;
+import androidx.preference.PreferenceManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.android.contacts.common.extensions.PhoneDirectoryExtenderAccessor;
+import com.android.dialer.R;
 import com.android.dialer.animation.AnimUtils;
-import com.android.dialer.callcomposer.CallComposerActivity;
 import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.callintent.CallSpecificAppData;
@@ -51,11 +52,6 @@ import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.ThreadUtil;
-import com.android.dialer.dialercontact.DialerContact;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager.CapabilitiesListener;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.searchfragment.common.RowClickListener;
 import com.android.dialer.searchfragment.common.SearchCursor;
@@ -66,11 +62,11 @@ import com.android.dialer.searchfragment.directories.DirectoryContactsCursorLoad
 import com.android.dialer.searchfragment.list.SearchActionViewHolder.Action;
 import com.android.dialer.searchfragment.nearbyplaces.NearbyPlacesCursorLoader;
 import com.android.dialer.util.CallUtil;
-import com.android.dialer.util.DialerUtils;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.ViewUtil;
 import com.android.dialer.widget.EmptyContentView;
 import com.android.dialer.widget.EmptyContentView.OnEmptyViewActionButtonClickedListener;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
@@ -78,23 +74,16 @@ import java.util.List;
 
 /** Fragment used for searching contacts. */
 public final class NewSearchFragment extends Fragment
-    implements LoaderCallbacks<Cursor>,
+    implements LoaderManager.LoaderCallbacks<Cursor>,
         OnEmptyViewActionButtonClickedListener,
-        CapabilitiesListener,
         OnTouchListener,
         RowClickListener {
 
   // Since some of our queries can generate network requests, we should delay them until the user
   // stops typing to prevent generating too much network traffic.
   private static final int NETWORK_SEARCH_DELAY_MILLIS = 300;
-  // To prevent constant capabilities updates refreshing the adapter, we want to add a delay between
-  // updates so they are bundled together
-  private static final int ENRICHED_CALLING_CAPABILITIES_UPDATED_DELAY = 400;
 
   private static final String KEY_LOCATION_PROMPT_DISMISSED = "search_location_prompt_dismissed";
-
-  @VisibleForTesting public static final int READ_CONTACTS_PERMISSION_REQUEST_CODE = 1;
-  @VisibleForTesting private static final int LOCATION_PERMISSION_REQUEST_CODE = 2;
 
   private static final int CONTACTS_LOADER_ID = 0;
   private static final int NEARBY_PLACES_LOADER_ID = 1;
@@ -115,7 +104,6 @@ public final class NewSearchFragment extends Fragment
   // for actions to add contact or send sms.
   private String rawNumber;
   private CallInitiationType.Type callInitiationType = CallInitiationType.Type.UNKNOWN_INITIATION;
-  private boolean directoriesDisabledForTesting;
 
   // Information about all local & remote directories (including ID, display name, etc, but not
   // the contacts in them).
@@ -123,24 +111,44 @@ public final class NewSearchFragment extends Fragment
   private final Runnable loaderCp2ContactsRunnable =
       () -> {
         if (getHost() != null) {
-          getLoaderManager().restartLoader(CONTACTS_LOADER_ID, null, this);
+          LoaderManager.getInstance(this).restartLoader(CONTACTS_LOADER_ID, null, this);
         }
       };
   private final Runnable loadNearbyPlacesRunnable =
       () -> {
         if (getHost() != null) {
-          getLoaderManager().restartLoader(NEARBY_PLACES_LOADER_ID, null, this);
+          LoaderManager.getInstance(this).restartLoader(NEARBY_PLACES_LOADER_ID, null, this);
         }
       };
   private final Runnable loadDirectoryContactsRunnable =
       () -> {
         if (getHost() != null) {
-          getLoaderManager().restartLoader(DIRECTORY_CONTACTS_LOADER_ID, null, this);
+          LoaderManager.getInstance(this).restartLoader(DIRECTORY_CONTACTS_LOADER_ID, null, this);
         }
       };
   private final Runnable capabilitiesUpdatedRunnable = () -> adapter.notifyDataSetChanged();
 
   private Runnable updatePositionRunnable;
+
+  private final ActivityResultLauncher<String[]> contactPermissionLauncher =
+          registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
+                  grantResults -> {
+            if (grantResults.size() >= 1 && grantResults.values().iterator().next()) {
+              // Force a refresh of the data since we were missing the permission before this.
+              emptyContentView.setVisibility(View.GONE);
+              initLoaders();
+            }
+          });
+
+  private final ActivityResultLauncher<String[]> locationPermissionLauncher =
+          registerForActivityResult(new ActivityResultContracts.RequestMultiplePermissions(),
+                  grantResults -> {
+            if (grantResults.size() >= 1 && grantResults.values().iterator().next()) {
+              // Force a refresh of the data since we were missing the permission before this.
+              loadNearbyPlacesCursor();
+              adapter.hideLocationPermissionRequest();
+            }
+          });
 
   public static NewSearchFragment newInstance() {
     return new NewSearchFragment();
@@ -191,7 +199,7 @@ public final class NewSearchFragment extends Fragment
   }
 
   private void initLoaders() {
-    getLoaderManager().initLoader(CONTACTS_LOADER_ID, null, this);
+    LoaderManager.getInstance(this).initLoader(CONTACTS_LOADER_ID, null, this);
     loadDirectoriesCursor();
   }
 
@@ -263,11 +271,6 @@ public final class NewSearchFragment extends Fragment
     this.rawNumber = rawNumber;
   }
 
-  @VisibleForTesting
-  public String getRawNumber() {
-    return rawNumber;
-  }
-
   public void setQuery(String query, CallInitiationType.Type callInitiationType) {
     this.query = query;
     this.callInitiationType = callInitiationType;
@@ -289,6 +292,7 @@ public final class NewSearchFragment extends Fragment
 
     if (getContext() == null
         || PermissionsUtil.hasLocationPermissions(getContext())
+        || !PhoneDirectoryExtenderAccessor.get(getContext()).isEnabled(getContext())
         || hasBeenDismissed()
         || !isRegularSearch()) {
       adapter.hideLocationPermissionRequest();
@@ -343,24 +347,6 @@ public final class NewSearchFragment extends Fragment
   }
 
   @Override
-  public void onRequestPermissionsResult(
-      int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-    if (requestCode == READ_CONTACTS_PERMISSION_REQUEST_CODE) {
-      if (grantResults.length >= 1 && PackageManager.PERMISSION_GRANTED == grantResults[0]) {
-        // Force a refresh of the data since we were missing the permission before this.
-        emptyContentView.setVisibility(View.GONE);
-        initLoaders();
-      }
-    } else if (requestCode == LOCATION_PERMISSION_REQUEST_CODE) {
-      if (grantResults.length >= 1 && PackageManager.PERMISSION_GRANTED == grantResults[0]) {
-        // Force a refresh of the data since we were missing the permission before this.
-        loadNearbyPlacesCursor();
-        adapter.hideLocationPermissionRequest();
-      }
-    }
-  }
-
-  @Override
   public void onEmptyViewActionButtonClicked() {
     String[] deniedPermissions =
         PermissionsUtil.getPermissionsCurrentlyDenied(
@@ -370,15 +356,13 @@ public final class NewSearchFragment extends Fragment
           "NewSearchFragment.onEmptyViewActionButtonClicked",
           "Requesting permissions: " + Arrays.toString(deniedPermissions));
       FragmentUtils.getParentUnsafe(this, SearchFragmentListener.class).requestingPermission();
-      requestPermissions(deniedPermissions, READ_CONTACTS_PERMISSION_REQUEST_CODE);
+      contactPermissionLauncher.launch(deniedPermissions);
     }
   }
 
   /** Loads info about all directories (local & remote). */
   private void loadDirectoriesCursor() {
-    if (!directoriesDisabledForTesting) {
-      getLoaderManager().initLoader(DIRECTORIES_LOADER_ID, null, this);
-    }
+    LoaderManager.getInstance(this).initLoader(DIRECTORIES_LOADER_ID, null, this);
   }
 
   /**
@@ -387,10 +371,6 @@ public final class NewSearchFragment extends Fragment
    * <p>Should not be called before finishing loading info about all directories (local & remote).
    */
   private void loadDirectoryContactsCursors() {
-    if (directoriesDisabledForTesting) {
-      return;
-    }
-
     // Cancel existing load if one exists.
     ThreadUtil.getUiThreadHandler().removeCallbacks(loadDirectoryContactsRunnable);
     ThreadUtil.getUiThreadHandler()
@@ -439,10 +419,9 @@ public final class NewSearchFragment extends Fragment
         PermissionsUtil.getPermissionsCurrentlyDenied(
             getContext(), PermissionsUtil.allLocationGroupPermissionsUsedInDialer);
     FragmentUtils.getParentUnsafe(this, SearchFragmentListener.class).requestingPermission();
-    requestPermissions(deniedPermissions, LOCATION_PERMISSION_REQUEST_CODE);
+    locationPermissionLauncher.launch(deniedPermissions);
   }
 
-  @VisibleForTesting
   public void dismissLocationPermission() {
     PreferenceManager.getDefaultSharedPreferences(getContext())
         .edit()
@@ -459,33 +438,7 @@ public final class NewSearchFragment extends Fragment
   @Override
   public void onResume() {
     super.onResume();
-    EnrichedCallComponent.get(getContext())
-        .getEnrichedCallManager()
-        .registerCapabilitiesListener(this);
-    getLoaderManager().restartLoader(CONTACTS_LOADER_ID, null, this);
-  }
-
-  @Override
-  public void onPause() {
-    super.onPause();
-    EnrichedCallComponent.get(getContext())
-        .getEnrichedCallManager()
-        .unregisterCapabilitiesListener(this);
-  }
-
-  @Override
-  public void onCapabilitiesUpdated() {
-    ThreadUtil.getUiThreadHandler().removeCallbacks(capabilitiesUpdatedRunnable);
-    ThreadUtil.getUiThreadHandler()
-        .postDelayed(capabilitiesUpdatedRunnable, ENRICHED_CALLING_CAPABILITIES_UPDATED_DELAY);
-  }
-
-  // Currently, setting up multiple FakeContentProviders doesn't work and results in this fragment
-  // being untestable while it can query multiple datasources. This is a temporary fix.
-  // TODO(a bug): Remove this method and test this fragment with multiple data sources
-  @VisibleForTesting
-  public void setDirectoriesDisabled(boolean disabled) {
-    directoriesDisabledForTesting = disabled;
+    LoaderManager.getInstance(this).restartLoader(CONTACTS_LOADER_ID, null, this);
   }
 
   /**
@@ -549,8 +502,6 @@ public final class NewSearchFragment extends Fragment
     CallSpecificAppData callSpecificAppData =
         CallSpecificAppData.newBuilder()
             .setCallInitiationType(callInitiationType)
-            .setPositionOfSelectedSearchResult(position)
-            .setCharactersInSearchString(query == null ? 0 : query.length())
             .setAllowAssistedDialing(true)
             .build();
     PreCall.start(
@@ -559,24 +510,6 @@ public final class NewSearchFragment extends Fragment
             .setIsVideoCall(isVideoCall)
             .setAllowAssistedDial(true));
     FragmentUtils.getParentUnsafe(this, SearchFragmentListener.class).onCallPlacedFromSearch();
-  }
-
-  @Override
-  public void placeDuoCall(String phoneNumber) {
-    Logger.get(getContext())
-        .logImpression(DialerImpression.Type.LIGHTBRINGER_VIDEO_REQUESTED_FROM_SEARCH);
-    PreCall.start(
-        getContext(),
-        new CallIntentBuilder(phoneNumber, CallInitiationType.Type.REGULAR_SEARCH)
-            .setIsVideoCall(true)
-            .setIsDuoCall(true));
-    FragmentUtils.getParentUnsafe(this, SearchFragmentListener.class).onCallPlacedFromSearch();
-  }
-
-  @Override
-  public void openCallAndShare(DialerContact contact) {
-    Intent intent = CallComposerActivity.newIntent(getContext(), contact);
-    DialerUtils.startActivityWithErrorToast(getContext(), intent);
   }
 
   /** Callback to {@link NewSearchFragment}'s parent to be notified of important events. */

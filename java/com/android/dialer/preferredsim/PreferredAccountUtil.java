@@ -18,21 +18,17 @@ package com.android.dialer.preferredsim;
 
 import android.content.ComponentName;
 import android.content.Context;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
-import android.telecom.TelecomManager;
-import android.telephony.SubscriptionInfo;
-import android.telephony.SubscriptionManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableSet;
+
+import java.util.Optional;
 
 /**
  * Utilities for looking up and validating preferred {@link PhoneAccountHandle}. Contacts should
@@ -45,53 +41,33 @@ public class PreferredAccountUtil {
    * device.
    */
   @NonNull
-  public static Optional<PhoneAccountHandle> getValidPhoneAccount(
-      @NonNull Context context, @Nullable String componentNameString, @Nullable String idString) {
+  public static Optional<PhoneAccountHandle> getValidPhoneAccount(@NonNull Context context,
+                                                                  @Nullable String
+                                                                          componentNameString,
+                                                                  @Nullable String idString) {
     if (TextUtils.isEmpty(componentNameString) || TextUtils.isEmpty(idString)) {
       LogUtil.i("PreferredAccountUtil.getValidPhoneAccount", "empty componentName or id");
-      return Optional.absent();
+      return Optional.empty();
     }
     ComponentName componentName = ComponentName.unflattenFromString(componentNameString);
     if (componentName == null) {
       LogUtil.e("PreferredAccountUtil.getValidPhoneAccount", "cannot parse component name");
-      return Optional.absent();
+      return Optional.empty();
     }
     PhoneAccountHandle phoneAccountHandle = new PhoneAccountHandle(componentName, idString);
 
     if (isPhoneAccountValid(context, phoneAccountHandle)) {
       return Optional.of(phoneAccountHandle);
     }
-    return Optional.absent();
+    return Optional.empty();
   }
 
   public static boolean isPhoneAccountValid(
       Context context, PhoneAccountHandle phoneAccountHandle) {
-    if (VERSION.SDK_INT >= VERSION_CODES.O) {
       return context
               .getSystemService(TelephonyManager.class)
               .createForPhoneAccountHandle(phoneAccountHandle)
           != null;
-    }
-
-    PhoneAccount phoneAccount =
-        context.getSystemService(TelecomManager.class).getPhoneAccount(phoneAccountHandle);
-    if (phoneAccount == null) {
-      LogUtil.e("PreferredAccountUtil.isPhoneAccountValid", "invalid phone account");
-      return false;
-    }
-
-    if (!phoneAccount.isEnabled()) {
-      LogUtil.e("PreferredAccountUtil.isPhoneAccountValid", "disabled phone account");
-      return false;
-    }
-    for (SubscriptionInfo info :
-        SubscriptionManager.from(context).getActiveSubscriptionInfoList()) {
-      if (phoneAccountHandle.getId().startsWith(info.getIccId())) {
-        LogUtil.i("PreferredAccountUtil.isPhoneAccountValid", "sim found");
-        return true;
-      }
-    }
-    return false;
   }
 
   /**
@@ -100,12 +76,9 @@ public class PreferredAccountUtil {
    * com.android.contacts.common.model.AccountTypeManager#getAccountTypes(boolean)}. External
    * accounts are not supported.
    */
-  public static ImmutableSet<String> getValidAccountTypes(Context context) {
+  public static ImmutableSet<String> getValidAccountTypes() {
     return ImmutableSet.copyOf(
-        ConfigProviderComponent.get(context)
-            .getConfigProvider()
-            .getString(
-                "preferred_sim_valid_account_types",
+            (
                 "com.google;"
                     + "com.osp.app.signin;"
                     + "com.android.exchange;"

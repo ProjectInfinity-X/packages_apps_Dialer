@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,17 +20,19 @@ import android.content.Context;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.support.annotation.AnyThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
+
+import androidx.annotation.AnyThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.google.auto.value.AutoValue;
+
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
@@ -43,9 +46,6 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class CequintCallerIdManager {
 
-  @VisibleForTesting
-  public static final String CONFIG_CALLER_ID_ENABLED = "config_caller_id_enabled";
-
   private static final int CALLER_ID_LOOKUP_USER_PROVIDED_CID = 0x0001;
   private static final int CALLER_ID_LOOKUP_SYSTEM_PROVIDED_CID = 0x0002;
   private static final int CALLER_ID_LOOKUP_INCOMING_CALL = 0x0020;
@@ -53,8 +53,7 @@ public class CequintCallerIdManager {
   private static final String[] EMPTY_PROJECTION = new String[] {};
 
   /** Column names in Cequint content provider. */
-  @VisibleForTesting
-  public static final class CequintColumnNames {
+  private static final class CequintColumnNames {
     public static final String CITY_NAME = "cid_pCityName";
     public static final String STATE_NAME = "cid_pStateName";
     public static final String STATE_ABBR = "cid_pStateAbbr";
@@ -110,11 +109,6 @@ public class CequintCallerIdManager {
   /** Check whether Cequint Caller ID provider package is available and enabled. */
   @AnyThread
   public static synchronized boolean isCequintCallerIdEnabled(@NonNull Context context) {
-    if (!ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean(CONFIG_CALLER_ID_ENABLED, true)) {
-      return false;
-    }
     if (!hasAlreadyCheckedCequintCallerIdPackage) {
       hasAlreadyCheckedCequintCallerIdPackage = true;
 

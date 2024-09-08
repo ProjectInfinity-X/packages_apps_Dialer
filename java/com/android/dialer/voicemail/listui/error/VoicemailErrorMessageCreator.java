@@ -17,9 +17,9 @@
 package com.android.dialer.voicemail.listui.error;
 
 import android.content.Context;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.VisualVoicemailTypeExtensions;
 
 /**
@@ -32,10 +32,6 @@ public class VoicemailErrorMessageCreator {
   @Nullable
   public VoicemailErrorMessage create(
       Context context, VoicemailStatus status, VoicemailStatusReader statusReader) {
-    // Never return error message before NMR1. Voicemail status is not supported on those.
-    if (VERSION.SDK_INT < VERSION_CODES.N_MR1) {
-      return null;
-    }
     switch (status.type) {
       case VisualVoicemailTypeExtensions.VVM_TYPE_VVM3:
         return Vvm3VoicemailMessageCreator.create(context, status, statusReader);

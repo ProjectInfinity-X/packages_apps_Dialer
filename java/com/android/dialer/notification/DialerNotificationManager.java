@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,13 +21,15 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.text.TextUtils;
 import android.util.Pair;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
+
 import java.util.HashSet;
 import java.util.Set;
 
@@ -49,10 +52,7 @@ public final class DialerNotificationManager {
     Assert.isNotNull(context);
     Assert.isNotNull(notification);
     Assert.checkArgument(!TextUtils.isEmpty(tag));
-
-    if (BuildCompat.isAtLeastO()) {
-      Assert.checkArgument(!TextUtils.isEmpty(notification.getChannelId()));
-    }
+    Assert.checkArgument(!TextUtils.isEmpty(notification.getChannelId()));
 
     getNotificationManager(context).notify(tag, id, notification);
     throttledNotificationSet.addAll(NotificationThrottler.throttle(context, notification));

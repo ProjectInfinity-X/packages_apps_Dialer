@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +18,25 @@
 package com.android.dialer.calldetails;
 
 import android.content.Context;
+import android.content.Intent;
 import android.net.Uri;
-import android.support.v7.widget.RecyclerView;
 import android.telecom.PhoneAccount;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.View.OnClickListener;
+import android.view.View.OnLongClickListener;
 import android.widget.ImageView;
 import android.widget.QuickContactBadge;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.dialer.R;
+import com.android.dialer.app.AccountSelectionActivity;
 import com.android.dialer.calldetails.CallDetailsActivityCommon.AssistedDialingNumberParseWorker;
 import com.android.dialer.calldetails.CallDetailsEntries.CallDetailsEntry;
+import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.calllogutils.CallbackActionHelper.CallbackAction;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
@@ -38,9 +46,8 @@ import com.android.dialer.compat.telephony.TelephonyManagerCompat;
 import com.android.dialer.contactphoto.ContactPhotoManager;
 import com.android.dialer.dialercontact.DialerContact;
 import com.android.dialer.glidephotomanager.GlidePhotoManagerComponent;
-import com.android.dialer.logging.InteractionEvent;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
+import com.android.dialer.util.DialerUtils;
 import com.android.dialer.widget.BidiTextView;
 
 /**
@@ -49,7 +56,7 @@ import com.android.dialer.widget.BidiTextView;
  * <p>The header contains contact info and the primary callback button.
  */
 public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
-    implements OnClickListener, FailureListener {
+    implements OnClickListener, OnLongClickListener, FailureListener {
 
   private final CallDetailsHeaderListener callDetailsHeaderListener;
   private final ImageView callbackButton;
@@ -86,14 +93,11 @@ public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
         callDetailsHeaderListener::openAssistedDialingSettings);
 
     callbackButton.setOnClickListener(this);
+    callbackButton.setOnLongClickListener(this);
 
     this.number = number;
     this.postDialDigits = postDialDigits;
     this.callDetailsHeaderListener = callDetailsHeaderListener;
-
-    Logger.get(context)
-        .logQuickContactOnTouch(
-            contactPhoto, InteractionEvent.Type.OPEN_QUICK_CONTACT_FROM_CALL_DETAILS, true);
   }
 
   private boolean hasAssistedDialingFeature(Integer features) {
@@ -163,7 +167,7 @@ public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
     numberView.setVisibility(View.GONE);
     numberView.setText(null);
 
-    if (PhoneNumberHelper.isLocalEmergencyNumber(context, contact.getNumber())) {
+    if (PhoneNumberHelper.isEmergencyNumber(context, contact.getNumber())) {
       nameView.setText(context.getResources().getString(R.string.emergency_number));
     } else {
       nameView.setText(contact.getNameOrNumber());
@@ -211,7 +215,6 @@ public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
   private void setCallbackAction(@CallbackAction int callbackAction) {
     this.callbackAction = callbackAction;
     switch (callbackAction) {
-      case CallbackAction.DUO:
       case CallbackAction.IMS_VIDEO:
         callbackButton.setVisibility(View.VISIBLE);
         callbackButton.setImageResource(R.drawable.quantum_ic_videocam_vd_theme_24);
@@ -235,9 +238,6 @@ public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
         case CallbackAction.IMS_VIDEO:
           callDetailsHeaderListener.placeImsVideoCall(number);
           break;
-        case CallbackAction.DUO:
-          callDetailsHeaderListener.placeDuoVideoCall(number);
-          break;
         case CallbackAction.VOICE:
           callDetailsHeaderListener.placeVoiceCall(number, postDialDigits);
           break;
@@ -250,14 +250,24 @@ public class CallDetailsHeaderViewHolder extends RecyclerView.ViewHolder
     }
   }
 
+  @Override
+  public boolean onLongClick(View view) {
+    if (view == callbackButton) {
+      Intent intent = AccountSelectionActivity.createIntent(view.getContext(),
+          number, CallInitiationType.Type.CALL_DETAILS);
+      if (intent != null) {
+        DialerUtils.startActivityWithErrorToast(view.getContext(), intent);
+        return true;
+      }
+    }
+    return false;
+  }
+
   /** Listener for the call details header */
   interface CallDetailsHeaderListener {
 
     /** Places an IMS video call. */
     void placeImsVideoCall(String phoneNumber);
-
-    /** Places a Duo video call. */
-    void placeDuoVideoCall(String phoneNumber);
 
     /** Place a traditional voice call. */
     void placeVoiceCall(String phoneNumber, String postDialDigits);

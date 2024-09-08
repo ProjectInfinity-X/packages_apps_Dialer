@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,7 +23,9 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Message;
+
 import com.android.dialer.common.LogUtil;
 
 /**
@@ -39,43 +42,46 @@ public class AccelerometerListener {
   private static final boolean DEBUG = true;
   private static final boolean VDEBUG = false;
   private static final int ORIENTATION_CHANGED = 1234;
+  private static final int FACE_UP_CHANGED = 1235;
   private static final int VERTICAL_DEBOUNCE = 100;
   private static final int HORIZONTAL_DEBOUNCE = 500;
   private static final double VERTICAL_ANGLE = 50.0;
-  private SensorManager sensorManager;
-  private Sensor sensor;
+  private final SensorManager sensorManager;
+  private final Sensor sensor;
   // mOrientation is the orientation value most recently reported to the client.
   private int orientation;
   // mPendingOrientation is the latest orientation computed based on the sensor value.
   // This is sent to the client after a rebounce delay, at which point it is copied to
   // mOrientation.
   private int pendingOrientation;
-  private OrientationListener listener;
-  Handler handler =
-      new Handler() {
-        @Override
-        public void handleMessage(Message msg) {
-          switch (msg.what) {
-            case ORIENTATION_CHANGED:
-              synchronized (this) {
-                orientation = pendingOrientation;
-                if (DEBUG) {
-                  LogUtil.d(
-                      TAG,
-                      "orientation: "
-                          + (orientation == ORIENTATION_HORIZONTAL
-                              ? "horizontal"
-                              : (orientation == ORIENTATION_VERTICAL ? "vertical" : "unknown")));
-                }
-                if (listener != null) {
-                  listener.orientationChanged(orientation);
-                }
-              }
-              break;
+  private ChangeListener listener;
+  final Handler handler = new Handler(Looper.getMainLooper()) {
+    @Override
+    public void handleMessage(Message msg) {
+      switch (msg.what) {
+        case ORIENTATION_CHANGED:
+          synchronized (this) {
+            orientation = pendingOrientation;
+            if (DEBUG) {
+              LogUtil.d(
+                  TAG,
+                  "orientation: "
+                      + (orientation == ORIENTATION_HORIZONTAL
+                          ? "horizontal"
+                          : (orientation == ORIENTATION_VERTICAL ? "vertical" : "unknown")));
+            }
+            if (listener != null) {
+              listener.onOrientationChanged(orientation);
+            }
           }
-        }
-      };
-  SensorEventListener sensorListener =
+          break;
+          case FACE_UP_CHANGED:
+              listener.onDeviceFlipped(msg.arg1 == 0);
+          break;
+      }
+    }
+  };
+  final SensorEventListener sensorListener =
       new SensorEventListener() {
         @Override
         public void onSensorChanged(SensorEvent event) {
@@ -88,12 +94,33 @@ public class AccelerometerListener {
         }
       };
 
+  // Flip detection
+  private static final int FACE_UP_GRAVITY_THRESHOLD = 7;
+  private static final int FACE_DOWN_GRAVITY_THRESHOLD = -7;
+  private static final int SENSOR_SAMPLES = 3;
+  private static final int MIN_ACCEPT_COUNT = SENSOR_SAMPLES - 1;
+
+  private boolean mWasFaceUp;
+  private boolean[] mSamples = new boolean[SENSOR_SAMPLES];
+  private int mSampleIndex;
+
+  public interface ChangeListener {
+    void onOrientationChanged(int orientation);
+    void onDeviceFlipped(boolean faceDown);
+  }
+
   public AccelerometerListener(Context context) {
     sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
     sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
   }
 
-  public void setListener(OrientationListener listener) {
+  public AccelerometerListener(Context context, ChangeListener listener) {
+      setListener(listener);
+      sensorManager = (SensorManager)context.getSystemService(Context.SENSOR_SERVICE);
+      sensor = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
+  }
+
+  public void setListener(ChangeListener listener) {
     this.listener = listener;
   }
 
@@ -105,12 +132,30 @@ public class AccelerometerListener {
       if (enable) {
         orientation = ORIENTATION_UNKNOWN;
         pendingOrientation = ORIENTATION_UNKNOWN;
+        mWasFaceUp = false;
+        resetFlipSamples();
         sensorManager.registerListener(sensorListener, sensor, SensorManager.SENSOR_DELAY_NORMAL);
       } else {
         sensorManager.unregisterListener(sensorListener);
         handler.removeMessages(ORIENTATION_CHANGED);
       }
     }
+  }
+
+  private void resetFlipSamples() {
+      for (int i = 0; i < SENSOR_SAMPLES; i++) {
+          mSamples[i] = false;
+      }
+  }
+
+  private boolean filterFlipSamples() {
+      int trues = 0;
+      for (int i = 0; i < mSamples.length; i++) {
+          if (mSamples[i]) {
+              ++trues;
+          }
+      }
+      return trues >= MIN_ACCEPT_COUNT;
   }
 
   private void setOrientation(int orientation) {
@@ -140,6 +185,17 @@ public class AccelerometerListener {
     }
   }
 
+  private void setIsFaceUp(boolean faceUp) {
+      synchronized (this) {
+          if (mWasFaceUp != faceUp) {
+              handler.removeMessages(FACE_UP_CHANGED);
+              handler.obtainMessage(FACE_UP_CHANGED, faceUp ? 1 : 0, 0).sendToTarget();
+              mWasFaceUp = faceUp;
+              resetFlipSamples();
+          }
+      }
+  }
+
   private void onSensorEvent(double x, double y, double z) {
     if (VDEBUG) {
       LogUtil.d(TAG, "onSensorEvent(" + x + ", " + y + ", " + z + ")");
@@ -163,10 +219,24 @@ public class AccelerometerListener {
       LogUtil.d(TAG, "angle: " + angle + " orientation: " + orientation);
     }
     setOrientation(orientation);
-  }
 
-  public interface OrientationListener {
+    boolean nowFaceUp, wasFaceUp;
+    synchronized (this) {
+        nowFaceUp = wasFaceUp = mWasFaceUp;
+    }
 
-    void orientationChanged(int orientation);
+    if (!wasFaceUp) {
+        // Check if its face up enough.
+        mSamples[mSampleIndex] = z > FACE_UP_GRAVITY_THRESHOLD;
+    } else {
+        // Check if its face down enough.
+        mSamples[mSampleIndex] = z < FACE_DOWN_GRAVITY_THRESHOLD;
+    }
+    if (filterFlipSamples()) {
+        nowFaceUp = !wasFaceUp;
+    }
+
+    mSampleIndex = ((mSampleIndex + 1) % SENSOR_SAMPLES);
+    setIsFaceUp(nowFaceUp);
   }
 }

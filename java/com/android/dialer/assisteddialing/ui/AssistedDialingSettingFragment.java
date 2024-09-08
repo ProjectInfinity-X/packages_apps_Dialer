@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,25 +19,25 @@ package com.android.dialer.assisteddialing.ui;
 import android.icu.util.ULocale;
 import android.icu.util.ULocale.Builder;
 import android.os.Bundle;
-import android.preference.ListPreference;
-import android.preference.Preference;
-import android.preference.PreferenceFragment;
-import android.preference.SwitchPreference;
-import android.telephony.TelephonyManager;
+
+import androidx.annotation.Nullable;
+import androidx.preference.ListPreference;
+import androidx.preference.Preference;
+import androidx.preference.PreferenceFragmentCompat;
+
+import com.android.dialer.R;
 import com.android.dialer.assisteddialing.AssistedDialingMediator;
 import com.android.dialer.assisteddialing.ConcreteCreator;
 import com.android.dialer.assisteddialing.CountryCodeProvider;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.google.auto.value.AutoValue;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
 /** The setting for Assisted Dialing */
-public class AssistedDialingSettingFragment extends PreferenceFragment {
+public class AssistedDialingSettingFragment extends PreferenceFragmentCompat {
 
   private CountryCodeProvider countryCodeProvider;
   private AssistedDialingMediator assistedDialingMediator;
@@ -61,29 +62,22 @@ public class AssistedDialingSettingFragment extends PreferenceFragment {
   public void onCreate(Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
 
-    assistedDialingMediator =
-        ConcreteCreator.createNewAssistedDialingMediator(
-            getContext().getSystemService(TelephonyManager.class), getContext());
+    assistedDialingMediator = ConcreteCreator.createNewAssistedDialingMediator();
+    countryCodeProvider = ConcreteCreator.getCountryCodeProvider();
+  }
 
-    countryCodeProvider =
-        ConcreteCreator.getCountryCodeProvider(
-            ConfigProviderComponent.get(getContext()).getConfigProvider());
-
+  @Override
+  public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
     // Load the preferences from an XML resource
     addPreferencesFromResource(R.xml.assisted_dialing_setting);
-    SwitchPreference switchPref =
-        (SwitchPreference)
-            findPreference(getContext().getString(R.string.assisted_dialing_setting_toggle_key));
 
     ListPreference countryChooserPref =
-        (ListPreference)
             findPreference(getContext().getString(R.string.assisted_dialing_setting_cc_key));
 
     updateCountryChoices(countryChooserPref);
     updateCountryChooserSummary(countryChooserPref);
 
     countryChooserPref.setOnPreferenceChangeListener(this::updateListSummary);
-    switchPref.setOnPreferenceChangeListener(this::logIfUserDisabledFeature);
   }
 
   private void updateCountryChooserSummary(ListPreference countryChooserPref) {
@@ -135,8 +129,8 @@ public class AssistedDialingSettingFragment extends PreferenceFragment {
       }
     }
 
-    countryChooserPref.setEntries(newKeys.toArray(new CharSequence[newKeys.size()]));
-    countryChooserPref.setEntryValues(newValues.toArray(new CharSequence[newValues.size()]));
+    countryChooserPref.setEntries(newKeys.toArray(new CharSequence[0]));
+    countryChooserPref.setEntryValues(newValues.toArray(new CharSequence[0]));
 
     if (!newValues.contains(countryChooserPref.getValue())) {
       ameliorateInvalidSelectedValue(countryChooserPref);
@@ -193,15 +187,6 @@ public class AssistedDialingSettingFragment extends PreferenceFragment {
     ListPreference listPref = (ListPreference) pref;
     CharSequence[] entries = listPref.getEntries();
     listPref.setSummary(entries[listPref.findIndexOfValue(newValue.toString())]);
-    return true;
-  }
-
-  boolean logIfUserDisabledFeature(Preference pref, Object newValue) {
-    if (!((boolean) newValue)) {
-      Logger.get(getActivity().getApplicationContext())
-          .logImpression(DialerImpression.Type.ASSISTED_DIALING_FEATURE_DISABLED_BY_USER);
-    }
-
     return true;
   }
 }

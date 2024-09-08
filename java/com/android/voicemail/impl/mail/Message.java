@@ -15,8 +15,8 @@
  */
 package com.android.voicemail.impl.mail;
 
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
+import androidx.annotation.Nullable;
+
 import java.util.Date;
 import java.util.HashSet;
 
@@ -51,38 +51,18 @@ public abstract class Message implements Part, Body {
 
   public abstract void setSubject(String subject) throws MessagingException;
 
-  public Date getInternalDate() {
-    return internalDate;
-  }
-
   public void setInternalDate(Date internalDate) {
     this.internalDate = internalDate;
   }
 
-  public abstract Date getReceivedDate() throws MessagingException;
-
   public abstract Date getSentDate() throws MessagingException;
-
-  public abstract void setSentDate(Date sentDate) throws MessagingException;
 
   @Nullable
   public abstract Long getDuration() throws MessagingException;
 
-  public abstract Address[] getRecipients(String type) throws MessagingException;
-
-  public abstract void setRecipients(String type, Address[] addresses) throws MessagingException;
-
-  public void setRecipient(String type, Address address) throws MessagingException {
-    setRecipients(type, new Address[] {address});
-  }
-
   public abstract Address[] getFrom() throws MessagingException;
 
   public abstract void setFrom(Address from) throws MessagingException;
-
-  public abstract Address[] getReplyTo() throws MessagingException;
-
-  public abstract void setReplyTo(Address[] from) throws MessagingException;
 
   // Always use these instead of getHeader("Message-ID") or setHeader("Message-ID");
   public abstract void setMessageId(String messageId) throws MessagingException;
@@ -96,7 +76,7 @@ public abstract class Message implements Part, Body {
 
   private HashSet<String> getFlagSet() {
     if (flags == null) {
-      flags = new HashSet<String>();
+      flags = new HashSet<>();
     }
     return flags;
   }
@@ -108,22 +88,7 @@ public abstract class Message implements Part, Body {
     return getFlagSet().toArray(new String[] {});
   }
 
-  /**
-   * Set/clear a flag directly, without involving overrides of {@link #setFlag} in subclasses. Only
-   * used for testing.
-   */
-  @VisibleForTesting
-  private final void setFlagDirectlyForTest(String flag, boolean set) throws MessagingException {
-    if (set) {
-      getFlagSet().add(flag);
-    } else {
-      getFlagSet().remove(flag);
-    }
-  }
-
-  public void setFlag(String flag, boolean set) throws MessagingException {
-    setFlagDirectlyForTest(flag, set);
-  }
+  public void setFlag(String flag, boolean set) throws MessagingException { }
 
   /**
    * This method calls setFlag(String, boolean)
@@ -136,12 +101,6 @@ public abstract class Message implements Part, Body {
       setFlag(flag, set);
     }
   }
-
-  public boolean isSet(String flag) {
-    return getFlagSet().contains(flag);
-  }
-
-  public abstract void saveChanges() throws MessagingException;
 
   @Override
   public String toString() {

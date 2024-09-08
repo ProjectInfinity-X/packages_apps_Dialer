@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,21 +18,23 @@
 package com.android.dialer.shortcuts;
 
 import android.Manifest;
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.pm.PackageManager;
 import android.content.pm.ShortcutInfo;
 import android.content.pm.ShortcutManager;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.Build.VERSION_CODES;
 import android.provider.ContactsContract.Contacts;
-import android.support.annotation.NonNull;
-import android.support.annotation.WorkerThread;
-import android.support.v4.content.ContextCompat;
 import android.util.ArrayMap;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+import androidx.core.content.ContextCompat;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -47,7 +50,6 @@ import java.util.Map;
  * still up to date (e.g. photo and name). We also check to see if the contact has been deleted from
  * the user's contacts, and if so, we disable the pinned shortcut.
  */
-@TargetApi(VERSION_CODES.N_MR1) // Shortcuts introduced in N MR1
 final class PinnedShortcuts {
 
   private static final String[] PROJECTION =

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023-2024 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,6 +26,9 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.LightingColorFilter;
 import android.os.Handler;
+import android.os.Looper;
+import android.os.VibrationAttributes;
+import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.view.View;
 
@@ -92,7 +96,7 @@ public class PseudoEmergencyAnimator {
                   viewProvider.getFab().getBackground().clearColorFilter();
                 }
 
-                new Handler()
+                new Handler(Looper.getMainLooper())
                     .postDelayed(
                         () -> {
                           try {
@@ -126,9 +130,13 @@ public class PseudoEmergencyAnimator {
   private void vibrate(long milliseconds) {
     Context context = viewProvider.getContext();
     if (context != null) {
-      Vibrator vibrator = (Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
-      if (vibrator != null) {
-        vibrator.vibrate(milliseconds);
+      Vibrator vibrator = context.getSystemService(Vibrator.class);
+      if (vibrator != null && vibrator.hasVibrator()) {
+        VibrationEffect effect = VibrationEffect.createOneShot(milliseconds,
+                VibrationEffect.DEFAULT_AMPLITUDE);
+        VibrationAttributes attributes = VibrationAttributes.createForUsage(
+                VibrationAttributes.USAGE_COMMUNICATION_REQUEST);
+        vibrator.vibrate(effect, attributes);
       }
     }
   }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,11 +19,13 @@ package com.android.dialer.simulator.impl;
 
 import android.content.Context;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.telecom.Connection;
 import android.telecom.VideoProfile;
 import android.view.Surface;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.simulator.Simulator.Event;
@@ -33,10 +36,12 @@ import com.android.dialer.simulator.Simulator.Event;
  * done by {@link SimulatorPreviewCamera} and {@link SimulatorRemoteVideo} respectively.
  */
 final class SimulatorVideoProvider extends Connection.VideoProvider {
-  @NonNull private final Context context;
+  @NonNull
+  private final Context context;
   @NonNull private final SimulatorConnection connection;
-  @Nullable private String previewCameraId;;
-  @Nullable private SimulatorPreviewCamera simulatorPreviewCamera;
+  @Nullable private String previewCameraId;
+  @Nullable
+  private SimulatorPreviewCamera simulatorPreviewCamera;
   @Nullable private SimulatorRemoteVideo simulatorRemoteVideo;
 
   SimulatorVideoProvider(@NonNull Context context, @NonNull SimulatorConnection connection) {

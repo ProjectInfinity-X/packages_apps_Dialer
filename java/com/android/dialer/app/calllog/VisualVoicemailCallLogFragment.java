@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023-2024 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -24,11 +25,14 @@ import android.media.AudioManager;
 import android.os.Bundle;
 import android.provider.CallLog;
 import android.provider.VoicemailContract;
-import android.support.annotation.VisibleForTesting;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import com.android.dialer.app.R;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.app.AppCompatActivity;
+
+import com.android.dialer.R;
 import com.android.dialer.app.voicemail.VoicemailAudioManager;
 import com.android.dialer.app.voicemail.VoicemailErrorManager;
 import com.android.dialer.app.voicemail.VoicemailPlaybackPresenter;
@@ -36,13 +40,12 @@ import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.voicemail.listui.error.VoicemailErrorMessageCreator;
 import com.android.dialer.voicemail.listui.error.VoicemailStatus;
 import com.android.dialer.voicemail.listui.error.VoicemailStatusWorker;
 import com.android.dialer.widget.EmptyContentView;
+
 import java.util.List;
 
 public class VisualVoicemailCallLogFragment extends CallLogFragment {
@@ -63,9 +66,9 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
   }
 
   @Override
-  public void onActivityCreated(Bundle savedInstanceState) {
-    voicemailPlaybackPresenter =
-        VoicemailPlaybackPresenter.getInstance(getActivity(), savedInstanceState);
+  public void onCreate(Bundle savedInstanceState) {
+    voicemailPlaybackPresenter = VoicemailPlaybackPresenter.getInstance(
+            (AppCompatActivity) getActivity(), savedInstanceState);
     if (PermissionsUtil.hasReadVoicemailPermissions(getContext())
         && PermissionsUtil.hasAddVoicemailPermissions(getContext())) {
       getActivity()
@@ -74,16 +77,21 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
               VoicemailContract.Status.CONTENT_URI, true, voicemailStatusObserver);
     } else {
       LogUtil.w(
-          "VisualVoicemailCallLogFragment.onActivityCreated",
+          "VisualVoicemailCallLogFragment.onCreate",
           "read voicemail permission unavailable.");
     }
-    super.onActivityCreated(savedInstanceState);
+    super.onCreate(savedInstanceState);
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
 
     preSyncVoicemailStatusCheckExecutor =
         DialerExecutorComponent.get(getContext())
             .dialerExecutorFactory()
             .createUiTaskBuilder(
-                getActivity().getFragmentManager(),
+                getActivity().getSupportFragmentManager(),
                 "fetchVoicemailStatus",
                 new VoicemailStatusWorker())
             .onSuccess(this::onPreSyncVoicemailStatusChecked)
@@ -102,7 +110,7 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
               voicemailErrorManager.getContentObserver());
     } else {
       LogUtil.w(
-          "VisualVoicemailCallLogFragment.onActivityCreated",
+          "VisualVoicemailCallLogFragment.onViewCreated",
           "read voicemail permission unavailable.");
     }
   }
@@ -150,7 +158,7 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
   }
 
   @Override
-  public void onSaveInstanceState(Bundle outState) {
+  public void onSaveInstanceState(@NonNull Bundle outState) {
     super.onSaveInstanceState(outState);
     if (voicemailPlaybackPresenter != null) {
       voicemailPlaybackPresenter.onSaveInstanceState(outState);
@@ -171,7 +179,6 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
     super.onVisible();
     if (getActivity() != null && preSyncVoicemailStatusCheckExecutor != null) {
       preSyncVoicemailStatusCheckExecutor.executeParallel(getActivity());
-      Logger.get(getActivity()).logImpression(DialerImpression.Type.VVM_TAB_VIEWED);
       getActivity().setVolumeControlStream(VoicemailAudioManager.PLAYBACK_STREAM);
     }
   }
@@ -186,8 +193,7 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
     getActivity().sendBroadcast(intent);
   }
 
-  @VisibleForTesting
-  boolean shouldAutoSync(
+  private boolean shouldAutoSync(
       VoicemailErrorMessageCreator errorMessageCreator, List<VoicemailStatus> statuses) {
     for (VoicemailStatus status : statuses) {
       if (!status.isActive(getContext())) {
@@ -209,7 +215,7 @@ public class VisualVoicemailCallLogFragment extends CallLogFragment {
     if (getActivity() != null) {
       getActivity().setVolumeControlStream(AudioManager.USE_DEFAULT_STREAM_TYPE);
       // onNotVisible will be called in the lock screen when the call ends
-      if (!getActivity().getSystemService(KeyguardManager.class).inKeyguardRestrictedInputMode()) {
+      if (!getActivity().getSystemService(KeyguardManager.class).isKeyguardLocked()) {
         LogUtil.i("VisualVoicemailCallLogFragment.onNotVisible", "clearing all new voicemails");
         CallLogNotificationsService.markAllNewVoicemailsAsOld(getActivity());
       }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * <p>Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file
  * except in compliance with the License. You may obtain a copy of the License at
@@ -14,10 +15,11 @@
 package com.android.voicemail.impl.mail.utils;
 
 import android.net.Uri;
-import android.support.annotation.VisibleForTesting;
 import android.text.TextUtils;
 import android.util.Log;
+
 import com.android.voicemail.impl.VvmLog;
+
 import java.util.List;
 
 public class LogUtils {
@@ -46,20 +48,7 @@ public class LogUtils {
    */
   private static final int MAX_ENABLED_LOG_LEVEL = DEBUG;
 
-  private static Boolean debugLoggingEnabledForTests = null;
-
-  /** Enable debug logging for unit tests. */
-  @VisibleForTesting
-  public static void setDebugLoggingEnabledForTests(boolean enabled) {
-    setDebugLoggingEnabledForTestsInternal(enabled);
-  }
-
-  protected static void setDebugLoggingEnabledForTestsInternal(boolean enabled) {
-    debugLoggingEnabledForTests = Boolean.valueOf(enabled);
-  }
-
   /** Returns true if the build configuration prevents debug logging. */
-  @VisibleForTesting
   public static boolean buildPreventsDebugLogging() {
     return MAX_ENABLED_LOG_LEVEL > VERBOSE;
   }
@@ -68,9 +57,6 @@ public class LogUtils {
   protected static boolean isDebugLoggingEnabled(String tag) {
     if (buildPreventsDebugLogging()) {
       return false;
-    }
-    if (debugLoggingEnabledForTests != null) {
-      return debugLoggingEnabledForTests.booleanValue();
     }
     return Log.isLoggable(tag, Log.DEBUG) || Log.isLoggable(TAG, Log.DEBUG);
   }

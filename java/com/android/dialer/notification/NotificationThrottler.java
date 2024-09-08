@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +21,14 @@ import android.app.Notification;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.service.notification.StatusBarNotification;
-import android.support.annotation.NonNull;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
@@ -77,8 +78,6 @@ class NotificationThrottler {
           "app has %d notifications, system may suppress future notifications",
           activeNotifications.length);
       didLogHighGlobalNotificationCountReached = true;
-      Logger.get(context)
-          .logImpression(DialerImpression.Type.HIGH_GLOBAL_NOTIFICATION_COUNT_REACHED);
     }
 
     // Count the number of notificatons for this group (excluding the summary).
@@ -114,14 +113,7 @@ class NotificationThrottler {
         notifications.add(notification);
       }
     }
-    Collections.sort(
-        notifications,
-        new Comparator<StatusBarNotification>() {
-          @Override
-          public int compare(StatusBarNotification left, StatusBarNotification right) {
-            return Long.compare(left.getPostTime(), right.getPostTime());
-          }
-        });
+    notifications.sort(Comparator.comparingLong(StatusBarNotification::getPostTime));
     return notifications;
   }
 

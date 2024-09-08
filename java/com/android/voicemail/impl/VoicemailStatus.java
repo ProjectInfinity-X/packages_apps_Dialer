@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,9 +23,9 @@ import android.content.Context;
 import android.net.Uri;
 import android.provider.VoicemailContract;
 import android.provider.VoicemailContract.Status;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
-import com.android.dialer.strictmode.StrictModeUtils;
+
+import androidx.annotation.Nullable;
 
 public class VoicemailStatus {
 
@@ -33,9 +34,10 @@ public class VoicemailStatus {
   public static class Editor {
 
     private final Context context;
-    @Nullable private final PhoneAccountHandle phoneAccountHandle;
+    @Nullable
+    private final PhoneAccountHandle phoneAccountHandle;
 
-    private ContentValues values = new ContentValues();
+    private final ContentValues values = new ContentValues();
 
     private Editor(Context context, PhoneAccountHandle phoneAccountHandle) {
       this.context = context;
@@ -100,7 +102,7 @@ public class VoicemailStatus {
       ContentResolver contentResolver = context.getContentResolver();
       Uri statusUri = VoicemailContract.Status.buildSourceUri(context.getPackageName());
       try {
-        StrictModeUtils.bypass(() -> contentResolver.insert(statusUri, values));
+        contentResolver.insert(statusUri, values);
       } catch (IllegalArgumentException iae) {
         VvmLog.e(TAG, "apply :: failed to insert content resolver ", iae);
         values.clear();

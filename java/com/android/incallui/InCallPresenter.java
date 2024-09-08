@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,48 +17,44 @@
 
 package com.android.incallui;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.graphics.Point;
+import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
 import android.os.Trace;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.os.UserManagerCompat;
+import android.preference.PreferenceManager;
+import android.provider.BlockedNumberContract;
+import android.telecom.Call;
 import android.telecom.Call.Details;
 import android.telecom.CallAudioState;
 import android.telecom.DisconnectCause;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
+import android.telecom.PhoneAccountSuggestion;
 import android.telecom.TelecomManager;
 import android.telecom.VideoProfile;
-import android.telephony.PhoneStateListener;
+import android.telephony.PhoneNumberUtils;
 import android.telephony.TelephonyManager;
 import android.util.ArraySet;
 import android.view.Window;
 import android.view.WindowManager;
 import android.widget.Toast;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.contacts.common.compat.CallCompat;
-import com.android.dialer.CallConfiguration;
-import com.android.dialer.Mode;
-import com.android.dialer.blocking.FilteredNumberAsyncQueryHandler;
-import com.android.dialer.blocking.FilteredNumberAsyncQueryHandler.OnCheckBlockedListener;
-import com.android.dialer.blocking.FilteredNumberCompat;
-import com.android.dialer.blocking.FilteredNumbersUtil;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.location.GeoUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.InteractionEvent;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.postcall.PostCall;
-import com.android.dialer.telecom.TelecomCallUtil;
 import com.android.dialer.telecom.TelecomUtil;
+import com.android.dialer.util.EmergencyCallUtil;
 import com.android.dialer.util.TouchPointManager;
 import com.android.incallui.InCallOrientationEventListener.ScreenOrientation;
 import com.android.incallui.answerproximitysensor.PseudoScreenState;
@@ -69,23 +66,19 @@ import com.android.incallui.call.TelecomAdapter;
 import com.android.incallui.call.state.DialerCallState;
 import com.android.incallui.disconnectdialog.DisconnectMessage;
 import com.android.incallui.incalluilock.InCallUiLock;
-import com.android.incallui.latencyreport.LatencyReport;
-import com.android.incallui.legacyblocking.BlockedNumberContentObserver;
 import com.android.incallui.spam.SpamCallListListener;
-import com.android.incallui.speakeasy.SpeakEasyCallManager;
 import com.android.incallui.telecomeventui.InternationalCallOnWifiDialogActivity;
 import com.android.incallui.telecomeventui.InternationalCallOnWifiDialogFragment;
 import com.android.incallui.videosurface.bindings.VideoSurfaceBindings;
 import com.android.incallui.videosurface.protocol.VideoSurfaceTexture;
 import com.android.incallui.videotech.utils.VideoUtils;
-import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
-import java.util.concurrent.atomic.AtomicBoolean;
 
 /**
  * Takes updates from the CallList and notifies the InCallActivity (UI) of the changes. Responsible
@@ -94,12 +87,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * presenters that want to listen in on the in-call state changes. TODO: This class has become more
  * of a state machine at this point. Consider renaming.
  */
-public class InCallPresenter implements CallList.Listener, AudioModeProvider.AudioModeListener {
-  private static final String PIXEL2017_SYSTEM_FEATURE =
-      "com.google.android.feature.PIXEL_2017_EXPERIENCE";
-  private static final String CALL_CONFIGURATION_EXTRA = "call_configuration";
-
-  private static final long BLOCK_QUERY_TIMEOUT_MS = 1000;
+public class InCallPresenter implements CallList.Listener, AudioModeProvider.AudioModeListener,
+        AccelerometerListener.ChangeListener {
 
   private static final Bundle EMPTY_EXTRAS = new Bundle();
 
@@ -110,36 +99,26 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
    * resizing, 1 means we only expect a single thread to access the map so make only a single shard
    */
   private final Set<InCallStateListener> listeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<InCallStateListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
 
   private final List<IncomingCallListener> incomingCallListeners = new CopyOnWriteArrayList<>();
   private final Set<InCallDetailsListener> detailsListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<InCallDetailsListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
   private final Set<CanAddCallListener> canAddCallListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<CanAddCallListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
   private final Set<InCallUiListener> inCallUiListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<InCallUiListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
   private final Set<InCallOrientationListener> orientationListeners =
-      Collections.newSetFromMap(
-          new ConcurrentHashMap<InCallOrientationListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
   private final Set<InCallEventListener> inCallEventListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<InCallEventListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
 
   private StatusBarNotifier statusBarNotifier;
   private ExternalCallNotifier externalCallNotifier;
+  private InCallVibrationHandler vibrationHandler;
+  private InCallDndHandler dndHandler;
   private ContactInfoCache contactInfoCache;
   private Context context;
-  private final OnCheckBlockedListener onCheckBlockedListener =
-      new OnCheckBlockedListener() {
-        @Override
-        public void onCheckComplete(final Integer id) {
-          if (id != null && id != FilteredNumberAsyncQueryHandler.INVALID_ID) {
-            // Silence the ringer now to prevent ringing and vibration before the call is
-            // terminated when Telecom attempts to add it.
-            TelecomUtil.silenceRinger(context);
-          }
-        }
-      };
   private CallList callList;
   private ExternalCallList externalCallList;
   private InCallActivity inCallActivity;
@@ -196,10 +175,10 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       };
   private InCallState inCallState = InCallState.NO_CALLS;
   private ProximitySensor proximitySensor;
+  private AccelerometerListener mAccelerometerListener;
   private final PseudoScreenState pseudoScreenState = new PseudoScreenState();
   private boolean serviceConnected;
   private InCallCameraManager inCallCameraManager;
-  private FilteredNumberAsyncQueryHandler filteredQueryHandler;
   private CallList.Listener spamCallListListener;
   private CallList.Listener activeCallsListener;
   /** Whether or not we are currently bound and waiting for Telecom to send us a new call. */
@@ -208,22 +187,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
   private boolean isFullScreen = false;
 
   private boolean screenTimeoutEnabled = true;
-
-  private PhoneStateListener phoneStateListener =
-      new PhoneStateListener() {
-        @Override
-        public void onCallStateChanged(int state, String incomingNumber) {
-          if (state == TelephonyManager.CALL_STATE_RINGING) {
-            if (FilteredNumbersUtil.hasRecentEmergencyCall(context)) {
-              return;
-            }
-            // Check if the number is blocked, to silence the ringer.
-            String countryIso = GeoUtil.getCurrentCountryIso(context);
-            filteredQueryHandler.isBlockedNumber(
-                onCheckBlockedListener, incomingNumber, countryIso);
-          }
-        }
-      };
 
   /** Whether or not InCallService is bound to Telecom. */
   private boolean serviceBound = false;
@@ -238,16 +201,13 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
 
   private boolean awaitingCallListUpdate = false;
 
-  private ExternalCallList.ExternalCallListener externalCallListener =
+  private final ExternalCallList.ExternalCallListener externalCallListener =
       new ExternalCallList.ExternalCallListener() {
 
         @Override
         public void onExternalCallPulled(android.telecom.Call call) {
-          // Note: keep this code in sync with InCallPresenter#onCallAdded
-          LatencyReport latencyReport = new LatencyReport(call);
-          latencyReport.onCallBlockingDone();
           // Note: External calls do not require spam checking.
-          callList.onCallAdded(context, call, latencyReport);
+          callList.onCallAdded(context, call);
           call.registerCallback(callCallback);
         }
 
@@ -271,13 +231,10 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
   private VideoSurfaceTexture localVideoSurfaceTexture;
   private VideoSurfaceTexture remoteVideoSurfaceTexture;
 
-  private SpeakEasyCallManager speakEasyCallManager;
-
   private boolean addCallClicked = false;
   private boolean automaticallyMutedByAddCall = false;
 
   /** Inaccessible constructor. Must use getRunningInstance() to get this singleton. */
-  @VisibleForTesting
   InCallPresenter() {}
 
   public static synchronized InCallPresenter getInstance() {
@@ -287,11 +244,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       Trace.endSection();
     }
     return inCallPresenter;
-  }
-
-  @VisibleForTesting
-  public static synchronized void setInstanceForTesting(InCallPresenter inCallPresenter) {
-    InCallPresenter.inCallPresenter = inCallPresenter;
   }
 
   /**
@@ -311,8 +263,9 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
         extras = EMPTY_EXTRAS;
       }
 
-      final List<PhoneAccountHandle> phoneAccountHandles =
-          extras.getParcelableArrayList(android.telecom.Call.AVAILABLE_PHONE_ACCOUNTS);
+      final List<PhoneAccountSuggestion> phoneAccountHandles =
+          extras.getParcelableArrayList(android.telecom.Call.EXTRA_SUGGESTED_PHONE_ACCOUNTS,
+                  PhoneAccountSuggestion.class);
 
       if ((call.getAccountHandle() == null
           && (phoneAccountHandles == null || phoneAccountHandles.isEmpty()))) {
@@ -339,9 +292,7 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       StatusBarNotifier statusBarNotifier,
       ExternalCallNotifier externalCallNotifier,
       ContactInfoCache contactInfoCache,
-      ProximitySensor proximitySensor,
-      FilteredNumberAsyncQueryHandler filteredNumberQueryHandler,
-      @NonNull SpeakEasyCallManager speakEasyCallManager) {
+      ProximitySensor proximitySensor) {
     Trace.beginSection("InCallPresenter.setUp");
     if (serviceConnected) {
       LogUtil.i("InCallPresenter.setUp", "New service connection replacing existing one.");
@@ -360,12 +311,16 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     this.statusBarNotifier = statusBarNotifier;
     this.externalCallNotifier = externalCallNotifier;
     addListener(this.statusBarNotifier);
-    EnrichedCallComponent.get(this.context)
-        .getEnrichedCallManager()
-        .registerStateChangedListener(this.statusBarNotifier);
+
+    vibrationHandler = new InCallVibrationHandler(context);
+    addListener(vibrationHandler);
+
+    dndHandler = new InCallDndHandler(context);
+    addListener(dndHandler);
 
     this.proximitySensor = proximitySensor;
     addListener(this.proximitySensor);
+    mAccelerometerListener = new AccelerometerListener(context, this);
 
     if (themeColorManager == null) {
       themeColorManager = new ThemeColorManager(new InCallUIMaterialColorMapUtils(this.context));
@@ -393,12 +348,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
 
     VideoPauseController.getInstance().setUp(this);
 
-    filteredQueryHandler = filteredNumberQueryHandler;
-    this.speakEasyCallManager = speakEasyCallManager;
-    this.context
-        .getSystemService(TelephonyManager.class)
-        .listen(phoneStateListener, PhoneStateListener.LISTEN_CALL_STATE);
-
     AudioModeProvider.getInstance().addListener(this);
 
     // Add listener to notify Telephony process when the incoming call screen is started or
@@ -413,66 +362,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
   }
 
   /**
-   * Return whether we should start call in bubble mode and not show InCallActivity. The call mode
-   * should be set in CallConfiguration in EXTRA_OUTGOING_CALL_EXTRAS when starting a call intent.
-   */
-  public boolean shouldStartInBubbleMode() {
-    if (!ReturnToCallController.isEnabled(context)) {
-      return false;
-    }
-
-    // We only start in Bubble mode for outgoing call
-    DialerCall dialerCall = callList.getPendingOutgoingCall();
-    if (dialerCall == null) {
-      dialerCall = callList.getOutgoingCall();
-    }
-    // Outgoing call can be disconnected and reason will be shown in toast
-    if (dialerCall == null) {
-      dialerCall = callList.getDisconnectedCall();
-    }
-    if (dialerCall == null) {
-      return false;
-    }
-    if (dialerCall.isEmergencyCall()) {
-      return false;
-    }
-
-    Bundle extras = dialerCall.getIntentExtras();
-    boolean result = shouldStartInBubbleModeWithExtras(extras);
-    if (result) {
-      Logger.get(context)
-          .logCallImpression(
-              DialerImpression.Type.START_CALL_IN_BUBBLE_MODE,
-              dialerCall.getUniqueCallId(),
-              dialerCall.getTimeAddedMs());
-    }
-    return result;
-  }
-
-  private boolean shouldStartInBubbleModeWithExtras(Bundle outgoingExtras) {
-    if (!ReturnToCallController.isEnabled(context)) {
-      return false;
-    }
-
-    if (outgoingExtras == null) {
-      return false;
-    }
-    byte[] callConfigurationByteArray = outgoingExtras.getByteArray(CALL_CONFIGURATION_EXTRA);
-    if (callConfigurationByteArray == null) {
-      return false;
-    }
-    try {
-      CallConfiguration callConfiguration = CallConfiguration.parseFrom(callConfigurationByteArray);
-      LogUtil.i(
-          "InCallPresenter.shouldStartInBubbleMode",
-          "call mode: " + callConfiguration.getCallMode());
-      return callConfiguration.getCallMode() == Mode.BUBBLE;
-    } catch (InvalidProtocolBufferException e) {
-      return false;
-    }
-  }
-
-  /**
    * Called when the telephony service has disconnected from us. This will happen when there are no
    * more active calls. However, we may still want to continue showing the UI for certain cases like
    * showing "Call Ended". What we really want is to wait for the activity and the service to both
@@ -484,10 +373,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     callList.clearOnDisconnect();
 
     serviceConnected = false;
-
-    context
-        .getSystemService(TelephonyManager.class)
-        .listen(phoneStateListener, PhoneStateListener.LISTEN_NONE);
 
     attemptCleanup();
     VideoPauseController.getInstance().tearDown();
@@ -604,10 +489,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     Trace.endSection();
   }
 
-  public SpeakEasyCallManager getSpeakEasyCallManager() {
-    return this.speakEasyCallManager;
-  }
-
   public void setManageConferenceActivity(
       @Nullable ManageConferenceActivity manageConferenceActivity) {
     this.manageConferenceActivity = manageConferenceActivity;
@@ -620,139 +501,38 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
 
   public void onCallAdded(final android.telecom.Call call) {
     Trace.beginSection("InCallPresenter.onCallAdded");
-    LatencyReport latencyReport = new LatencyReport(call);
-    if (shouldAttemptBlocking(call)) {
-      maybeBlockCall(call, latencyReport);
+    Call.Details callDetails = call.getDetails();
+    if (callDetails.hasProperty(CallCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
+      externalCallList.onCallAdded(call);
     } else {
-      if (call.getDetails().hasProperty(CallCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
-        externalCallList.onCallAdded(call);
-      } else {
-        latencyReport.onCallBlockingDone();
-        callList.onCallAdded(context, call, latencyReport);
+      callList.onCallAdded(context, call);
+    }
+
+    if (callDetails.getState() == Call.STATE_RINGING) {
+      if (EmergencyCallUtil.hasRecentEmergencyCall(context)) {
+        return;
+      }
+
+      TelephonyManager tm = context.getSystemService(TelephonyManager.class);
+      String countryIso = tm.getSimCountryIso().toUpperCase();
+      Uri handle = callDetails.getHandle();
+      if (handle != null) {
+        String incomingNumber = handle.getSchemeSpecificPart();
+
+        incomingNumber = PhoneNumberUtils.formatNumberToE164(incomingNumber, countryIso);
+
+        // Check if the number is blocked, to silence the ringer.
+        if (BlockedNumberContract.canCurrentUserBlockNumbers(context) &&
+                BlockedNumberContract.isBlocked(context, incomingNumber)) {
+          TelecomUtil.silenceRinger(context);
+        }
       }
     }
 
     // Since a call has been added we are no longer waiting for Telecom to send us a call.
     setBoundAndWaitingForOutgoingCall(false, null);
     call.registerCallback(callCallback);
-    // TODO(maxwelb): Return the future in recordPhoneLookupInfo and propagate.
-    PhoneLookupHistoryRecorder.recordPhoneLookupInfo(context.getApplicationContext(), call);
     Trace.endSection();
-  }
-
-  private boolean shouldAttemptBlocking(android.telecom.Call call) {
-    if (call.getState() != android.telecom.Call.STATE_RINGING) {
-      return false;
-    }
-    if (!UserManagerCompat.isUserUnlocked(context)) {
-      LogUtil.i(
-          "InCallPresenter.shouldAttemptBlocking",
-          "not attempting to block incoming call because user is locked");
-      return false;
-    }
-    if (TelecomCallUtil.isEmergencyCall(call)) {
-      LogUtil.i(
-          "InCallPresenter.shouldAttemptBlocking",
-          "Not attempting to block incoming emergency call");
-      return false;
-    }
-    if (FilteredNumbersUtil.hasRecentEmergencyCall(context)) {
-      LogUtil.i(
-          "InCallPresenter.shouldAttemptBlocking",
-          "Not attempting to block incoming call due to recent emergency call");
-      return false;
-    }
-    if (call.getDetails().hasProperty(CallCompat.Details.PROPERTY_IS_EXTERNAL_CALL)) {
-      return false;
-    }
-    if (FilteredNumberCompat.useNewFiltering(context)) {
-      LogUtil.i(
-          "InCallPresenter.shouldAttemptBlocking",
-          "not attempting to block incoming call because framework blocking is in use");
-      return false;
-    }
-    return true;
-  }
-
-  /**
-   * Checks whether a call should be blocked, and blocks it if so. Otherwise, it adds the call to
-   * the CallList so it can proceed as normal. There is a timeout, so if the function for checking
-   * whether a function is blocked does not return in a reasonable time, we proceed with adding the
-   * call anyways.
-   */
-  private void maybeBlockCall(final android.telecom.Call call, final LatencyReport latencyReport) {
-    final String countryIso = GeoUtil.getCurrentCountryIso(context);
-    final String number = TelecomCallUtil.getNumber(call);
-    final long timeAdded = System.currentTimeMillis();
-
-    // Though AtomicBoolean's can be scary, don't fear, as in this case it is only used on the
-    // main UI thread. It is needed so we can change its value within different scopes, since
-    // that cannot be done with a final boolean.
-    final AtomicBoolean hasTimedOut = new AtomicBoolean(false);
-
-    final Handler handler = new Handler();
-
-    // Proceed if the query is slow; the call may still be blocked after the query returns.
-    final Runnable runnable =
-        new Runnable() {
-          @Override
-          public void run() {
-            hasTimedOut.set(true);
-            latencyReport.onCallBlockingDone();
-            callList.onCallAdded(context, call, latencyReport);
-          }
-        };
-    handler.postDelayed(runnable, BLOCK_QUERY_TIMEOUT_MS);
-
-    OnCheckBlockedListener onCheckBlockedListener =
-        new OnCheckBlockedListener() {
-          @Override
-          public void onCheckComplete(final Integer id) {
-            if (isReadyForTearDown()) {
-              LogUtil.i("InCallPresenter.onCheckComplete", "torn down, not adding call");
-              return;
-            }
-            if (!hasTimedOut.get()) {
-              handler.removeCallbacks(runnable);
-            }
-            if (id == null) {
-              if (!hasTimedOut.get()) {
-                latencyReport.onCallBlockingDone();
-                callList.onCallAdded(context, call, latencyReport);
-              }
-            } else if (id == FilteredNumberAsyncQueryHandler.INVALID_ID) {
-              LogUtil.d(
-                  "InCallPresenter.onCheckComplete", "invalid number, skipping block checking");
-              if (!hasTimedOut.get()) {
-                handler.removeCallbacks(runnable);
-
-                latencyReport.onCallBlockingDone();
-                callList.onCallAdded(context, call, latencyReport);
-              }
-            } else {
-              LogUtil.i(
-                  "InCallPresenter.onCheckComplete", "Rejecting incoming call from blocked number");
-              call.reject(false, null);
-              Logger.get(context).logInteraction(InteractionEvent.Type.CALL_BLOCKED);
-
-              /*
-               * If mContext is null, then the InCallPresenter was torn down before the
-               * block check had a chance to complete. The context is no longer valid, so
-               * don't attempt to remove the call log entry.
-               */
-              if (context == null) {
-                return;
-              }
-              // Register observer to update the call log.
-              // BlockedNumberContentObserver will unregister after successful log or timeout.
-              BlockedNumberContentObserver contentObserver =
-                  new BlockedNumberContentObserver(context, new Handler(), number, timeAdded);
-              contentObserver.register();
-            }
-          }
-        };
-
-    filteredQueryHandler.isBlockedNumber(onCheckBlockedListener, number, countryIso);
   }
 
   public void onCallRemoved(android.telecom.Call call) {
@@ -859,6 +639,10 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     LogUtil.d(
         "InCallPresenter.onCallListChange", "onCallListChange newState changed to " + newState);
 
+    if (!newState.isIncoming() && mAccelerometerListener != null) {
+        mAccelerometerListener.enable(false);
+    }
+
     // Set the new state before announcing it to the world
     LogUtil.i(
         "InCallPresenter.onCallListChange",
@@ -957,6 +741,10 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
         "InCallPresenter.onIncomingCall", "Phone switching state: " + oldState + " -> " + newState);
     inCallState = newState;
 
+    if (newState.isIncoming() && mAccelerometerListener != null) {
+        mAccelerometerListener.enable(true);
+    }
+
     Trace.beginSection("listener.onIncomingCall");
     for (IncomingCallListener listener : incomingCallListeners) {
       listener.onIncomingCall(oldState, inCallState, call);
@@ -996,13 +784,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
   }
 
   @Override
-  public void onSpeakEasyStateChange() {
-    if (inCallActivity != null) {
-      inCallActivity.onPrimaryCallStateChanged();
-    }
-  }
-
-  @Override
   public void onSessionModificationStateChange(DialerCall call) {
     int newState = call.getVideoTech().getSessionModificationState();
     LogUtil.i("InCallPresenter.onSessionModificationStateChange", "state: %d", newState);
@@ -1034,7 +815,7 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     }
 
     if (call.isEmergencyCall()) {
-      FilteredNumbersUtil.recordLastEmergencyCallTime(context);
+      EmergencyCallUtil.recordLastEmergencyCallTime(context);
     }
 
     if (!callList.hasLiveCall()
@@ -1048,6 +829,22 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
   private boolean isSecretCode(@Nullable String number) {
     return number != null
         && (number.length() <= 8 || number.startsWith("*#*#") || number.endsWith("#*#*"));
+  }
+
+  public void onOrientationChanged(int orientation) {
+      // ignored
+  }
+
+  @Override
+  public void onDeviceFlipped(boolean faceDown) {
+      if (!faceDown) {
+          return;
+      }
+
+      SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(context);
+      if (prefs.getBoolean("button_smart_mute", false)) {
+          TelecomUtil.silenceRinger(context);
+      }
   }
 
   /** Given the call list, return the state in which the in-call screen should be. */
@@ -1091,7 +888,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
         "InCallPresenter.setBoundAndWaitingForOutgoingCall",
         "setBoundAndWaitingForOutgoingCall: " + isBound);
     boundAndWaitingForOutgoingCall = isBound;
-    themeColorManager.setPendingPhoneAccountHandle(handle);
     if (isBound && inCallState == InCallState.NO_CALLS) {
       inCallState = InCallState.PENDING_OUTGOING;
     }
@@ -1336,6 +1132,9 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     // (1) Attempt to answer a call
     if (incomingCall != null) {
       incomingCall.answer(VideoProfile.STATE_AUDIO_ONLY);
+      if (mAccelerometerListener != null) {
+          mAccelerometerListener.enable(false);
+      }
       return true;
     }
 
@@ -1567,7 +1366,7 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       inCallActivity.dismissPendingDialogs();
     }
 
-    if ((showCallUi || showAccountPicker) && !shouldStartInBubbleMode()) {
+    if (showCallUi || showAccountPicker) {
       LogUtil.i("InCallPresenter.startOrFinishUi", "Start in call UI");
       showInCall(false /* showDialpad */, !showAccountPicker /* newOutgoingCall */);
     } else if (newState == InCallState.NO_CALLS) {
@@ -1593,11 +1392,13 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       extras = new Bundle();
     }
 
-    final List<PhoneAccountHandle> phoneAccountHandles =
-        extras.getParcelableArrayList(android.telecom.Call.AVAILABLE_PHONE_ACCOUNTS);
+    final List<PhoneAccountSuggestion> phoneAccountSuggestions =
+        extras.getParcelableArrayList(Call.EXTRA_SUGGESTED_PHONE_ACCOUNTS,
+                PhoneAccountSuggestion.class);
 
-    if (phoneAccountHandles == null || phoneAccountHandles.isEmpty()) {
-      String scheme = call.getHandle().getScheme();
+    if (phoneAccountSuggestions == null || phoneAccountSuggestions.isEmpty()) {
+      Uri callHandle = call.getHandle();
+      String scheme = callHandle == null ? "null" : callHandle.getScheme();
       final String errorMsg =
           PhoneAccount.SCHEME_TEL.equals(scheme)
               ? context.getString(R.string.callFailed_simError)
@@ -1641,17 +1442,29 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       }
       proximitySensor = null;
 
+      if (mAccelerometerListener != null) {
+          mAccelerometerListener.enable(false);
+          mAccelerometerListener = null;
+      }
+
       if (statusBarNotifier != null) {
         removeListener(statusBarNotifier);
-        EnrichedCallComponent.get(context)
-            .getEnrichedCallManager()
-            .unregisterStateChangedListener(statusBarNotifier);
       }
 
       if (externalCallNotifier != null && externalCallList != null) {
         externalCallList.removeExternalCallListener(externalCallNotifier);
       }
       statusBarNotifier = null;
+
+      if (vibrationHandler != null) {
+        removeListener(vibrationHandler);
+      }
+      vibrationHandler = null;
+
+      if (dndHandler != null) {
+        removeListener(dndHandler);
+      }
+      dndHandler = null;
 
       if (callList != null) {
         callList.removeListener(this);
@@ -1707,22 +1520,17 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
       return;
     }
 
-    if (extras.containsKey(android.telecom.Call.AVAILABLE_PHONE_ACCOUNTS)) {
+    if (extras.containsKey(Call.EXTRA_SUGGESTED_PHONE_ACCOUNTS)) {
       // Account selection dialog will show up so don't show the animation.
       return;
     }
 
     final PhoneAccountHandle accountHandle =
-        intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE);
-    final Point touchPoint = extras.getParcelable(TouchPointManager.TOUCH_POINT);
+            intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                    PhoneAccountHandle.class);
+    final Point touchPoint = extras.getParcelable(TouchPointManager.TOUCH_POINT, Point.class);
 
     setBoundAndWaitingForOutgoingCall(true, accountHandle);
-
-    if (shouldStartInBubbleModeWithExtras(extras)) {
-      LogUtil.i("InCallPresenter.maybeStartRevealAnimation", "shouldStartInBubbleMode");
-      // Show bubble instead of in call UI
-      return;
-    }
 
     final Intent activityIntent =
         InCallActivity.getIntent(context, false, true, false /* forFullScreen */);
@@ -1839,11 +1647,6 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     return themeColorManager;
   }
 
-  @VisibleForTesting
-  public void setThemeColorManager(ThemeColorManager themeColorManager) {
-    this.themeColorManager = themeColorManager;
-  }
-
   /** Called when the foreground call changes. */
   public void onForegroundCallChanged(DialerCall newForegroundCall) {
     themeColorManager.onForegroundCallChanged(context, newForegroundCall);
@@ -1874,22 +1677,14 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
 
   VideoSurfaceTexture getLocalVideoSurfaceTexture() {
     if (localVideoSurfaceTexture == null) {
-      boolean isPixel2017 = false;
-      if (context != null) {
-        isPixel2017 = context.getPackageManager().hasSystemFeature(PIXEL2017_SYSTEM_FEATURE);
-      }
-      localVideoSurfaceTexture = VideoSurfaceBindings.createLocalVideoSurfaceTexture(isPixel2017);
+      localVideoSurfaceTexture = VideoSurfaceBindings.createLocalVideoSurfaceTexture();
     }
     return localVideoSurfaceTexture;
   }
 
   VideoSurfaceTexture getRemoteVideoSurfaceTexture() {
     if (remoteVideoSurfaceTexture == null) {
-      boolean isPixel2017 = false;
-      if (context != null) {
-        isPixel2017 = context.getPackageManager().hasSystemFeature(PIXEL2017_SYSTEM_FEATURE);
-      }
-      remoteVideoSurfaceTexture = VideoSurfaceBindings.createRemoteVideoSurfaceTexture(isPixel2017);
+      remoteVideoSurfaceTexture = VideoSurfaceBindings.createRemoteVideoSurfaceTexture();
     }
     return remoteVideoSurfaceTexture;
   }
@@ -1905,6 +1700,7 @@ public class InCallPresenter implements CallList.Listener, AudioModeProvider.Aud
     }
   }
 
+  @SuppressLint("MissingPermission")
   @Override
   public void onAudioStateChanged(CallAudioState audioState) {
     if (statusBarNotifier != null) {

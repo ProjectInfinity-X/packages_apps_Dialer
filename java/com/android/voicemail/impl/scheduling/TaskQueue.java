@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,12 +19,15 @@ package com.android.voicemail.impl.scheduling;
 
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.impl.Assert;
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.scheduling.Task.TaskId;
 import com.android.voicemail.impl.scheduling.Tasks.TaskCreationException;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -104,7 +108,8 @@ class TaskQueue implements Iterable<Task> {
    * tasks at all both will be {@code null}.
    */
   static final class NextTask {
-    @Nullable final Task task;
+    @Nullable
+    final Task task;
     @Nullable final Long minimalWaitTimeMillis;
 
     NextTask(@Nullable Task task, @Nullable Long minimalWaitTimeMillis) {

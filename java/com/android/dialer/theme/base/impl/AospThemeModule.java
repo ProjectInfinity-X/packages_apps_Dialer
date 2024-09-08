@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,14 @@
 package com.android.dialer.theme.base.impl;
 
 import android.content.Context;
+
 import com.android.dialer.inject.ApplicationContext;
-import com.android.dialer.inject.DialerVariant;
-import com.android.dialer.inject.InstallIn;
 import com.android.dialer.theme.base.Theme;
+
 import dagger.Module;
 import dagger.Provides;
 
 /** Module which binds {@link AospThemeImpl}. */
-@InstallIn(variants = {DialerVariant.DIALER_TEST})
 @Module
 public class AospThemeModule {
 

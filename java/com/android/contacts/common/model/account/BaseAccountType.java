@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2009 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -37,43 +38,40 @@ import android.provider.ContactsContract.CommonDataKinds.Website;
 import android.util.ArrayMap;
 import android.util.AttributeSet;
 import android.view.inputmethod.EditorInfo;
+
 import com.android.contacts.common.model.dataitem.DataKind;
 import com.android.contacts.common.util.CommonDateUtils;
 import com.android.contacts.common.util.ContactDisplayUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.contacts.resources.R;
+
+import org.xmlpull.v1.XmlPullParser;
+import org.xmlpull.v1.XmlPullParserException;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
-import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
 
 public abstract class BaseAccountType extends AccountType {
 
-  public static final StringInflater ORGANIZATION_BODY_INFLATER =
-      new StringInflater() {
-        @Override
-        public CharSequence inflateUsing(Context context, ContentValues values) {
-          final CharSequence companyValue =
-              values.containsKey(Organization.COMPANY)
-                  ? values.getAsString(Organization.COMPANY)
-                  : null;
-          final CharSequence titleValue =
-              values.containsKey(Organization.TITLE)
-                  ? values.getAsString(Organization.TITLE)
-                  : null;
+  public static final StringInflater ORGANIZATION_BODY_INFLATER = (context, values) -> {
+    final CharSequence companyValue = values.containsKey(Organization.COMPANY)
+            ? values.getAsString(Organization.COMPANY)
+            : null;
+    final CharSequence titleValue = values.containsKey(Organization.TITLE)
+            ? values.getAsString(Organization.TITLE)
+            : null;
 
-          if (companyValue != null && titleValue != null) {
-            return companyValue + ": " + titleValue;
-          } else if (companyValue == null) {
-            return titleValue;
-          } else {
-            return companyValue;
-          }
-        }
-      };
+    if (companyValue != null && titleValue != null) {
+      return companyValue + ": " + titleValue;
+    } else if (companyValue == null) {
+      return titleValue;
+    } else {
+      return companyValue;
+    }
+  };
   protected static final int FLAGS_PHONE = EditorInfo.TYPE_CLASS_PHONE;
   protected static final int FLAGS_EMAIL =
       EditorInfo.TYPE_CLASS_TEXT | EditorInfo.TYPE_TEXT_VARIATION_EMAIL_ADDRESS;
@@ -314,28 +312,17 @@ public abstract class BaseAccountType extends AccountType {
     kind.actionBody = new SimpleInflater(Phone.NUMBER);
     kind.typeColumn = Phone.TYPE;
     kind.typeList = new ArrayList<>();
+    kind.typeList = new ArrayList<>();
     kind.typeList.add(buildPhoneType(Phone.TYPE_MOBILE));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_HOME));
     kind.typeList.add(buildPhoneType(Phone.TYPE_WORK));
+    kind.typeList.add(buildPhoneType(Phone.TYPE_HOME));
+    kind.typeList.add(buildPhoneType(Phone.TYPE_MAIN));
     kind.typeList.add(buildPhoneType(Phone.TYPE_FAX_WORK).setSecondary(true));
     kind.typeList.add(buildPhoneType(Phone.TYPE_FAX_HOME).setSecondary(true));
     kind.typeList.add(buildPhoneType(Phone.TYPE_PAGER).setSecondary(true));
     kind.typeList.add(buildPhoneType(Phone.TYPE_OTHER));
     kind.typeList.add(
-        buildPhoneType(Phone.TYPE_CUSTOM).setSecondary(true).setCustomColumn(Phone.LABEL));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_CALLBACK).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_CAR).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_COMPANY_MAIN).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_ISDN).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_MAIN).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_OTHER_FAX).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_RADIO).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_TELEX).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_TTY_TDD).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_WORK_MOBILE).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_WORK_PAGER).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_ASSISTANT).setSecondary(true));
-    kind.typeList.add(buildPhoneType(Phone.TYPE_MMS).setSecondary(true));
+            buildPhoneType(Phone.TYPE_CUSTOM).setSecondary(true).setCustomColumn(Phone.LABEL));
 
     kind.fieldList = new ArrayList<>();
     kind.fieldList.add(new EditField(Phone.NUMBER, R.string.phoneLabelsGroup, FLAGS_PHONE));
@@ -354,7 +341,6 @@ public abstract class BaseAccountType extends AccountType {
     kind.typeList.add(buildEmailType(Email.TYPE_HOME));
     kind.typeList.add(buildEmailType(Email.TYPE_WORK));
     kind.typeList.add(buildEmailType(Email.TYPE_OTHER));
-    kind.typeList.add(buildEmailType(Email.TYPE_MOBILE));
     kind.typeList.add(
         buildEmailType(Email.TYPE_CUSTOM).setSecondary(true).setCustomColumn(Email.LABEL));
 
@@ -407,14 +393,6 @@ public abstract class BaseAccountType extends AccountType {
 
     kind.typeColumn = Im.PROTOCOL;
     kind.typeList = new ArrayList<>();
-    kind.typeList.add(buildImType(Im.PROTOCOL_AIM));
-    kind.typeList.add(buildImType(Im.PROTOCOL_MSN));
-    kind.typeList.add(buildImType(Im.PROTOCOL_YAHOO));
-    kind.typeList.add(buildImType(Im.PROTOCOL_SKYPE));
-    kind.typeList.add(buildImType(Im.PROTOCOL_QQ));
-    kind.typeList.add(buildImType(Im.PROTOCOL_GOOGLE_TALK));
-    kind.typeList.add(buildImType(Im.PROTOCOL_ICQ));
-    kind.typeList.add(buildImType(Im.PROTOCOL_JABBER));
     kind.typeList.add(
         buildImType(Im.PROTOCOL_CUSTOM).setSecondary(true).setCustomColumn(Im.CUSTOM_PROTOCOL));
 
@@ -631,10 +609,6 @@ public abstract class BaseAccountType extends AccountType {
           + " mColumnName"
           + mColumnName;
     }
-
-    public String getColumnNameForTest() {
-      return mColumnName;
-    }
   }
 
   public abstract static class CommonInflater implements StringInflater {
@@ -775,31 +749,7 @@ public abstract class BaseAccountType extends AccountType {
 
     @Override
     protected int getTypeLabelResource(Integer type) {
-      if (type == null) {
-        return R.string.chat;
-      }
-      switch (type) {
-        case Im.PROTOCOL_AIM:
-          return R.string.chat_aim;
-        case Im.PROTOCOL_MSN:
-          return R.string.chat_msn;
-        case Im.PROTOCOL_YAHOO:
-          return R.string.chat_yahoo;
-        case Im.PROTOCOL_SKYPE:
-          return R.string.chat_skype;
-        case Im.PROTOCOL_QQ:
-          return R.string.chat_qq;
-        case Im.PROTOCOL_GOOGLE_TALK:
-          return R.string.chat_gtalk;
-        case Im.PROTOCOL_ICQ:
-          return R.string.chat_icq;
-        case Im.PROTOCOL_JABBER:
-          return R.string.chat_jabber;
-        case Im.PROTOCOL_NETMEETING:
-          return R.string.chat;
-        default:
-          return R.string.chat;
-      }
+      return R.string.chat;
     }
   }
 
@@ -1485,30 +1435,6 @@ public abstract class BaseAccountType extends AccountType {
 
     @Override
     protected EditType buildEditTypeForTypeTag(AttributeSet attrs, String type) {
-      if ("aim".equals(type)) {
-        return buildImType(Im.PROTOCOL_AIM);
-      }
-      if ("msn".equals(type)) {
-        return buildImType(Im.PROTOCOL_MSN);
-      }
-      if ("yahoo".equals(type)) {
-        return buildImType(Im.PROTOCOL_YAHOO);
-      }
-      if ("skype".equals(type)) {
-        return buildImType(Im.PROTOCOL_SKYPE);
-      }
-      if ("qq".equals(type)) {
-        return buildImType(Im.PROTOCOL_QQ);
-      }
-      if ("google_talk".equals(type)) {
-        return buildImType(Im.PROTOCOL_GOOGLE_TALK);
-      }
-      if ("icq".equals(type)) {
-        return buildImType(Im.PROTOCOL_ICQ);
-      }
-      if ("jabber".equals(type)) {
-        return buildImType(Im.PROTOCOL_JABBER);
-      }
       if ("custom".equals(type)) {
         return buildImType(Im.PROTOCOL_CUSTOM)
             .setSecondary(true)

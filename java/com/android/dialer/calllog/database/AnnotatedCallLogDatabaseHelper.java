@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +21,16 @@ import android.content.Context;
 import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.provider.CallLog.Calls;
-import android.support.annotation.VisibleForTesting;
+
 import com.android.dialer.calllog.database.contract.AnnotatedCallLogContract.AnnotatedCallLog;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.BackgroundExecutor;
 import com.android.dialer.inject.ApplicationContext;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+
 import java.util.Locale;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -35,7 +38,7 @@ import javax.inject.Singleton;
 @Singleton
 public class AnnotatedCallLogDatabaseHelper extends SQLiteOpenHelper {
 
-  @VisibleForTesting static final int VERSION = 4;
+  private static final int VERSION = 4;
 
   private static final String FILENAME = "annotated_call_log.db";
 
@@ -84,13 +87,11 @@ public class AnnotatedCallLogDatabaseHelper extends SQLiteOpenHelper {
           + (AnnotatedCallLog.PHONE_ACCOUNT_COMPONENT_NAME + " text, ")
           + (AnnotatedCallLog.PHONE_ACCOUNT_ID + " text, ")
           + (AnnotatedCallLog.FEATURES + " integer, ")
-          + (AnnotatedCallLog.TRANSCRIPTION + " integer, ")
           + (AnnotatedCallLog.VOICEMAIL_URI + " text, ")
           + (AnnotatedCallLog.CALL_TYPE + " integer, ")
           + (AnnotatedCallLog.NUMBER_ATTRIBUTES + " blob, ")
           + (AnnotatedCallLog.IS_VOICEMAIL_CALL + " integer, ")
           + (AnnotatedCallLog.VOICEMAIL_CALL_TAG + " text, ")
-          + (AnnotatedCallLog.TRANSCRIPTION_STATE + " integer, ")
           + (AnnotatedCallLog.CALL_MAPPING_ID + " text")
           + ");";
 

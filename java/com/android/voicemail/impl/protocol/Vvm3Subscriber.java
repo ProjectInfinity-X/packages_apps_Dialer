@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,22 +17,19 @@
 
 package com.android.voicemail.impl.protocol;
 
-import android.annotation.TargetApi;
-import android.content.Context;
 import android.net.Network;
 import android.os.Build;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.TelephonyManager;
 import android.text.Html;
 import android.text.Spanned;
 import android.text.style.URLSpan;
 import android.util.ArrayMap;
-import com.android.dialer.configprovider.ConfigProviderComponent;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.WorkerThread;
+
 import com.android.voicemail.impl.ActivationTask;
 import com.android.voicemail.impl.Assert;
 import com.android.voicemail.impl.OmtpEvents;
@@ -48,6 +46,10 @@ import com.android.volley.toolbox.HurlStack;
 import com.android.volley.toolbox.RequestFuture;
 import com.android.volley.toolbox.StringRequest;
 import com.android.volley.toolbox.Volley;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+
 import java.io.IOException;
 import java.net.CookieHandler;
 import java.net.CookieManager;
@@ -63,8 +65,6 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import org.json.JSONArray;
-import org.json.JSONException;
 
 /**
  * Class to subscribe to basic VVM3 visual voicemail, for example, Verizon. Subscription is required
@@ -81,7 +81,6 @@ import org.json.JSONException;
  * <p>After the process is completed, the carrier should send us another STATUS SMS with a new or
  * ready user.
  */
-@TargetApi(VERSION_CODES.O)
 public class Vvm3Subscriber {
 
   private static final String TAG = "Vvm3Subscriber";
@@ -119,10 +118,6 @@ public class Vvm3Subscriber {
   private static final String SPG_LANGUAGE_PARAM = "SPG_LANGUAGE_PARAM";
   private static final String SPG_LANGUAGE_EN = "ENGLISH";
 
-  @VisibleForTesting
-  static final String VVM3_SUBSCRIBE_LINK_PATTERNS_JSON_ARRAY =
-      "vvm3_subscribe_link_pattern_json_array";
-
   private static final String VVM3_SUBSCRIBE_LINK_DEFAULT_PATTERNS =
       "["
           + "\"(?i)Subscribe to Basic Visual Voice Mail\","
@@ -141,7 +136,6 @@ public class Vvm3Subscriber {
 
   private RequestQueue requestQueue;
 
-  @VisibleForTesting
   static class ProvisioningException extends Exception {
 
     public ProvisioningException(String message) {
@@ -219,7 +213,7 @@ public class Vvm3Subscriber {
       String gatewayUrl = getSelfProvisioningGateway();
       String selfProvisionResponse = getSelfProvisionResponse(gatewayUrl);
       String subscribeLink =
-          findSubscribeLink(getSubscribeLinkPatterns(helper.getContext()), selfProvisionResponse);
+          findSubscribeLink(getSubscribeLinkPatterns(), selfProvisionResponse);
       clickSubscribeLink(subscribeLink);
     } catch (ProvisioningException e) {
       VvmLog.e(TAG, e.toString());
@@ -323,13 +317,8 @@ public class Vvm3Subscriber {
     }
   }
 
-  @VisibleForTesting
-  static List<Pattern> getSubscribeLinkPatterns(Context context) {
-    String patternsJsonString =
-        ConfigProviderComponent.get(context)
-            .getConfigProvider()
-            .getString(
-                VVM3_SUBSCRIBE_LINK_PATTERNS_JSON_ARRAY, VVM3_SUBSCRIBE_LINK_DEFAULT_PATTERNS);
+  static List<Pattern> getSubscribeLinkPatterns() {
+    String patternsJsonString = VVM3_SUBSCRIBE_LINK_DEFAULT_PATTERNS;
     List<Pattern> patterns = new ArrayList<>();
     try {
       JSONArray patternsArray = new JSONArray(patternsJsonString);
@@ -342,7 +331,6 @@ public class Vvm3Subscriber {
     return patterns;
   }
 
-  @VisibleForTesting
   static String findSubscribeLink(@NonNull List<Pattern> patterns, String response)
       throws ProvisioningException {
     if (patterns.isEmpty()) {

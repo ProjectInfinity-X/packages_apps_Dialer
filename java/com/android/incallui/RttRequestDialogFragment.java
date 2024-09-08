@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +21,17 @@ import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
-import android.support.v4.app.DialogFragment;
 import android.telephony.PhoneNumberUtils;
 import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
 import android.text.TextUtils;
 import android.view.View;
 import android.widget.TextView;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.DialogFragment;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.contacts.ContactsComponent;
@@ -35,6 +39,7 @@ import com.android.incallui.ContactInfoCache.ContactCacheEntry;
 import com.android.incallui.ContactInfoCache.ContactInfoCacheCallback;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
+
 import java.lang.ref.WeakReference;
 
 /** Dialog that shown to user when receiving RTT request mid call. */

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,11 +18,15 @@
 package com.android.dialer.app.voicemail;
 
 import android.content.Context;
+import android.media.AudioAttributes;
 import android.media.AudioDeviceInfo;
+import android.media.AudioFocusRequest;
 import android.media.AudioManager;
 import android.media.AudioManager.OnAudioFocusChangeListener;
 import android.telecom.CallAudioState;
+
 import com.android.dialer.common.LogUtil;
+
 import java.util.concurrent.RejectedExecutionException;
 
 /** This class manages all audio changes for voicemail playback. */
@@ -32,12 +37,14 @@ public final class VoicemailAudioManager
 
   public static final int PLAYBACK_STREAM = AudioManager.STREAM_VOICE_CALL;
 
-  private AudioManager audioManager;
-  private VoicemailPlaybackPresenter voicemailPlaybackPresenter;
-  private WiredHeadsetManager wiredHeadsetManager;
+  private final AudioManager audioManager;
+  private final VoicemailPlaybackPresenter voicemailPlaybackPresenter;
+  private final WiredHeadsetManager wiredHeadsetManager;
   private boolean wasSpeakerOn;
   private CallAudioState callAudioState;
   private boolean bluetoothScoEnabled;
+
+  private AudioFocusRequest audioFocusRequest;
 
   public VoicemailAudioManager(
       Context context, VoicemailPlaybackPresenter voicemailPlaybackPresenter) {
@@ -52,10 +59,15 @@ public final class VoicemailAudioManager
   }
 
   public void requestAudioFocus() {
-    int result =
-        audioManager.requestAudioFocus(
-            this, PLAYBACK_STREAM, AudioManager.AUDIOFOCUS_GAIN_TRANSIENT);
+    audioFocusRequest = new AudioFocusRequest.Builder(
+            AudioManager.AUDIOFOCUS_GAIN_TRANSIENT)
+            .setAudioAttributes(
+                    new AudioAttributes.Builder().setLegacyStreamType(PLAYBACK_STREAM).build())
+            .setOnAudioFocusChangeListener(this)
+            .build();
+    int result = audioManager.requestAudioFocus(audioFocusRequest);
     if (result != AudioManager.AUDIOFOCUS_REQUEST_GRANTED) {
+      audioFocusRequest = null;
       throw new RejectedExecutionException("Could not capture audio focus.");
     }
     updateBluetoothScoState(true);
@@ -63,7 +75,10 @@ public final class VoicemailAudioManager
 
   public void abandonAudioFocus() {
     updateBluetoothScoState(false);
-    audioManager.abandonAudioFocus(this);
+    if (audioFocusRequest != null) {
+      audioManager.abandonAudioFocusRequest(audioFocusRequest);
+      audioFocusRequest = null;
+    }
   }
 
   @Override

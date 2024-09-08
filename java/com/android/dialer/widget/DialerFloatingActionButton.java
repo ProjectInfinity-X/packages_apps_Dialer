@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +18,13 @@
 package com.android.dialer.widget;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.design.widget.FloatingActionButton;
 import android.util.AttributeSet;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
+import com.google.android.material.floatingactionbutton.FloatingActionButton;
+import com.google.android.material.shape.ShapeAppearanceModel;
 
 /**
  * Since {@link FloatingActionButton} is possibly the worst widget supported by the framework, we
@@ -45,6 +49,13 @@ public class DialerFloatingActionButton extends FloatingActionButton {
 
   public DialerFloatingActionButton(Context context, AttributeSet attributeSet) {
     super(context, attributeSet);
+    float radiusPx = 99 * getResources().getDisplayMetrics().density;
+
+        setShapeAppearanceModel(
+            ShapeAppearanceModel.builder()
+                .setAllCornerSizes(radiusPx)
+                .build()
+       );
   }
 
   @Override

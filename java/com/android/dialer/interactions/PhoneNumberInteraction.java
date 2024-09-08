@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,14 +21,9 @@ import android.annotation.SuppressLint;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentManager;
 import android.content.Context;
-import android.content.CursorLoader;
 import android.content.DialogInterface;
 import android.content.Intent;
-import android.content.Loader;
-import android.content.Loader.OnLoadCompleteListener;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
@@ -38,9 +34,6 @@ import android.provider.ContactsContract.CommonDataKinds.SipAddress;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Data;
 import android.provider.ContactsContract.RawContacts;
-import android.support.annotation.IntDef;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.ActivityCompat;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -48,22 +41,30 @@ import android.widget.ArrayAdapter;
 import android.widget.CheckBox;
 import android.widget.ListAdapter;
 import android.widget.TextView;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.annotation.IntDef;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentActivity;
+import androidx.fragment.app.FragmentManager;
+import androidx.loader.content.CursorLoader;
+import androidx.loader.content.Loader;
+
 import com.android.contacts.common.Collapser;
 import com.android.contacts.common.Collapser.Collapsible;
 import com.android.contacts.common.MoreContactUtils;
 import com.android.contacts.common.util.ContactDisplayUtils;
-import com.android.dialer.callintent.CallInitiationType;
+import com.android.dialer.R;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.callintent.CallIntentParser;
 import com.android.dialer.callintent.CallSpecificAppData;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.InteractionEvent;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.util.DialerUtils;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.TransactionSafeActivity;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -80,16 +81,11 @@ import java.util.List;
  * <p>TODO: clean up code and documents since it is quite confusing to use "phone numbers" or "phone
  * calls" here while they can be SIP addresses or SIP calls (See also issue 5039627).
  */
-public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
+public class PhoneNumberInteraction implements Loader.OnLoadCompleteListener<Cursor> {
 
   static final String TAG = PhoneNumberInteraction.class.getSimpleName();
-  /** The identifier for a permissions request if one is generated. */
-  public static final int REQUEST_READ_CONTACTS = 1;
 
-  public static final int REQUEST_CALL_PHONE = 2;
-
-  @VisibleForTesting
-  public static final String[] PHONE_NUMBER_PROJECTION =
+  private static final String[] PHONE_NUMBER_PROJECTION =
       new String[] {
         Phone._ID,
         Phone.NUMBER,
@@ -118,7 +114,7 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
   private final CallSpecificAppData callSpecificAppData;
   private long contactId = UNKNOWN_CONTACT_ID;
   private CursorLoader loader;
-  private boolean isVideoCall;
+  private final boolean isVideoCall;
 
   /** Error codes for interactions. */
   @Retention(RetentionPolicy.SOURCE)
@@ -168,7 +164,6 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
 
     Assert.checkArgument(context instanceof InteractionErrorListener);
     Assert.checkArgument(context instanceof DisambigDialogDismissedListener);
-    Assert.checkArgument(context instanceof ActivityCompat.OnRequestPermissionsResultCallback);
   }
 
   private static void performAction(
@@ -202,13 +197,14 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
    * @param isVideoCall {@code true} if the call is a video call, {@code false} otherwise.
    */
   public static void startInteractionForPhoneCall(
-      TransactionSafeActivity activity,
-      Uri uri,
-      boolean isVideoCall,
-      CallSpecificAppData callSpecificAppData) {
+          TransactionSafeActivity activity,
+          Uri uri,
+          boolean isVideoCall,
+          CallSpecificAppData callSpecificAppData,
+          ActivityResultLauncher<String[]> permissionLauncher) {
     new PhoneNumberInteraction(
             activity, ContactDisplayUtils.INTERACTION_CALL, isVideoCall, callSpecificAppData)
-        .startInteraction(uri);
+        .startInteraction(uri, permissionLauncher);
   }
 
   private void performAction(String phoneNumber) {
@@ -221,14 +217,13 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
    *
    * @param uri Contact Uri
    */
-  private void startInteraction(Uri uri) {
+  private void startInteraction(Uri uri, ActivityResultLauncher<String[]> permissionLauncher) {
     // It's possible for a shortcut to have been created, and then permissions revoked. To avoid a
     // crash when the user tries to use such a shortcut, check for this condition and ask the user
     // for the permission.
     if (!PermissionsUtil.hasPhonePermissions(context)) {
       LogUtil.i("PhoneNumberInteraction.startInteraction", "Need phone permission: CALL_PHONE");
-      ActivityCompat.requestPermissions(
-          (Activity) context, new String[] {permission.CALL_PHONE}, REQUEST_CALL_PHONE);
+      permissionLauncher.launch(new String[] {permission.CALL_PHONE});
       return;
     }
 
@@ -239,8 +234,7 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
       LogUtil.i(
           "PhoneNumberInteraction.startInteraction",
           "Need contact permissions: " + Arrays.toString(deniedContactsPermissions));
-      ActivityCompat.requestPermissions(
-          (Activity) context, deniedContactsPermissions, REQUEST_READ_CONTACTS);
+      permissionLauncher.launch(deniedContactsPermissions);
       return;
     }
 
@@ -350,14 +344,9 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
         || ((TransactionSafeActivity) context).isSafeToCommitTransactions();
   }
 
-  @VisibleForTesting
-  /* package */ CursorLoader getLoader() {
-    return loader;
-  }
-
   private void showDisambiguationDialog(ArrayList<PhoneItem> phoneList) {
     // TODO(a bug): don't leak the activity
-    final Activity activity = (Activity) context;
+    final FragmentActivity activity = (FragmentActivity) context;
     if (activity.isFinishing()) {
       LogUtil.i("PhoneNumberInteraction.showDisambiguationDialog", "activity finishing");
       return;
@@ -371,7 +360,7 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
 
     try {
       PhoneDisambiguationDialogFragment.show(
-          activity.getFragmentManager(),
+          activity.getSupportFragmentManager(),
           phoneList,
           interactionType,
           isVideoCall,
@@ -384,8 +373,7 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
   }
 
   /** A model object for capturing a phone number for a given contact. */
-  @VisibleForTesting
-  /* package */ static class PhoneItem implements Parcelable, Collapsible<PhoneItem> {
+  private static class PhoneItem implements Parcelable, Collapsible<PhoneItem> {
 
     public static final Parcelable.Creator<PhoneItem> CREATOR =
         new Parcelable.Creator<PhoneItem>() {
@@ -529,7 +517,7 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
       final Activity activity = getActivity();
       Assert.checkState(activity instanceof DisambigDialogDismissedListener);
 
-      phoneList = getArguments().getParcelableArrayList(ARG_PHONE_LIST);
+      phoneList = getArguments().getParcelableArrayList(ARG_PHONE_LIST, PhoneItem.class);
       interactionType = getArguments().getInt(ARG_INTERACTION_TYPE);
       isVideoCall = getArguments().getBoolean(ARG_IS_VIDEO_CALL);
       callSpecificAppData = CallIntentParser.getCallSpecificAppData(getArguments());
@@ -559,12 +547,6 @@ public class PhoneNumberInteraction implements OnLoadCompleteListener<Cursor> {
         final PhoneItem phoneItem = phoneList.get(which);
         final CheckBox checkBox = (CheckBox) alertDialog.findViewById(R.id.setPrimary);
         if (checkBox.isChecked()) {
-          if (callSpecificAppData.getCallInitiationType() == CallInitiationType.Type.SPEED_DIAL) {
-            Logger.get(getContext())
-                .logInteraction(
-                    InteractionEvent.Type.SPEED_DIAL_SET_DEFAULT_NUMBER_FOR_AMBIGUOUS_CONTACT);
-          }
-
           // Request to mark the data as primary in the background.
           final Intent serviceIntent =
               ContactUpdateService.createSetSuperPrimaryIntent(activity, phoneItem.id);

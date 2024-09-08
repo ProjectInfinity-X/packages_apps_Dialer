@@ -16,57 +16,18 @@
 
 package com.android.dialer.constants;
 
-import android.content.Context;
-import android.support.annotation.NonNull;
-import com.android.dialer.common.Assert;
-import com.android.dialer.proguard.UsedByReflection;
-
 /**
- * Utility to access constants that are different across build variants (Google Dialer, AOSP,
- * etc...). This functionality depends on a an implementation being present in the app that has the
- * same package and the class name ending in "Impl". For example,
- * com.android.dialer.constants.ConstantsImpl. This class is found by the module using reflection.
+ * Utility to access constants
  */
-@UsedByReflection(value = "Constants.java")
-public abstract class Constants {
-  private static Constants instance;
-  private static boolean didInitializeInstance;
+public class Constants {
+  public static final String FILE_PROVIDER_AUTHORITY = "com.android.dialer.files";
 
-  @NonNull
-  public static synchronized Constants get() {
-    if (!didInitializeInstance) {
-      didInitializeInstance = true;
-      try {
-        Class<?> clazz = Class.forName(Constants.class.getName() + "Impl");
-        instance = (Constants) clazz.getConstructor().newInstance();
-      } catch (ReflectiveOperationException e) {
-        Assert.fail(
-            "Unable to create an instance of ConstantsImpl. To fix this error include one of the "
-                + "constants modules (googledialer, aosp etc...) in your target.");
-      }
-    }
-    return instance;
-  }
+  public static final String ANNOTATED_CALL_LOG_PROVIDER_AUTHORITY =
+          "com.android.dialer.annotatedcalllog";
 
-  @NonNull
-  public abstract String getFilteredNumberProviderAuthority();
+  public static final String PHONE_LOOKUP_HISTORY_PROVIDER_AUTHORITY =
+          "com.android.dialer.phonelookuphistory";
 
-  @NonNull
-  public abstract String getFileProviderAuthority();
-
-  @NonNull
-  public abstract String getAnnotatedCallLogProviderAuthority();
-
-  @NonNull
-  public abstract String getPhoneLookupHistoryProviderAuthority();
-
-  @NonNull
-  public abstract String getPreferredSimFallbackProviderAuthority();
-
-  public abstract String getUserAgent(Context context);
-
-  @NonNull
-  public abstract String getSettingsActivity();
-
-  protected Constants() {}
+  public static final String PREFERRED_SIM_FALLBACK_PROVIDER_AUTHORITY =
+          "com.android.dialer.preferredsimfallback";
 }

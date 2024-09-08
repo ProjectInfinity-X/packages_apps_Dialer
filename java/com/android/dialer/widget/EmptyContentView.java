@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,17 @@ package com.android.dialer.widget;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
-import android.support.annotation.StringRes;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.View;
+import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.StringRes;
+
+import com.android.dialer.R;
 import com.android.dialer.theme.base.ThemeComponent;
 
 public class EmptyContentView extends LinearLayout implements View.OnClickListener {
@@ -37,9 +42,9 @@ public class EmptyContentView extends LinearLayout implements View.OnClickListen
   public static final int NO_LABEL = 0;
   public static final int NO_IMAGE = 0;
 
-  private ImageView imageView;
-  private TextView descriptionView;
-  private TextView actionView;
+  private final ImageView imageView;
+  private final TextView descriptionView;
+  private final Button actionView;
   private OnEmptyViewActionButtonClickedListener onActionButtonClickedListener;
 
   private @StringRes int actionLabel;
@@ -64,11 +69,8 @@ public class EmptyContentView extends LinearLayout implements View.OnClickListen
     setClickable(true);
     imageView = (ImageView) findViewById(R.id.empty_list_view_image);
     descriptionView = (TextView) findViewById(R.id.empty_list_view_message);
-    actionView = (TextView) findViewById(R.id.empty_list_view_action);
+    actionView = findViewById(R.id.empty_list_view_action);
     actionView.setOnClickListener(this);
-
-    imageView.setImageTintList(
-        ColorStateList.valueOf(ThemeComponent.get(context).theme().getColorIconSecondary()));
   }
 
   public void setDescription(int resourceId) {

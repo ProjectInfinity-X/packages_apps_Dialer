@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,19 +23,23 @@ import android.os.Trace;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.Data;
-import android.support.annotation.Nullable;
+import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
 import android.util.ArraySet;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.glidephotomanager.PhotoInfo;
 import com.android.dialer.speeddial.database.SpeedDialEntry;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 
 /**
@@ -92,7 +97,7 @@ public abstract class SpeedDialUiItem {
   public static Builder builder() {
     return new AutoValue_SpeedDialUiItem.Builder()
         .setChannels(ImmutableList.of())
-        .setPinnedPosition(Optional.absent());
+        .setPinnedPosition(Optional.empty());
   }
 
   /**
@@ -129,8 +134,9 @@ public abstract class SpeedDialUiItem {
     Set<String> numbers = new ArraySet<>();
     do {
       String number = cursor.getString(NUMBER);
+      String normalizedNumber = PhoneNumberUtils.normalizeNumber(number);
       // TODO(78492722): consider using lib phone number to compare numbers
-      if (!numbers.add(number)) {
+      if (!numbers.add(normalizedNumber)) {
         // Number is identical to an existing number, skip this number
         continue;
       }

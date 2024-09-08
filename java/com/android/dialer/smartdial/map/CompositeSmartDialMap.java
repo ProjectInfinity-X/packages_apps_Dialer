@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,10 +18,12 @@
 package com.android.dialer.smartdial.map;
 
 import android.content.Context;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.util.SimpleArrayMap;
+
+import androidx.collection.SimpleArrayMap;
+
 import com.android.dialer.i18n.LocaleUtils;
-import com.google.common.base.Optional;
+
+import java.util.Optional;
 
 /**
  * A utility class that combines the functionality of two implementations of {@link SmartDialMap} so
@@ -32,7 +35,6 @@ import com.google.common.base.Optional;
  * <p>Note that the second implementation can be absent if it is not defined for the system's 1st
  * language preference.
  */
-@SuppressWarnings("Guava")
 public class CompositeSmartDialMap {
 
   private static final SmartDialMap DEFAULT_MAP = LatinSmartDialMap.getInstance();
@@ -155,11 +157,10 @@ public class CompositeSmartDialMap {
     return normalizedChar.isPresent() ? normalizedChar.get() : ch;
   }
 
-  @VisibleForTesting
-  static Optional<SmartDialMap> getExtraMap(Context context) {
+  private static Optional<SmartDialMap> getExtraMap(Context context) {
     String languageCode = LocaleUtils.getLocale(context).getISO3Language();
     return EXTRA_MAPS.containsKey(languageCode)
         ? Optional.of(EXTRA_MAPS.get(languageCode))
-        : Optional.absent();
+        : Optional.empty();
   }
 }

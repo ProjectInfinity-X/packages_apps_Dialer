@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,9 +20,8 @@ import android.annotation.SuppressLint;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnClickListener;
 import android.content.Intent;
+import android.content.res.TypedArray;
 import android.graphics.Point;
 import android.os.Bundle;
 import android.telecom.TelecomManager;
@@ -31,11 +31,15 @@ import android.text.TextDirectionHeuristics;
 import android.view.View;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
+
+import androidx.annotation.AttrRes;
+import androidx.annotation.ColorInt;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.telecom.TelecomUtil;
-import java.io.File;
+
 import java.util.Iterator;
-import java.util.Random;
 
 /** General purpose utility methods for the Dialer. */
 public class DialerUtils {
@@ -45,10 +49,6 @@ public class DialerUtils {
    * Priority Service.
    */
   private static final String WPS_PREFIX = "*272";
-
-  public static final String FILE_PROVIDER_CACHE_DIR = "my_cache";
-
-  private static final Random RANDOM = new Random();
 
   /**
    * Attempts to start an activity and displays a toast with the default error message if the
@@ -80,7 +80,8 @@ public class DialerUtils {
           Bundle extras;
           // Make sure to not accidentally clobber any existing extras
           if (intent.hasExtra(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS)) {
-            extras = intent.getParcelableExtra(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS);
+            extras = intent.getParcelableExtra(TelecomManager.EXTRA_OUTGOING_CALL_EXTRAS,
+                    Bundle.class);
           } else {
             extras = new Bundle();
           }
@@ -95,13 +96,7 @@ public class DialerUtils {
           AlertDialog.Builder builder = new AlertDialog.Builder(context);
           builder.setMessage(R.string.outgoing_wps_warning);
           builder.setPositiveButton(
-              R.string.dialog_continue,
-              new OnClickListener() {
-                @Override
-                public void onClick(DialogInterface dialog, int which) {
-                  placeCallOrMakeToast(context, intent);
-                }
-              });
+              R.string.dialog_continue, (dialog, which) -> placeCallOrMakeToast(context, intent));
           builder.setNegativeButton(android.R.string.cancel, null);
           builder.create().show();
         } else {
@@ -133,11 +128,11 @@ public class DialerUtils {
   @SuppressLint("MissingPermission")
   private static boolean shouldWarnForOutgoingWps(Context context, String number) {
     if (number != null && number.startsWith(WPS_PREFIX)) {
+      TelecomManager telecomManager = context.getSystemService(TelecomManager.class);
       TelephonyManager telephonyManager = context.getSystemService(TelephonyManager.class);
       boolean isOnVolte =
           telephonyManager.getVoiceNetworkType() == TelephonyManager.NETWORK_TYPE_LTE;
-      boolean hasCurrentActiveCall =
-          telephonyManager.getCallState() == TelephonyManager.CALL_STATE_OFFHOOK;
+      boolean hasCurrentActiveCall = telecomManager.isInCall();
       return isOnVolte && hasCurrentActiveCall;
     }
     return false;
@@ -204,16 +199,12 @@ public class DialerUtils {
     }
   }
 
-  /**
-   * Create a File in the cache directory that Dialer's FileProvider knows about so they can be
-   * shared to other apps.
-   */
-  public static File createShareableFile(Context context) {
-    long fileId = Math.abs(RANDOM.nextLong());
-    File parentDir = new File(context.getCacheDir(), FILE_PROVIDER_CACHE_DIR);
-    if (!parentDir.exists()) {
-      parentDir.mkdirs();
+  public static @ColorInt int resolveColor(Context context, @AttrRes int styledAttributeId) {
+    TypedArray a = context.obtainStyledAttributes(new int[] {styledAttributeId});
+    try {
+      return a.getColor(0, 0);
+    } finally {
+      a.recycle();
     }
-    return new File(parentDir, String.valueOf(fileId));
   }
 }

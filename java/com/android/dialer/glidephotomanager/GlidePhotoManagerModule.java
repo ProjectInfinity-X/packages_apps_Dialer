@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,14 +18,13 @@
 package com.android.dialer.glidephotomanager;
 
 import com.android.dialer.glidephotomanager.impl.GlidePhotoManagerImpl;
-import com.android.dialer.inject.DialerVariant;
-import com.android.dialer.inject.InstallIn;
-import dagger.Binds;
-import dagger.Module;
+
 import javax.inject.Singleton;
 
+import dagger.Binds;
+import dagger.Module;
+
 /** Module for {@link GlidePhotoManagerComponent} */
-@InstallIn(variants = {DialerVariant.DIALER_TEST})
 @Module
 public abstract class GlidePhotoManagerModule {
   @Binds

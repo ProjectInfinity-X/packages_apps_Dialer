@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +19,13 @@ package com.android.incallui.answer.impl;
 
 import android.content.res.Configuration;
 import android.graphics.Point;
-import android.support.annotation.NonNull;
-import android.support.v4.app.Fragment;
 import android.view.TextureView;
 import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.fragment.app.Fragment;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
@@ -33,7 +37,8 @@ import com.android.incallui.videosurface.bindings.VideoSurfaceBindings;
 /** Shows a video preview for an incoming call. */
 public class AnswerVideoCallScreen implements VideoCallScreen {
   @NonNull private final String callId;
-  @NonNull private final Fragment fragment;
+  @NonNull
+  private final Fragment fragment;
   @NonNull private final TextureView textureView;
   @NonNull private final VideoCallScreenDelegate delegate;
 

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,8 +18,9 @@
 package com.android.dialer.metrics;
 
 import android.os.SystemClock;
-import android.support.annotation.IntDef;
-import android.support.annotation.VisibleForTesting;
+
+import androidx.annotation.IntDef;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.LightweightExecutor;
 import com.google.common.base.Function;
@@ -26,17 +28,18 @@ import com.google.common.util.concurrent.FutureCallback;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+
 import javax.inject.Inject;
 
 /** Applies logcat and metric logging to a supplied future. */
 public final class FutureTimer {
 
   /** Operations which exceed this threshold will have logcat warnings printed. */
-  @VisibleForTesting static final long LONG_OPERATION_LOGCAT_THRESHOLD_MILLIS = 100L;
+  private static final long LONG_OPERATION_LOGCAT_THRESHOLD_MILLIS = 100L;
 
-  private final Metrics metrics;
   private final ListeningExecutorService lightweightExecutorService;
 
   /** Modes for logging Future results to logcat. */
@@ -58,9 +61,7 @@ public final class FutureTimer {
   }
 
   @Inject
-  public FutureTimer(
-      Metrics metrics, @LightweightExecutor ListeningExecutorService lightweightExecutorService) {
-    this.metrics = metrics;
+  public FutureTimer(@LightweightExecutor ListeningExecutorService lightweightExecutorService) {
     this.lightweightExecutorService = lightweightExecutorService;
   }
 
@@ -101,16 +102,12 @@ public final class FutureTimer {
       Function<T, String> eventNameFromResultFunction,
       @LogCatMode int logCatMode) {
     long startTime = SystemClock.elapsedRealtime();
-    Integer timerId = metrics.startUnnamedTimer();
     Futures.addCallback(
         future,
         new FutureCallback<T>() {
           @Override
           public void onSuccess(T result) {
             String eventName = eventNameFromResultFunction.apply(result);
-            if (timerId != null) {
-              metrics.stopUnnamedTimer(timerId, eventName);
-            }
             long operationTime = SystemClock.elapsedRealtime() - startTime;
 
             // If the operation took a long time, do some WARNING logging.

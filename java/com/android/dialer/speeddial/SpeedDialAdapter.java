@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,18 +18,21 @@
 package com.android.dialer.speeddial;
 
 import android.content.Context;
-import android.support.annotation.IntDef;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.GridLayoutManager.SpanSizeLookup;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
-import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.ArrayMap;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
 import android.view.animation.AnticipateInterpolator;
 import android.widget.FrameLayout;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView.ViewHolder;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.speeddial.FavoritesViewHolder.FavoriteContactsListener;
 import com.android.dialer.speeddial.HeaderViewHolder.SpeedDialHeaderListener;
@@ -37,6 +41,7 @@ import com.android.dialer.speeddial.SuggestionViewHolder.SuggestedContactsListen
 import com.android.dialer.speeddial.draghelper.SpeedDialItemTouchHelperCallback.ItemTouchHelperAdapter;
 import com.android.dialer.speeddial.loader.SpeedDialUiItem;
 import com.google.common.collect.ImmutableList;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -65,7 +70,8 @@ public final class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.Vi
   private static final float IN_REMOVE_VIEW_ALPHA = 0.5f;
 
   @Retention(RetentionPolicy.SOURCE)
-  @IntDef({RowType.STARRED_HEADER, RowType.SUGGESTION_HEADER, RowType.STARRED, RowType.SUGGESTION})
+  @IntDef({RowType.REMOVE_VIEW, RowType.STARRED_HEADER, RowType.SUGGESTION_HEADER, RowType.STARRED,
+          RowType.SUGGESTION})
   @interface RowType {
     int REMOVE_VIEW = 0;
     int STARRED_HEADER = 1;
@@ -174,7 +180,7 @@ public final class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.Vi
     speedDialUiItems.sort(
         (o1, o2) -> {
           if (o1.isStarred() && o2.isStarred()) {
-            return Integer.compare(o1.pinnedPosition().or(-1), o2.pinnedPosition().or(-1));
+            return Integer.compare(o1.pinnedPosition().orElse(-1), o2.pinnedPosition().orElse(-1));
           }
           return Boolean.compare(o2.isStarred(), o1.isStarred());
         });
@@ -211,8 +217,8 @@ public final class SpeedDialAdapter extends RecyclerView.Adapter<RecyclerView.Vi
     return ImmutableList.copyOf(speedDialUiItems);
   }
 
-  public SpanSizeLookup getSpanSizeLookup() {
-    return new SpanSizeLookup() {
+  public GridLayoutManager.SpanSizeLookup getSpanSizeLookup() {
+    return new GridLayoutManager.SpanSizeLookup() {
       @Override
       public int getSpanSize(int position) {
         switch (getItemViewType(position)) {

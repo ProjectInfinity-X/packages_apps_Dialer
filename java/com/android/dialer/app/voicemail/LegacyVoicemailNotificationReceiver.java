@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,18 +17,15 @@
 
 package com.android.dialer.app.voicemail;
 
-import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.os.BuildCompat;
-import android.support.v4.os.UserManagerCompat;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.TelephonyManager;
+
+import androidx.core.os.UserManagerCompat;
+
 import com.android.dialer.app.calllog.LegacyVoicemailNotifier;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
@@ -42,10 +40,9 @@ import com.android.voicemail.VoicemailComponent;
  * LegacyVoicemailNotifier}. Will ignore the notification if the account has visual voicemail.
  * Legacy voicemail is the traditional, non-visual, dial-in voicemail.
  */
-@TargetApi(VERSION_CODES.O)
 public class LegacyVoicemailNotificationReceiver extends BroadcastReceiver {
 
-  @VisibleForTesting static final String LEGACY_VOICEMAIL_DISMISSED = "legacy_voicemail_dismissed";
+  private static final String LEGACY_VOICEMAIL_DISMISSED = "legacy_voicemail_dismissed";
 
   @Override
   public void onReceive(Context context, Intent intent) {
@@ -57,20 +54,9 @@ public class LegacyVoicemailNotificationReceiver extends BroadcastReceiver {
 
     LogUtil.i(
         "LegacyVoicemailNotificationReceiver.onReceive", "received legacy voicemail notification");
-    if (!BuildCompat.isAtLeastO()) {
-      LogUtil.e(
-          "LegacyVoicemailNotificationReceiver.onReceive",
-          "SDK not finalized: SDK_INT="
-              + Build.VERSION.SDK_INT
-              + ", PREVIEW_SDK_INT="
-              + Build.VERSION.PREVIEW_SDK_INT
-              + ", RELEASE="
-              + Build.VERSION.RELEASE_OR_CODENAME);
-      return;
-    }
-
     PhoneAccountHandle phoneAccountHandle =
-        Assert.isNotNull(intent.getParcelableExtra(TelephonyManager.EXTRA_PHONE_ACCOUNT_HANDLE));
+        Assert.isNotNull(intent.getParcelableExtra(TelephonyManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                PhoneAccountHandle.class));
     int count = intent.getIntExtra(TelephonyManager.EXTRA_NOTIFICATION_COUNT, -1);
 
     boolean isRefresh = intent.getBooleanExtra(TelephonyManagerCompat.EXTRA_IS_REFRESH, false);
@@ -113,9 +99,11 @@ public class LegacyVoicemailNotificationReceiver extends BroadcastReceiver {
 
     String voicemailNumber = intent.getStringExtra(TelephonyManager.EXTRA_VOICEMAIL_NUMBER);
     PendingIntent callVoicemailIntent =
-        intent.getParcelableExtra(TelephonyManager.EXTRA_CALL_VOICEMAIL_INTENT);
+        intent.getParcelableExtra(TelephonyManager.EXTRA_CALL_VOICEMAIL_INTENT,
+                PendingIntent.class);
     PendingIntent voicemailSettingIntent =
-        intent.getParcelableExtra(TelephonyManager.EXTRA_LAUNCH_VOICEMAIL_SETTINGS_INTENT);
+        intent.getParcelableExtra(TelephonyManager.EXTRA_LAUNCH_VOICEMAIL_SETTINGS_INTENT,
+                PendingIntent.class);
 
     LogUtil.i("LegacyVoicemailNotificationReceiver.onReceive", "sending notification");
     LegacyVoicemailNotifier.showNotification(
@@ -136,7 +124,6 @@ public class LegacyVoicemailNotificationReceiver extends BroadcastReceiver {
         .apply();
   }
 
-  @VisibleForTesting
   static PerAccountSharedPreferences getSharedPreferences(
       Context context, PhoneAccountHandle phoneAccountHandle) {
     return new PerAccountSharedPreferences(

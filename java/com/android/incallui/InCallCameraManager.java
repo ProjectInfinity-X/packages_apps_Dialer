@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import android.content.Context;
 import android.hardware.camera2.CameraAccessException;
 import android.hardware.camera2.CameraCharacteristics;
 import android.hardware.camera2.CameraManager;
+
 import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -28,7 +30,7 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InCallCameraManager {
 
   private final Set<Listener> cameraSelectionListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<Listener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
   /** The camera ID for the front facing camera. */
   private String frontFacingCameraId;
   /** The camera ID for the rear facing camera. */
@@ -41,7 +43,7 @@ public class InCallCameraManager {
    */
   private boolean isInitialized = false;
   /** The context. */
-  private Context context;
+  private final Context context;
 
   /**
    * Initializes the InCall CameraManager.

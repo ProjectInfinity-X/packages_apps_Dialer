@@ -17,13 +17,14 @@
 package com.android.dialer.inject;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
+
 import dagger.Module;
 import dagger.Provides;
 
 /** Provides the singleton application context object. */
 @Module
-@InstallIn(variants = {DialerVariant.DIALER_DEMO, DialerVariant.DIALER_TEST})
 public final class ContextModule {
 
   @NonNull private final Context context;

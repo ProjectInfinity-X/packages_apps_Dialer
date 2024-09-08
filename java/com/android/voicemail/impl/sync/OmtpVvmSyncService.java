@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +16,13 @@
  */
 package com.android.voicemail.impl.sync;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.Network;
 import android.net.Uri;
-import android.os.Build.VERSION_CODES;
-import android.support.v4.os.BuildCompat;
 import android.telecom.PhoneAccountHandle;
 import android.text.TextUtils;
 import android.util.ArrayMap;
-import com.android.dialer.logging.DialerImpression;
+
 import com.android.voicemail.VoicemailComponent;
 import com.android.voicemail.impl.ActivationTask;
 import com.android.voicemail.impl.Assert;
@@ -41,14 +39,13 @@ import com.android.voicemail.impl.scheduling.BaseTask;
 import com.android.voicemail.impl.settings.VisualVoicemailSettingsUtil;
 import com.android.voicemail.impl.sync.VvmNetworkRequest.NetworkWrapper;
 import com.android.voicemail.impl.sync.VvmNetworkRequest.RequestFailedException;
-import com.android.voicemail.impl.utils.LoggerUtils;
 import com.android.voicemail.impl.utils.VoicemailDatabaseUtil;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /** Sync OMTP visual voicemail. */
-@TargetApi(VERSION_CODES.O)
 public class OmtpVvmSyncService {
 
   private static final String TAG = "OmtpVvmSyncService";
@@ -89,7 +86,6 @@ public class OmtpVvmSyncService {
     }
 
     OmtpVvmCarrierConfigHelper config = new OmtpVvmCarrierConfigHelper(context, phoneAccount);
-    LoggerUtils.logImpressionOnMainThread(context, DialerImpression.Type.VVM_SYNC_STARTED);
     // DATA_IMAP_OPERATION_STARTED posting should not be deferred. This event clears all data
     // channel errors, which should happen when the task starts, not when it ends. It is the
     // "Sync in progress..." status, which is currently displayed to the user as no error.
@@ -126,7 +122,6 @@ public class OmtpVvmSyncService {
         imapHelper.updateQuota();
         autoDeleteAndArchiveVM(imapHelper, phoneAccount);
         imapHelper.handleEvent(OmtpEvents.DATA_IMAP_OPERATION_COMPLETED);
-        LoggerUtils.logImpressionOnMainThread(context, DialerImpression.Type.VVM_SYNC_COMPLETED);
       } else {
         task.fail();
       }
@@ -144,14 +139,10 @@ public class OmtpVvmSyncService {
       ImapHelper imapHelper, PhoneAccountHandle phoneAccountHandle) {
     if (!isArchiveAllowedAndEnabled(context, phoneAccountHandle)) {
       VvmLog.i(TAG, "autoDeleteAndArchiveVM is turned off");
-      LoggerUtils.logImpressionOnMainThread(
-          context, DialerImpression.Type.VVM_ARCHIVE_AUTO_DELETE_TURNED_OFF);
       return;
     }
     Quota quotaOnServer = imapHelper.getQuota();
     if (quotaOnServer == null) {
-      LoggerUtils.logImpressionOnMainThread(
-          context, DialerImpression.Type.VVM_ARCHIVE_AUTO_DELETE_FAILED_DUE_TO_FAILED_QUOTA_CHECK);
       VvmLog.e(TAG, "autoDeleteAndArchiveVM failed - Can't retrieve Imap quota.");
       return;
     }
@@ -160,8 +151,6 @@ public class OmtpVvmSyncService {
         > AUTO_DELETE_ARCHIVE_VM_THRESHOLD) {
       deleteAndArchiveVM(imapHelper, quotaOnServer);
       imapHelper.updateQuota();
-      LoggerUtils.logImpressionOnMainThread(
-          context, DialerImpression.Type.VVM_ARCHIVE_AUTO_DELETED_VM_FROM_SERVER);
     } else {
       VvmLog.i(TAG, "no need to archive and auto delete VM, quota below threshold");
     }
@@ -188,9 +177,6 @@ public class OmtpVvmSyncService {
   }
 
   private void deleteAndArchiveVM(ImapHelper imapHelper, Quota quotaOnServer) {
-    // Archive column should only be used for 0 and above
-    Assert.isTrue(BuildCompat.isAtLeastO());
-
     // The number of voicemails that exceed our threshold and should be deleted from the server
     int numVoicemails =
         quotaOnServer.occupied - (int) (AUTO_DELETE_ARCHIVE_VM_THRESHOLD * quotaOnServer.total);
@@ -259,8 +245,6 @@ public class OmtpVvmSyncService {
 
         if (!TextUtils.isEmpty(remoteVoicemail.getTranscription())
             && TextUtils.isEmpty(localVoicemail.getTranscription())) {
-          LoggerUtils.logImpressionOnMainThread(
-              context, DialerImpression.Type.VVM_TRANSCRIPTION_DOWNLOADED);
           queryHelper.updateWithTranscription(localVoicemail, remoteVoicemail.getTranscription());
         }
       }
@@ -279,10 +263,6 @@ public class OmtpVvmSyncService {
     // The leftover messages are messages that exist on the server but not locally.
     boolean prefetchEnabled = shouldPerformPrefetch(account, imapHelper);
     for (Voicemail remoteVoicemail : remoteMap.values()) {
-      if (!TextUtils.isEmpty(remoteVoicemail.getTranscription())) {
-        LoggerUtils.logImpressionOnMainThread(
-            context, DialerImpression.Type.VVM_TRANSCRIPTION_DOWNLOADED);
-      }
       Uri uri = VoicemailDatabaseUtil.insert(context, remoteVoicemail);
       if (prefetchEnabled) {
         VoicemailFetchedCallback fetchedCallback =
@@ -314,7 +294,7 @@ public class OmtpVvmSyncService {
 
   /** Builds a map from provider data to message for the given collection of voicemails. */
   private Map<String, Voicemail> buildMap(List<Voicemail> messages) {
-    Map<String, Voicemail> map = new ArrayMap<String, Voicemail>();
+    Map<String, Voicemail> map = new ArrayMap<>();
     for (Voicemail message : messages) {
       map.put(message.getSourceData(), message);
     }
@@ -324,8 +304,8 @@ public class OmtpVvmSyncService {
   /** Callback for {@link ImapHelper#fetchTranscription(TranscriptionFetchedCallback, String)} */
   public static class TranscriptionFetchedCallback {
 
-    private Context context;
-    private Voicemail voicemail;
+    private final Context context;
+    private final Voicemail voicemail;
 
     public TranscriptionFetchedCallback(Context context, Voicemail voicemail) {
       this.context = context;

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,7 @@ package com.android.dialer.calllogutils;
 
 import android.content.Context;
 import android.provider.CallLog.Calls;
-import android.support.v4.os.BuildCompat;
+
 import com.android.dialer.NumberAttributes;
 import com.android.dialer.calllog.model.CoalescedRow;
 import com.android.dialer.glidephotomanager.PhotoInfo;
@@ -38,9 +39,7 @@ public final class PhotoInfoBuilder {
             Spam.shouldShowAsSpam(
                 coalescedRow.getNumberAttributes().getIsSpam(), coalescedRow.getCallType()))
         .setIsVideo((coalescedRow.getFeatures() & Calls.FEATURES_VIDEO) == Calls.FEATURES_VIDEO)
-        .setIsRtt(
-            BuildCompat.isAtLeastP()
-                && (coalescedRow.getFeatures() & Calls.FEATURES_RTT) == Calls.FEATURES_RTT);
+        .setIsRtt((coalescedRow.getFeatures() & Calls.FEATURES_RTT) == Calls.FEATURES_RTT);
   }
 
   /** Returns a {@link PhotoInfo.Builder} with info from {@link VoicemailEntry}. */

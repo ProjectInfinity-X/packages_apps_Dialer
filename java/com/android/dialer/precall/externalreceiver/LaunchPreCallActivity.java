@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +17,19 @@
 
 package com.android.dialer.precall.externalreceiver;
 
-import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telecom.VideoProfile;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
 import com.android.dialer.callintent.CallInitiationType.Type;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProvider;
-import com.android.dialer.configprovider.ConfigProviderComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCall;
 import com.google.common.collect.ImmutableList;
 
@@ -41,9 +40,7 @@ import com.google.common.collect.ImmutableList;
  *
  * @see CallIntentBuilder
  */
-public class LaunchPreCallActivity extends Activity {
-
-  public static final String ACTION_LAUNCH_PRE_CALL = "com.android.dialer.LAUNCH_PRE_CALL";
+public class LaunchPreCallActivity extends AppCompatActivity {
 
   public static final String EXTRA_PHONE_ACCOUNT_HANDLE = "phone_account_handle";
 
@@ -67,26 +64,22 @@ public class LaunchPreCallActivity extends Activity {
   @Override
   public void onCreate(@Nullable Bundle savedInstanceState) {
     super.onCreate(savedInstanceState);
-    Logger.get(this).logImpression(DialerImpression.Type.PRECALL_INITIATED_EXTERNAL);
 
-    ConfigProvider configProvider =
-        ConfigProviderComponent.get(getApplicationContext()).getConfigProvider();
     Intent intent = getIntent();
     CallIntentBuilder builder = new CallIntentBuilder(intent.getData(), Type.EXTERNAL_INITIATION);
 
-    PhoneAccountHandle phoneAccountHandle = intent.getParcelableExtra(EXTRA_PHONE_ACCOUNT_HANDLE);
+    PhoneAccountHandle phoneAccountHandle = intent.getParcelableExtra(EXTRA_PHONE_ACCOUNT_HANDLE,
+            PhoneAccountHandle.class);
     if (phoneAccountHandle == null) {
-      phoneAccountHandle = intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE);
+      phoneAccountHandle = intent.getParcelableExtra(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+              PhoneAccountHandle.class);
     }
 
     builder
         .setPhoneAccountHandle(phoneAccountHandle)
         .setIsVideoCall(intent.getBooleanExtra(EXTRA_IS_VIDEO_CALL, false))
         .setCallSubject(intent.getStringExtra(EXTRA_CALL_SUBJECT))
-        .setAllowAssistedDial(
-            intent.getBooleanExtra(
-                EXTRA_ALLOW_ASSISTED_DIAL,
-                configProvider.getBoolean("assisted_dialing_default_precall_state", false)));
+        .setAllowAssistedDial(intent.getBooleanExtra(EXTRA_ALLOW_ASSISTED_DIAL, false));
     filterExtras(intent.getExtras(), builder);
     PreCall.start(this, builder);
     finish();
@@ -133,7 +126,8 @@ public class LaunchPreCallActivity extends Activity {
 
     if (intentExtras.containsKey(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE)) {
       builder.setPhoneAccountHandle(
-          intentExtras.getParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE));
+          intentExtras.getParcelable(TelecomManager.EXTRA_PHONE_ACCOUNT_HANDLE,
+                  PhoneAccountHandle.class));
     }
 
     if (intentExtras.containsKey(TelecomManager.EXTRA_CALL_SUBJECT)) {

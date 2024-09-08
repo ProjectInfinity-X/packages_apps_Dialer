@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,23 +17,22 @@
 
 package com.android.voicemail.impl.scheduling;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.content.Intent;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.Looper;
 import android.os.Message;
-import android.support.annotation.MainThread;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.voicemail.impl.Assert;
-import com.android.voicemail.impl.NeededForTesting;
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.scheduling.TaskQueue.NextTask;
+
 import java.util.List;
 
 /**
@@ -69,7 +69,6 @@ import java.util.List;
  *   <li>A job cannot be mutated to store information such as retry count.
  * </ul>
  */
-@TargetApi(VERSION_CODES.O)
 final class TaskExecutor {
 
   /**
@@ -121,12 +120,6 @@ final class TaskExecutor {
 
   private static TaskExecutor instance;
 
-  /**
-   * Used by tests to turn task handling into a single threaded process by calling {@link
-   * Handler#handleMessage(Message)} directly
-   */
-  private MessageSender messageSender = new MessageSender();
-
   private final MainThreadHandler mainThreadHandler;
 
   private final Context appContext;
@@ -140,19 +133,14 @@ final class TaskExecutor {
 
   private Job job;
 
-  private final Runnable stopServiceWithDelay =
-      new Runnable() {
-        @MainThread
-        @Override
-        public void run() {
-          VvmLog.i(TAG, "Stopping service");
-          if (!isJobRunning() || isTerminating()) {
-            VvmLog.e(TAG, "Service already stopped");
-            return;
-          }
-          scheduleJobAndTerminate(0, true);
-        }
-      };
+  private final Runnable stopServiceWithDelay = () -> {
+    VvmLog.i(TAG, "Stopping service");
+    if (!isJobRunning() || isTerminating()) {
+      VvmLog.e(TAG, "Service already stopped");
+      return;
+    }
+    scheduleJobAndTerminate(0, true);
+  };
 
   /**
    * Reschedule the {@link TaskSchedulerJobService} and terminate the executor when the {@link Job}
@@ -188,13 +176,9 @@ final class TaskExecutor {
       VvmLog.w("JobFinishedPoller.run", "Job still running");
       mainThreadHandler.postDelayed(this, TERMINATE_POLLING_INTERVAL_MILLISECONDS);
     }
-  };
-
-  /** Should attempt to run the next task when a task has finished or been added. */
-  private boolean taskAutoRunDisabledForTesting = false;
+  }
 
   /** Handles execution of the background task in teh worker thread. */
-  @VisibleForTesting
   final class WorkerThreadHandler extends Handler {
 
     public WorkerThreadHandler(Looper looper) {
@@ -214,12 +198,11 @@ final class TaskExecutor {
 
       Message schedulerMessage = mainThreadHandler.obtainMessage();
       schedulerMessage.obj = task;
-      messageSender.send(schedulerMessage);
+      schedulerMessage.sendToTarget();
     }
   }
 
   /** Handles completion of the background task in the main thread. */
-  @VisibleForTesting
   final class MainThreadHandler extends Handler {
 
     public MainThreadHandler(Looper looper) {
@@ -267,7 +250,6 @@ final class TaskExecutor {
     mainThreadHandler = new MainThreadHandler(Looper.getMainLooper());
   }
 
-  @VisibleForTesting
   void terminate() {
     VvmLog.i(TAG, "terminated");
     Assert.isMainThread();
@@ -287,7 +269,6 @@ final class TaskExecutor {
   }
 
   @MainThread
-  @VisibleForTesting
   TaskQueue getTasks() {
     Assert.isMainThread();
     return tasks;
@@ -300,16 +281,10 @@ final class TaskExecutor {
     if (isWorkerThreadBusy) {
       return;
     }
-    if (taskAutoRunDisabledForTesting) {
-      // If taskAutoRunDisabledForTesting is true, runNextTask() must be explicitly called
-      // to run the next task.
-      return;
-    }
 
     runNextTask();
   }
 
-  @VisibleForTesting
   @MainThread
   void runNextTask() {
     Assert.isMainThread();
@@ -324,11 +299,11 @@ final class TaskExecutor {
       Message message = workerThreadHandler.obtainMessage();
       message.obj = nextTask.task;
       isWorkerThreadBusy = true;
-      messageSender.send(message);
+      message.sendToTarget();
       return;
     }
     VvmLog.i(TAG, "minimal wait time:" + nextTask.minimalWaitTimeMillis);
-    if (!taskAutoRunDisabledForTesting && nextTask.minimalWaitTimeMillis != null) {
+    if (nextTask.minimalWaitTimeMillis != null) {
       // No tasks are currently ready. Sleep until the next one should be.
       // If a new task is added during the sleep the service will wake immediately.
       sleep(nextTask.minimalWaitTimeMillis);
@@ -339,14 +314,7 @@ final class TaskExecutor {
   private void sleep(long timeMillis) {
     VvmLog.i(TAG, "sleep for " + timeMillis + " millis");
     if (timeMillis < SHORT_SLEEP_THRESHOLD_MILLISECONDS) {
-      mainThreadHandler.postDelayed(
-          new Runnable() {
-            @Override
-            public void run() {
-              maybeRunNextTask();
-            }
-          },
-          timeMillis);
+      mainThreadHandler.postDelayed(() -> maybeRunNextTask(), timeMillis);
       return;
     }
     scheduleJobAndTerminate(timeMillis, false);
@@ -363,24 +331,6 @@ final class TaskExecutor {
             + STOP_DELAY_MILLISECONDS
             + " millis");
     mainThreadHandler.postDelayed(stopServiceWithDelay, STOP_DELAY_MILLISECONDS);
-  }
-
-  @NeededForTesting
-  static class MessageSender {
-
-    public void send(Message message) {
-      message.sendToTarget();
-    }
-  }
-
-  @NeededForTesting
-  void setTaskAutoRunDisabledForTest(boolean value) {
-    taskAutoRunDisabledForTesting = value;
-  }
-
-  @NeededForTesting
-  void setMessageSenderForTest(MessageSender sender) {
-    messageSender = sender;
   }
 
   /**
@@ -418,7 +368,6 @@ final class TaskExecutor {
    * @param isNewJob a new job will be requested to run immediately, bypassing all requirements.
    */
   @MainThread
-  @VisibleForTesting
   void scheduleJobAndTerminate(long delayMillis, boolean isNewJob) {
     Assert.isMainThread();
     finishJobAsync();

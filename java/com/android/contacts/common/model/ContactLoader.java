@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2010 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,7 +17,6 @@
 
 package com.android.contacts.common.model;
 
-import android.content.AsyncTaskLoader;
 import android.content.ContentResolver;
 import android.content.ContentUris;
 import android.content.ContentValues;
@@ -36,6 +36,9 @@ import android.provider.ContactsContract.Directory;
 import android.provider.ContactsContract.Groups;
 import android.provider.ContactsContract.RawContacts;
 import android.text.TextUtils;
+
+import androidx.loader.content.AsyncTaskLoader;
+
 import com.android.contacts.common.GroupMetaData;
 import com.android.contacts.common.model.account.AccountType;
 import com.android.contacts.common.model.account.AccountTypeWithDataSet;
@@ -53,6 +56,11 @@ import com.google.common.collect.ImmutableList;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -64,9 +72,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 /** Loads a single Contact and all it constituent RawContacts. */
 public class ContactLoader extends AsyncTaskLoader<Contact> {
@@ -79,10 +84,10 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
   private final Uri mRequestedUri;
   private final Set<Long> mNotifiedRawContactIds = Sets.newHashSet();
   private Uri mLookupUri;
-  private boolean mLoadGroupMetaData;
-  private boolean mLoadInvitableAccountTypes;
-  private boolean mPostViewNotification;
-  private boolean mComputeFormattedPhoneNumber;
+  private final boolean mLoadGroupMetaData;
+  private final boolean mLoadInvitableAccountTypes;
+  private final boolean mPostViewNotification;
+  private final boolean mComputeFormattedPhoneNumber;
   private Contact mContact;
   private ForceLoadContentObserver mObserver;
 
@@ -292,8 +297,7 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
       // status data.  Initially, result has empty entities and statuses.
       long currentRawContactId = -1;
       RawContact rawContact = null;
-      ImmutableList.Builder<RawContact> rawContactsBuilder =
-          new ImmutableList.Builder<RawContact>();
+      ImmutableList.Builder<RawContact> rawContactsBuilder = new ImmutableList.Builder<>();
       do {
         long rawContactId = cursor.getLong(ContactQuery.RAW_CONTACT_ID);
         if (rawContactId != currentRawContactId) {
@@ -388,8 +392,7 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
 
   /** Sets the "invitable" account types to {@link Contact#mInvitableAccountTypes}. */
   private void loadInvitableAccountTypes(Contact contactData) {
-    final ImmutableList.Builder<AccountType> resultListBuilder =
-        new ImmutableList.Builder<AccountType>();
+    final ImmutableList.Builder<AccountType> resultListBuilder = new ImmutableList.Builder<>();
     if (!contactData.isUserProfile()) {
       Map<AccountTypeWithDataSet, AccountType> invitables =
           AccountTypeManager.getInstance(getContext()).getUsableInvitableAccountTypes();
@@ -594,7 +597,7 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
    */
   private void loadGroupMetaData(Contact result) {
     StringBuilder selection = new StringBuilder();
-    ArrayList<String> selectionArgs = new ArrayList<String>();
+    ArrayList<String> selectionArgs = new ArrayList<>();
     final HashSet<AccountKey> accountsSeen = new HashSet<>();
     for (RawContact rawContact : result.getRawContacts()) {
       final String accountName = rawContact.getAccountName();
@@ -619,8 +622,7 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
         selection.append(")");
       }
     }
-    final ImmutableList.Builder<GroupMetaData> groupListBuilder =
-        new ImmutableList.Builder<GroupMetaData>();
+    final ImmutableList.Builder<GroupMetaData> groupListBuilder = new ImmutableList.Builder<>();
     final Cursor cursor =
         getContext()
             .getContentResolver()
@@ -928,7 +930,7 @@ public class ContactLoader extends AsyncTaskLoader<Contact> {
     static {
       List<String> projectionList = Lists.newArrayList(COLUMNS_INTERNAL);
       projectionList.add(Data.CARRIER_PRESENCE);
-      COLUMNS = projectionList.toArray(new String[projectionList.size()]);
+      COLUMNS = projectionList.toArray(new String[0]);
     }
   }
 

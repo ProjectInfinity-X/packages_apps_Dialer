@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,12 +18,15 @@
 package com.android.dialer.speeddial.database;
 
 import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+
 import com.google.auto.value.AutoValue;
-import com.google.common.base.Optional;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
+import java.util.Optional;
 
 /** POJO representation of database rows returned by {@link SpeedDialEntryDao}. */
 @AutoValue
@@ -57,7 +61,7 @@ public abstract class SpeedDialEntry {
   public abstract Builder toBuilder();
 
   public static Builder builder() {
-    return new AutoValue_SpeedDialEntry.Builder().setPinnedPosition(Optional.absent());
+    return new AutoValue_SpeedDialEntry.Builder().setPinnedPosition(Optional.empty());
   }
 
   /** Builder class for speed dial entry. */
@@ -84,15 +88,14 @@ public abstract class SpeedDialEntry {
     public static final int UNKNOWN = 0;
     public static final int VOICE = 1;
     public static final int IMS_VIDEO = 2;
-    public static final int DUO = 3;
 
     /** Whether the Channel is for an audio or video call. */
     @Retention(RetentionPolicy.SOURCE)
-    @IntDef({UNKNOWN, VOICE, IMS_VIDEO, DUO})
+    @IntDef({UNKNOWN, VOICE, IMS_VIDEO})
     public @interface Technology {}
 
     public boolean isVideoTechnology() {
-      return technology() == IMS_VIDEO || technology() == DUO;
+      return technology() == IMS_VIDEO;
     }
 
     /**

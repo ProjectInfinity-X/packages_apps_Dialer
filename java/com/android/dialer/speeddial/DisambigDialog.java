@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,28 +20,27 @@ package com.android.dialer.speeddial;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
-import android.support.v4.app.DialogFragment;
-import android.support.v4.app.FragmentManager;
-import android.support.v7.app.AlertDialog;
-import android.text.TextUtils;
 import android.util.ArraySet;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.LinearLayout.LayoutParams;
 import android.widget.TextView;
+
+import androidx.annotation.WorkerThread;
+import androidx.appcompat.app.AlertDialog;
+import androidx.core.content.res.ResourcesCompat;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.android.dialer.R;
 import com.android.dialer.callintent.CallInitiationType;
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DefaultFutureCallback;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.speeddial.database.SpeedDialEntry;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
@@ -49,19 +49,20 @@ import com.android.dialer.speeddial.loader.SpeedDialUiItem;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
+
 import java.util.List;
 import java.util.Set;
 
 /** Disambiguation dialog for favorite contacts in {@link SpeedDialFragment}. */
 public class DisambigDialog extends DialogFragment {
 
-  @VisibleForTesting public static final String FRAGMENT_TAG = "disambig_dialog";
+  private static final String FRAGMENT_TAG = "disambig_dialog";
   private final Set<String> phoneNumbers = new ArraySet<>();
 
   private SpeedDialUiItem speedDialUiItem;
-  @VisibleForTesting public List<Channel> channels;
-  @VisibleForTesting public LinearLayout container;
-  @VisibleForTesting public CheckBox rememberThisChoice;
+  private  List<Channel> channels;
+  private LinearLayout container;
+  private CheckBox rememberThisChoice;
 
   /** Show a disambiguation dialog for a starred contact without a favorite communication avenue. */
   public static DisambigDialog show(SpeedDialUiItem speedDialUiItem, FragmentManager manager) {
@@ -86,11 +87,9 @@ public class DisambigDialog extends DialogFragment {
   @Override
   public void onResume() {
     super.onResume();
-    getDialog()
-        .getWindow()
-        .setLayout(
-            getContext().getResources().getDimensionPixelSize(R.dimen.disambig_dialog_width),
-            LayoutParams.WRAP_CONTENT);
+    getDialog().getWindow().setBackgroundDrawable(
+            ResourcesCompat.getDrawable(requireActivity().getResources(),
+                    R.drawable.dialog_background, requireActivity().getTheme()));
   }
 
   @Override
@@ -112,90 +111,48 @@ public class DisambigDialog extends DialogFragment {
    */
   private void insertOptions(LinearLayout container, List<Channel> channels) {
     for (Channel channel : channels) {
-      // TODO(calderwoodra): use fuzzy number matcher
-      if (phoneNumbers.add(channel.number())) {
-        if (phoneNumbers.size() != 1) {
-          insertDivider(container);
-        }
-        insertHeader(container, channel.number(), channel.label());
-      }
       insertOption(container, channel);
     }
   }
 
-  private void insertDivider(LinearLayout container) {
-    View view =
-        getActivity()
-            .getLayoutInflater()
-            .inflate(R.layout.disambig_dialog_divider, container, false);
-    container.addView(view);
-  }
-
-  private void insertHeader(LinearLayout container, String number, String label) {
-    View view =
-        getActivity()
-            .getLayoutInflater()
-            .inflate(R.layout.disambig_option_header_layout, container, false);
-    String secondaryInfo =
-        TextUtils.isEmpty(label)
-            ? number
-            : getContext().getString(R.string.call_subject_type_and_number, label, number);
-    ((TextView) view.findViewById(R.id.disambig_header_phone_label)).setText(secondaryInfo);
-    container.addView(view);
-  }
-
-  /** Inserts a group of options for a specific phone number. */
   private void insertOption(LinearLayout container, Channel channel) {
-    View view =
-        getActivity()
+    View view = getActivity()
             .getLayoutInflater()
             .inflate(R.layout.disambig_option_layout, container, false);
+    View option = view.findViewById(R.id.option_container);
     if (channel.isVideoTechnology()) {
-      View videoOption = view.findViewById(R.id.option_container);
-      videoOption.setOnClickListener(v -> onVideoOptionClicked(channel));
-      videoOption.setContentDescription(
-          getActivity().getString(R.string.disambig_option_video_call));
+      option.setOnClickListener(v -> onVideoOptionClicked(channel));
+      option.setContentDescription(
+              getActivity().getString(R.string.disambig_option_video_call));
       ((ImageView) view.findViewById(R.id.disambig_option_image))
-          .setImageResource(R.drawable.quantum_ic_videocam_vd_theme_24);
-      ((TextView) view.findViewById(R.id.disambig_option_text))
-          .setText(R.string.disambig_option_video_call);
+              .setImageResource(R.drawable.quantum_ic_videocam_vd_theme_24);
     } else {
-      View voiceOption = view.findViewById(R.id.option_container);
-      voiceOption.setOnClickListener(v -> onVoiceOptionClicked(channel));
-      voiceOption.setContentDescription(
-          getActivity().getString(R.string.disambig_option_voice_call));
+      option.setOnClickListener(v -> onVoiceOptionClicked(channel));
+      option.setContentDescription(
+              getActivity().getString(R.string.disambig_option_voice_call));
       ((ImageView) view.findViewById(R.id.disambig_option_image))
-          .setImageResource(R.drawable.quantum_ic_phone_vd_theme_24);
-      ((TextView) view.findViewById(R.id.disambig_option_text))
-          .setText(R.string.disambig_option_voice_call);
+              .setImageResource(R.drawable.quantum_ic_phone_vd_theme_24);
     }
+    ((TextView) option.findViewById(R.id.speed_dial_label)).setText(channel.label());
+    ((TextView) option.findViewById(R.id.speed_dial_number)).setText(channel.number());
     container.addView(view);
   }
 
   private void onVideoOptionClicked(Channel channel) {
     if (rememberThisChoice.isChecked()) {
-      Logger.get(getContext()).logImpression(DialerImpression.Type.FAVORITE_SET_VIDEO_DEFAULT);
       setDefaultChannel(getContext().getApplicationContext(), speedDialUiItem, channel);
-    }
-
-    if (channel.technology() == Channel.DUO) {
-      Logger.get(getContext())
-          .logImpression(
-              DialerImpression.Type.LIGHTBRINGER_VIDEO_REQUESTED_FOR_FAVORITE_CONTACT_DISAMBIG);
     }
 
     PreCall.start(
         getContext(),
         new CallIntentBuilder(channel.number(), CallInitiationType.Type.SPEED_DIAL_DISAMBIG_DIALOG)
             .setAllowAssistedDial(true)
-            .setIsVideoCall(true)
-            .setIsDuoCall(channel.technology() == Channel.DUO));
+            .setIsVideoCall(true));
     dismiss();
   }
 
   private void onVoiceOptionClicked(Channel channel) {
     if (rememberThisChoice.isChecked()) {
-      Logger.get(getContext()).logImpression(DialerImpression.Type.FAVORITE_SET_VOICE_DEFAULT);
       setDefaultChannel(getContext().getApplicationContext(), speedDialUiItem, channel);
     }
 

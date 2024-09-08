@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,17 +21,19 @@ import android.Manifest.permission;
 import android.content.Context;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
-import android.support.annotation.Nullable;
-import android.support.annotation.RequiresPermission;
+
+import androidx.annotation.Nullable;
+import androidx.annotation.RequiresPermission;
+
 import com.android.dialer.CoalescedIds;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
 import com.android.dialer.common.database.Selection;
 import com.android.dialer.historyitemactions.HistoryItemActionModule;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.List;
@@ -64,8 +67,6 @@ final class DeleteCallLogItemModule implements HistoryItemActionModule {
         .createNonUiTaskBuilder(new CallLogItemDeletionWorker(context))
         .build()
         .executeSerial(coalescedIds);
-
-    Logger.get(context).logImpression(DialerImpression.Type.USER_DELETED_CALL_LOG_ITEM);
     return true;
   }
 
@@ -100,6 +101,9 @@ final class DeleteCallLogItemModule implements HistoryItemActionModule {
           context
               .getContentResolver()
               .delete(Calls.CONTENT_URI, selection.getSelection(), selection.getSelectionArgs());
+      context
+          .getContentResolver()
+          .notifyChange(Calls.CONTENT_URI, null);
 
       if (numRowsDeleted != coalescedIds.getCoalescedIdCount()) {
         LogUtil.e(

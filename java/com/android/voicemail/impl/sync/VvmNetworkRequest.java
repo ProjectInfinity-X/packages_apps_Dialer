@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +17,15 @@
 
 package com.android.voicemail.impl.sync;
 
-import android.annotation.TargetApi;
 import android.net.Network;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.NonNull;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.NonNull;
+
 import com.android.voicemail.impl.OmtpVvmCarrierConfigHelper;
 import com.android.voicemail.impl.VoicemailStatus;
 import com.android.voicemail.impl.VvmLog;
+
 import java.io.Closeable;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -33,7 +35,6 @@ import java.util.concurrent.Future;
  * Class to retrieve a {@link Network} synchronously. {@link #getNetwork(OmtpVvmCarrierConfigHelper,
  * PhoneAccountHandle)} will block until a suitable network is retrieved or it has failed.
  */
-@TargetApi(VERSION_CODES.O)
 public class VvmNetworkRequest {
 
   private static final String TAG = "VvmNetworkRequest";

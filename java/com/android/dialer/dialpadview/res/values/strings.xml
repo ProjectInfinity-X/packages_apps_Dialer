@@ -77,12 +77,6 @@
   <!-- The title of a dialog that displays the MEID of the CDMA phone -->
   <string name="meid">MEID</string>
 
-  <!-- The label for the hex encoding of the device ID -->
-  <string name="hex" translatable="false">HEX:</string>
-
-  <!-- The label for the decimal encoding of the device ID -->
-  <string name="dec" translatable="false">DEC:</string>
-
   <!-- Dialog text displayed when loading a phone number from the SIM card for speed dial -->
   <string name="simContacts_emptyLoading">Loading from SIM card\u2026</string>
 
@@ -92,16 +86,7 @@
   <!-- Menu item used to call a contact, containing the number of the contact to call -->
   <string name="menu_callNumber">Call <xliff:g id="number">%s</xliff:g></string>
 
-
-  <!-- Regular expression for prohibiting certain phone numbers in dialpad.
-       Ignored if empty. -->
-  <string name="config_prohibited_phone_number_regexp" translatable="false"></string>
-
   <!-- Warning hint shown in the dialpad input field when emergency call (911, etc.) cannot be made over wifi.
        [CHAR_LIMIT=60] -->
   <string name="dialpad_hint_emergency_calling_not_available">Can\'t make emergency calls over WiFi</string>
-
-  <!-- Dialog message which is shown when the user tries to make a phone call
-       to prohibited phone numbers [CHAR LIMIT=NONE] -->
-  <string name="dialog_phone_call_prohibited_message" msgid="4313552620858880999">Can\'t call this number</string>
 </resources>

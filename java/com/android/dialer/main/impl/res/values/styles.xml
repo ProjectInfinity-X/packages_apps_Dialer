@@ -16,18 +16,39 @@
   -->
 <resources>
 
-  <!-- Activities should use this theme as their style -->
-  <style name="MainActivityTheme" parent="MainActivityThemeBase"/>
+  <style name="LaunchTheme" parent="Theme.Material3.DayNight">
+    <item name="android:colorPrimary">@color/dialer_primary_color</item>
+    <item name="colorPrimary">@color/dialer_primary_color</item>
+    <item name="android:colorPrimaryDark">@color/dialer_theme_color_dark</item>
+    <item name="colorPrimaryDark">@color/dialer_theme_color_dark</item>
+    <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
+  </style>
 
-  <style name="MainActivityTheme.Dark" parent="MainActivityTheme.Dark"/>
+  <!-- Activities should use this theme as their style -->
+  <style name="MainActivityTheme" parent="MainActivityThemeBase">
+    <!-- Used to change the navigation bar color -->
+    <item name="android:windowLightNavigationBar">true</item>
+    <item name="android:navigationBarColor">@color/rounded_dialpad_bg_color</item>
+    <item name="android:navigationBarDividerColor">@null</item>
+  </style>
+
+  <style name="MainActivityTheme.Dark" parent="MainActivityThemeBase.Dark">
+    <!-- Used to change the navigation bar color -->
+    <item name="android:windowLightNavigationBar">true</item>
+    <item name="android:navigationBarColor">@color/rounded_dialpad_bg_color</item>
+    <item name="android:navigationBarDividerColor">@null</item>
+  </style>
 
   <!-- Used as a procy for values-v27/styles.xml -->
   <style name="MainActivityThemeBase" parent="Dialer.ThemeBase.NoActionBar">
     <!-- Required for actionmode/multiselect to render properly. -->
     <!-- TODO(a bug): Check to see if we can remove this after NewVoicemailFragment launches -->
     <item name="actionModeStyle">@style/MainActionModeStyle</item>
-    <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.Dark.ActionBar</item>
+    <item name="actionBarTheme">@style/ThemeOverlay.AppCompat.ActionBar</item>
     <item name="dialpad_style">@style/Dialpad.Themed</item>
+    <item name="android:colorPrimaryDark">@color/dialer_theme_color_dark</item>
+    <item name="colorPrimaryDark">@color/dialer_theme_color_dark</item>
+    <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
   </style>
 
   <style name="MainActivityThemeBase.Dark" parent="Dialer.Dark.ThemeBase.NoActionBar">

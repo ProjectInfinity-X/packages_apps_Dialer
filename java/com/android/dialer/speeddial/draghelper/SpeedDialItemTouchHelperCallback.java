@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,21 +17,18 @@
 
 package com.android.dialer.speeddial.draghelper;
 
-import android.content.Context;
 import android.graphics.Canvas;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
-import android.support.v7.widget.helper.ItemTouchHelper;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.ItemTouchHelper;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView.ViewHolder;
 
 /** {@link ItemTouchHelper} for Speed Dial favorite contacts. */
 public class SpeedDialItemTouchHelperCallback extends ItemTouchHelper.Callback {
 
   private final ItemTouchHelperAdapter adapter;
-  private final Context context;
 
   // When dragged item is in removeView, onMove() and onChildDraw() are called in turn. This
   // behavior changes when dragged item entering/leaving removeView. The boolean field
@@ -38,8 +36,7 @@ public class SpeedDialItemTouchHelperCallback extends ItemTouchHelper.Callback {
   private boolean movedOverRemoveView;
   private boolean inRemoveView;
 
-  public SpeedDialItemTouchHelperCallback(Context context, ItemTouchHelperAdapter adapter) {
-    this.context = context;
+  public SpeedDialItemTouchHelperCallback(ItemTouchHelperAdapter adapter) {
     this.adapter = adapter;
   }
 
@@ -56,8 +53,8 @@ public class SpeedDialItemTouchHelperCallback extends ItemTouchHelper.Callback {
   }
 
   @Override
-  public boolean canDropOver(
-      @NonNull RecyclerView recyclerView, @NonNull ViewHolder current, @NonNull ViewHolder target) {
+  public boolean canDropOver(@NonNull RecyclerView recyclerView, @NonNull ViewHolder current,
+                             @NonNull ViewHolder target) {
     return adapter.canDropOver(target);
   }
 
@@ -104,8 +101,6 @@ public class SpeedDialItemTouchHelperCallback extends ItemTouchHelper.Callback {
       int toPos,
       int x,
       int y) {
-    Logger.get(context)
-        .logImpression(DialerImpression.Type.FAVORITE_MOVE_FAVORITE_BY_DRAG_AND_DROP);
     super.onMoved(recyclerView, viewHolder, fromPos, viewHolder1, toPos, x, y);
   }
 

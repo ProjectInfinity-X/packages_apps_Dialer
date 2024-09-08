@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,17 @@
 package com.android.dialer.searchfragment.list;
 
 import android.content.Context;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.view.ViewGroup;
+
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView.ViewHolder;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.searchfragment.common.RowClickListener;
 import com.android.dialer.searchfragment.common.SearchCursor;
@@ -33,10 +36,10 @@ import com.android.dialer.searchfragment.cp2.SearchContactViewHolder;
 import com.android.dialer.searchfragment.directories.DirectoryContactViewHolder;
 import com.android.dialer.searchfragment.list.SearchCursorManager.RowType;
 import com.android.dialer.searchfragment.nearbyplaces.NearbyPlaceViewHolder;
+
 import java.util.List;
 
 /** RecyclerView adapter for {@link NewSearchFragment}. */
-@VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
 public final class SearchAdapter extends RecyclerView.Adapter<ViewHolder> {
 
   private final SearchCursorManager searchCursorManager;
@@ -48,9 +51,8 @@ public final class SearchAdapter extends RecyclerView.Adapter<ViewHolder> {
   private String rawNumber;
   private OnClickListener allowClickListener;
   private OnClickListener dismissClickListener;
-  private RowClickListener rowClickListener;
+  private final RowClickListener rowClickListener;
 
-  @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public SearchAdapter(
       Context context, SearchCursorManager searchCursorManager, RowClickListener rowClickListener) {
     this.context = context;

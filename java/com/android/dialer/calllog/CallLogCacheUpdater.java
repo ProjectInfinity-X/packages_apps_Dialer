@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,7 +26,7 @@ import android.os.RemoteException;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.support.annotation.VisibleForTesting;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.NumberAttributes;
 import com.android.dialer.calllog.database.contract.AnnotatedCallLogContract.AnnotatedCallLog;
@@ -37,9 +38,11 @@ import com.android.dialer.protos.ProtoParsers;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.stream.Stream;
+
 import javax.inject.Inject;
 
 /**
@@ -57,7 +60,7 @@ public final class CallLogCacheUpdater {
    * trigger a call log refresh, so the updater can only do a single batch. If there are more
    * operations it will be truncated. Under normal circumstances there will only be 1 operation
    */
-  @VisibleForTesting static final int CACHE_UPDATE_LIMIT = 100;
+  private static final int CACHE_UPDATE_LIMIT = 100;
 
   @Inject
   CallLogCacheUpdater(

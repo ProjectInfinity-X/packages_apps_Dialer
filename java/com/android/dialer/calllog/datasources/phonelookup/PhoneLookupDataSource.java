@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,11 +23,13 @@ import android.content.Context;
 import android.content.OperationApplicationException;
 import android.database.Cursor;
 import android.os.RemoteException;
-import android.support.annotation.MainThread;
-import android.support.annotation.WorkerThread;
 import android.text.TextUtils;
 import android.util.ArrayMap;
 import android.util.ArraySet;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.calllog.database.contract.AnnotatedCallLogContract.AnnotatedCallLog;
 import com.android.dialer.calllog.datasources.CallLogDataSource;
@@ -51,12 +54,14 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
+
 import javax.inject.Inject;
 
 /**

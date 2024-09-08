@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -27,10 +28,11 @@ import android.os.Trace;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
-import android.support.annotation.MainThread;
-import android.support.annotation.WorkerThread;
 import android.util.ArrayMap;
 import android.util.ArraySet;
+
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.BackgroundExecutor;
@@ -42,25 +44,26 @@ import com.android.dialer.contacts.ContactsComponent;
 import com.android.dialer.contacts.displaypreference.ContactDisplayPreferences;
 import com.android.dialer.contacts.displaypreference.ContactDisplayPreferences.DisplayOrder;
 import com.android.dialer.contacts.hiresphoto.HighResolutionPhotoRequester;
-import com.android.dialer.duo.DuoComponent;
 import com.android.dialer.inject.ApplicationContext;
 import com.android.dialer.speeddial.database.SpeedDialEntry;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
 import com.android.dialer.speeddial.database.SpeedDialEntryDao;
 import com.android.dialer.speeddial.database.SpeedDialEntryDatabaseHelper;
 import com.android.dialer.util.CallUtil;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+
 import javax.inject.Inject;
 import javax.inject.Singleton;
 
@@ -446,8 +449,7 @@ public final class SpeedDialUiItemMutator {
             // Preserve the default channel if it didn't change/still exists
             Channel defaultChannel = entry.defaultChannel();
             if (defaultChannel != null) {
-              if (item.channels().contains(defaultChannel)
-                  || isValidDuoDefaultChannel(item.channels(), defaultChannel)) {
+              if (item.channels().contains(defaultChannel)) {
                 entrySpeedDialItem.setDefaultChannel(defaultChannel);
               }
             }
@@ -469,25 +471,6 @@ public final class SpeedDialUiItemMutator {
       Trace.endSection();
       return map;
     }
-  }
-
-  /**
-   * Since we can't check duo reachabliity on background threads, we have to assume the contact is
-   * still duo reachable. So we just check it is and return true if the Duo number is still
-   * associated with the contact.
-   */
-  private static boolean isValidDuoDefaultChannel(
-      ImmutableList<Channel> channels, Channel defaultChannel) {
-    if (defaultChannel.technology() != Channel.DUO) {
-      return false;
-    }
-
-    for (Channel channel : channels) {
-      if (channel.number().equals(defaultChannel.number())) {
-        return true;
-      }
-    }
-    return false;
   }
 
   @WorkerThread
@@ -624,61 +607,6 @@ public final class SpeedDialUiItemMutator {
           "Exception thrown when pinning contacts",
           e);
     }
-  }
-
-  /**
-   * Returns a new list with duo reachable channels inserted. Duo channels won't replace ViLTE
-   * channels.
-   */
-  @MainThread
-  public ImmutableList<SpeedDialUiItem> insertDuoChannels(
-      Context context, ImmutableList<SpeedDialUiItem> speedDialUiItems) {
-    Assert.isMainThread();
-
-    ImmutableList.Builder<SpeedDialUiItem> newSpeedDialItemList = ImmutableList.builder();
-    // for each existing item
-    for (SpeedDialUiItem item : speedDialUiItems) {
-      if (item.defaultChannel() == null) {
-        // If the contact is starred and doesn't have a default channel, insert duo channels
-        newSpeedDialItemList.add(insertDuoChannelsToStarredContact(context, item));
-      } else {
-        // if starred and has a default channel, leave it as is, the user knows what they want.
-        newSpeedDialItemList.add(item);
-      }
-    }
-    return newSpeedDialItemList.build();
-  }
-
-  @MainThread
-  private SpeedDialUiItem insertDuoChannelsToStarredContact(Context context, SpeedDialUiItem item) {
-    Assert.isMainThread();
-    Assert.checkArgument(item.isStarred());
-
-    // build a new list of channels
-    ImmutableList.Builder<Channel> newChannelsList = ImmutableList.builder();
-    Channel previousChannel = item.channels().get(0);
-    newChannelsList.add(previousChannel);
-
-    for (int i = 1; i < item.channels().size(); i++) {
-      Channel currentChannel = item.channels().get(i);
-      // If the previous and current channel are voice channels, that means the previous number
-      // didn't have a video channel.
-      // If the previous number is duo reachable, insert a duo channel.
-      if (!previousChannel.isVideoTechnology()
-          && !currentChannel.isVideoTechnology()
-          && DuoComponent.get(context).getDuo().isReachable(context, previousChannel.number())) {
-        newChannelsList.add(previousChannel.toBuilder().setTechnology(Channel.DUO).build());
-      }
-      newChannelsList.add(currentChannel);
-      previousChannel = currentChannel;
-    }
-
-    // Check the last channel
-    if (!previousChannel.isVideoTechnology()
-        && DuoComponent.get(context).getDuo().isReachable(context, previousChannel.number())) {
-      newChannelsList.add(previousChannel.toBuilder().setTechnology(Channel.DUO).build());
-    }
-    return item.toBuilder().setChannels(newChannelsList.build()).build();
   }
 
   private SpeedDialEntryDao getSpeedDialEntryDao() {

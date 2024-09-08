@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,14 +17,15 @@
 
 package com.android.dialer.precall.impl;
 
-import android.app.Activity;
 import android.app.KeyguardManager;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.view.WindowManager.LayoutParams;
 
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+
 /** A transparent activity to host dialogs for {@link PreCallCoordinatorImpl} */
-public class PreCallActivity extends Activity {
+public class PreCallActivity extends AppCompatActivity {
 
   private PreCallCoordinatorImpl preCallCoordinator;
 

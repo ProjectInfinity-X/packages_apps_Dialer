@@ -19,7 +19,9 @@ package com.android.voicemail;
 import android.Manifest.permission;
 import android.content.Context;
 import android.content.pm.PackageManager;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -35,6 +37,7 @@ public class VoicemailPermissionHelper {
     permission.WRITE_VOICEMAIL,
     permission.READ_VOICEMAIL,
     permission.READ_PHONE_STATE,
+    permission.RECEIVE_SMS,
     permission.SEND_SMS
   };
 

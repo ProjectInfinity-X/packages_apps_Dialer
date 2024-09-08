@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,11 +21,14 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.ValueAnimator;
 import android.content.Context;
-import android.support.annotation.Nullable;
 import android.view.MotionEvent;
 import android.view.VelocityTracker;
 import android.view.View;
 import android.view.ViewConfiguration;
+
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.incallui.answer.impl.utils.FlingAnimationUtils;
 import com.android.incallui.answer.impl.utils.Interpolators;
 
@@ -51,7 +55,8 @@ public class SwipeButtonHelper {
   private int minTranslationAmount;
   private int minFlingVelocity;
   private int hintGrowAmount;
-  @Nullable private SwipeButtonView leftIcon;
+  @Nullable
+  private SwipeButtonView leftIcon;
   @Nullable private SwipeButtonView rightIcon;
   private Animator swipeAnimator;
   private int minBackgroundRadius;
@@ -59,7 +64,7 @@ public class SwipeButtonHelper {
   private int touchTargetSize;
   private View targetedView;
   private boolean touchSlopExeeded;
-  private AnimatorListenerAdapter flingEndListener =
+  private final AnimatorListenerAdapter flingEndListener =
       new AnimatorListenerAdapter() {
         @Override
         public void onAnimationEnd(Animator animation) {
@@ -80,7 +85,7 @@ public class SwipeButtonHelper {
     public void run() {
       callback.onAnimationToSideEnded(rightPage);
     }
-  };
+  }
 
   public SwipeButtonHelper(Callback callback, Context context) {
     this.context = context;
@@ -335,16 +340,13 @@ public class SwipeButtonHelper {
     }
     ValueAnimator animator = ValueAnimator.ofFloat(targetView.getCircleRadius(), radius);
     animator.addUpdateListener(
-        new ValueAnimator.AnimatorUpdateListener() {
-          @Override
-          public void onAnimationUpdate(ValueAnimator animation) {
-            float newRadius = (float) animation.getAnimatedValue();
-            targetView.setCircleRadiusWithoutAnimation(newRadius);
-            float translation = getTranslationFromRadius(newRadius);
-            SwipeButtonHelper.this.translation = right ? -translation : translation;
-            updateIconsFromTranslation(targetView);
-          }
-        });
+            animation -> {
+              float newRadius = (float) animation.getAnimatedValue();
+              targetView.setCircleRadiusWithoutAnimation(newRadius);
+              float translation = getTranslationFromRadius(newRadius);
+              SwipeButtonHelper.this.translation = right ? -translation : translation;
+              updateIconsFromTranslation(targetView);
+            });
     return animator;
   }
 
@@ -383,13 +385,7 @@ public class SwipeButtonHelper {
 
     ValueAnimator animator = ValueAnimator.ofFloat(translation, target);
     flingAnimationUtils.apply(animator, translation, target, vel);
-    animator.addUpdateListener(
-        new ValueAnimator.AnimatorUpdateListener() {
-          @Override
-          public void onAnimationUpdate(ValueAnimator animation) {
-            translation = (float) animation.getAnimatedValue();
-          }
-        });
+    animator.addUpdateListener(animation -> translation = (float) animation.getAnimatedValue());
     animator.addListener(flingEndListener);
     if (!snapBack) {
       startFinishingCircleAnimation(vel * 0.375f, new AnimationEndRunnable(right), right);
@@ -600,8 +596,7 @@ public class SwipeButtonHelper {
       updateIcon(otherView, 0.0f, 0, true, false, true, false);
     } else {
       callback.onAnimationToSideStarted(!left, translation, 0);
-      translation =
-          left ? callback.getMaxTranslationDistance() : callback.getMaxTranslationDistance();
+      translation = callback.getMaxTranslationDistance();
       updateIcon(otherView, 0.0f, 0.0f, false, false, true, false);
       targetView.instantFinishAnimation();
       flingEndListener.onAnimationEnd(null);

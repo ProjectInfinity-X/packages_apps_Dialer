@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,14 +24,12 @@ import android.os.Trace;
 import android.telecom.Call;
 import android.telecom.CallAudioState;
 import android.telecom.InCallService;
-import com.android.dialer.blocking.FilteredNumberAsyncQueryHandler;
-import com.android.dialer.feedback.FeedbackComponent;
+
 import com.android.incallui.audiomode.AudioModeProvider;
 import com.android.incallui.call.CallList;
+import com.android.incallui.call.CallRecorder;
 import com.android.incallui.call.ExternalCallList;
 import com.android.incallui.call.TelecomAdapter;
-import com.android.incallui.speakeasy.SpeakEasyCallManager;
-import com.android.incallui.speakeasy.SpeakEasyComponent;
 
 /**
  * Used to receive updates about calls from the Telecom component. This service is bound to Telecom
@@ -39,14 +38,6 @@ import com.android.incallui.speakeasy.SpeakEasyComponent;
  * service triggering InCallActivity (via CallList) to finish soon after.
  */
 public class InCallServiceImpl extends InCallService {
-
-  private ReturnToCallController returnToCallController;
-  private CallList.Listener feedbackListener;
-  // We only expect there to be one speakEasyCallManager to be instantiated at a time.
-  // We did not use a singleton SpeakEasyCallManager to avoid holding on to state beyond the
-  // lifecycle of this service, because the singleton is associated with the state of the
-  // Application, not this service.
-  private SpeakEasyCallManager speakEasyCallManager;
 
   @Override
   public void onCallAudioStateChanged(CallAudioState audioState) {
@@ -72,7 +63,6 @@ public class InCallServiceImpl extends InCallService {
   @Override
   public void onCallRemoved(Call call) {
     Trace.beginSection("InCallServiceImpl.onCallRemoved");
-    speakEasyCallManager.onCallRemoved(CallList.getInstance().getDialerCallFromTelecomCall(call));
 
     InCallPresenter.getInstance().onCallRemoved(call);
     Trace.endSection();
@@ -83,12 +73,6 @@ public class InCallServiceImpl extends InCallService {
     Trace.beginSection("InCallServiceImpl.onCanAddCallChanged");
     InCallPresenter.getInstance().onCanAddCallChanged(canAddCall);
     Trace.endSection();
-  }
-
-  @Override
-  public void onCreate() {
-    super.onCreate();
-    this.speakEasyCallManager = SpeakEasyComponent.get(this).speakEasyCallManager();
   }
 
   @Override
@@ -106,16 +90,11 @@ public class InCallServiceImpl extends InCallService {
             new ExternalCallNotifier(context, contactInfoCache),
             contactInfoCache,
             new ProximitySensor(
-                context, AudioModeProvider.getInstance(), new AccelerometerListener(context)),
-            new FilteredNumberAsyncQueryHandler(context),
-            speakEasyCallManager);
+                context, AudioModeProvider.getInstance(), new AccelerometerListener(context)));
     InCallPresenter.getInstance().onServiceBind();
     InCallPresenter.getInstance().maybeStartRevealAnimation(intent);
     TelecomAdapter.getInstance().setInCallService(this);
-    returnToCallController =
-        new ReturnToCallController(this, ContactInfoCache.getInstance(context));
-    feedbackListener = FeedbackComponent.get(context).getCallFeedbackListener();
-    CallList.getInstance().addListener(feedbackListener);
+    CallRecorder.getInstance().setUp(context);
 
     IBinder iBinder = super.onBind(intent);
     Trace.endSection();
@@ -140,14 +119,6 @@ public class InCallServiceImpl extends InCallService {
     // Tear down the InCall system
     InCallPresenter.getInstance().tearDown();
     TelecomAdapter.getInstance().clearInCallService();
-    if (returnToCallController != null) {
-      returnToCallController.tearDown();
-      returnToCallController = null;
-    }
-    if (feedbackListener != null) {
-      CallList.getInstance().removeListener(feedbackListener);
-      feedbackListener = null;
-    }
     Trace.endSection();
   }
 }

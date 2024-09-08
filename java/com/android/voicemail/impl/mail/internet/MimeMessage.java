@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,8 +16,10 @@
  */
 package com.android.voicemail.impl.mail.internet;
 
-import android.support.annotation.Nullable;
 import android.text.TextUtils;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.mail.Address;
 import com.android.voicemail.impl.mail.Body;
@@ -26,6 +29,16 @@ import com.android.voicemail.impl.mail.MessagingException;
 import com.android.voicemail.impl.mail.Multipart;
 import com.android.voicemail.impl.mail.Part;
 import com.android.voicemail.impl.mail.utils.LogUtils;
+
+import org.apache.james.mime4j.MimeException;
+import org.apache.james.mime4j.dom.field.DateTimeField;
+import org.apache.james.mime4j.field.DefaultFieldParser;
+import org.apache.james.mime4j.io.EOLConvertingInputStream;
+import org.apache.james.mime4j.parser.ContentHandler;
+import org.apache.james.mime4j.parser.MimeStreamParser;
+import org.apache.james.mime4j.stream.BodyDescriptor;
+import org.apache.james.mime4j.stream.Field;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,14 +49,6 @@ import java.util.Date;
 import java.util.Locale;
 import java.util.Stack;
 import java.util.regex.Pattern;
-import org.apache.james.mime4j.MimeException;
-import org.apache.james.mime4j.dom.field.DateTimeField;
-import org.apache.james.mime4j.field.DefaultFieldParser;
-import org.apache.james.mime4j.io.EOLConvertingInputStream;
-import org.apache.james.mime4j.parser.ContentHandler;
-import org.apache.james.mime4j.parser.MimeStreamParser;
-import org.apache.james.mime4j.stream.BodyDescriptor;
-import org.apache.james.mime4j.stream.Field;
 
 /**
  * An implementation of Message that stores all of its metadata in RFC 822 and RFC 2045 style
@@ -105,7 +110,7 @@ public class MimeMessage extends Message {
       sb.append(c);
     }
     sb.append(".");
-    sb.append(Long.toString(System.currentTimeMillis()));
+    sb.append(System.currentTimeMillis());
     sb.append("@email.android.com>");
     return sb.toString();
   }
@@ -156,11 +161,6 @@ public class MimeMessage extends Message {
   }
 
   @Override
-  public Date getReceivedDate() throws MessagingException {
-    return null;
-  }
-
-  @Override
   public Date getSentDate() throws MessagingException {
     if (sentDate == null) {
       try {
@@ -190,12 +190,6 @@ public class MimeMessage extends Message {
       }
     }
     return sentDate;
-  }
-
-  @Override
-  public void setSentDate(Date sentDate) throws MessagingException {
-    setHeader("Date", DATE_FORMAT.format(sentDate));
-    this.sentDate = sentDate;
   }
 
   @Override
@@ -256,66 +250,6 @@ public class MimeMessage extends Message {
     return size;
   }
 
-  /**
-   * Returns a list of the given recipient type from this message. If no addresses are found the
-   * method returns an empty array.
-   */
-  @Override
-  public Address[] getRecipients(String type) throws MessagingException {
-    if (type == RECIPIENT_TYPE_TO) {
-      if (to == null) {
-        to = Address.parse(MimeUtility.unfold(getFirstHeader("To")));
-      }
-      return to;
-    } else if (type == RECIPIENT_TYPE_CC) {
-      if (cc == null) {
-        cc = Address.parse(MimeUtility.unfold(getFirstHeader("CC")));
-      }
-      return cc;
-    } else if (type == RECIPIENT_TYPE_BCC) {
-      if (bcc == null) {
-        bcc = Address.parse(MimeUtility.unfold(getFirstHeader("BCC")));
-      }
-      return bcc;
-    } else {
-      throw new MessagingException("Unrecognized recipient type.");
-    }
-  }
-
-  @Override
-  public void setRecipients(String type, Address[] addresses) throws MessagingException {
-    final int toLength = 4; // "To: "
-    final int ccLength = 4; // "Cc: "
-    final int bccLength = 5; // "Bcc: "
-    if (type == RECIPIENT_TYPE_TO) {
-      if (addresses == null || addresses.length == 0) {
-        removeHeader("To");
-        this.to = null;
-      } else {
-        setHeader("To", MimeUtility.fold(Address.toHeader(addresses), toLength));
-        this.to = addresses;
-      }
-    } else if (type == RECIPIENT_TYPE_CC) {
-      if (addresses == null || addresses.length == 0) {
-        removeHeader("CC");
-        this.cc = null;
-      } else {
-        setHeader("CC", MimeUtility.fold(Address.toHeader(addresses), ccLength));
-        this.cc = addresses;
-      }
-    } else if (type == RECIPIENT_TYPE_BCC) {
-      if (addresses == null || addresses.length == 0) {
-        removeHeader("BCC");
-        this.bcc = null;
-      } else {
-        setHeader("BCC", MimeUtility.fold(Address.toHeader(addresses), bccLength));
-        this.bcc = addresses;
-      }
-    } else {
-      throw new MessagingException("Unrecognized recipient type.");
-    }
-  }
-
   /** Returns the unfolded, decoded value of the Subject header. */
   @Override
   public String getSubject() throws MessagingException {
@@ -351,26 +285,6 @@ public class MimeMessage extends Message {
     }
   }
 
-  @Override
-  public Address[] getReplyTo() throws MessagingException {
-    if (replyTo == null) {
-      replyTo = Address.parse(MimeUtility.unfold(getFirstHeader("Reply-to")));
-    }
-    return replyTo;
-  }
-
-  @Override
-  public void setReplyTo(Address[] replyTo) throws MessagingException {
-    final int replyToLength = 10; // "Reply-to: "
-    if (replyTo == null || replyTo.length == 0) {
-      removeHeader("Reply-to");
-      this.replyTo = null;
-    } else {
-      setHeader("Reply-to", MimeUtility.fold(Address.toHeader(replyTo), replyToLength));
-      this.replyTo = replyTo;
-    }
-  }
-
   /**
    * Set the mime "Message-ID" header
    *
@@ -397,11 +311,6 @@ public class MimeMessage extends Message {
       setMessageId(messageId);
     }
     return messageId;
-  }
-
-  @Override
-  public void saveChanges() throws MessagingException {
-    throw new MessagingException("saveChanges not yet implemented");
   }
 
   @Override
@@ -547,7 +456,7 @@ public class MimeMessage extends Message {
   }
 
   class MimeMessageBuilder implements ContentHandler {
-    private final Stack<Object> stack = new Stack<Object>();
+    private final Stack<Object> stack = new Stack<>();
 
     public MimeMessageBuilder() {}
 

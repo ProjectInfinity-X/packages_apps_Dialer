@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +20,14 @@ package com.android.incallui.ringtone;
 import android.content.ContentResolver;
 import android.net.Uri;
 import android.provider.Settings;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.incallui.call.CallList;
+import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.state.DialerCallState;
+
 import java.util.Objects;
 
 /**
@@ -38,7 +43,6 @@ public class DialerRingtoneManager {
   private static final boolean IS_DIALER_RINGING_ENABLED = false;
   private final InCallTonePlayer inCallTonePlayer;
   private final CallList callList;
-  private Boolean isDialerRingingEnabledForTesting;
 
   /**
    * Creates the DialerRingtoneManager with the given {@link InCallTonePlayer}.
@@ -48,7 +52,7 @@ public class DialerRingtoneManager {
    * @throws NullPointerException if inCallTonePlayer or callList are null
    */
   public DialerRingtoneManager(
-      @NonNull InCallTonePlayer inCallTonePlayer, @NonNull CallList callList) {
+          @NonNull InCallTonePlayer inCallTonePlayer, @NonNull CallList callList) {
     this.inCallTonePlayer = Objects.requireNonNull(inCallTonePlayer);
     this.callList = Objects.requireNonNull(callList);
   }
@@ -92,9 +96,7 @@ public class DialerRingtoneManager {
   }
 
   private boolean isDialerRingingEnabled() {
-    return isDialerRingingEnabledForTesting != null
-        ? isDialerRingingEnabledForTesting
-        : IS_DIALER_RINGING_ENABLED;
+    return IS_DIALER_RINGING_ENABLED;
   }
 
   /**
@@ -124,9 +126,5 @@ public class DialerRingtoneManager {
       return;
     }
     inCallTonePlayer.stop();
-  }
-
-  void setDialerRingingEnabledForTesting(boolean status) {
-    isDialerRingingEnabledForTesting = status;
   }
 }

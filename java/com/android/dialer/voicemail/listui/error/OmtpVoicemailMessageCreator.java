@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,19 @@
 package com.android.dialer.voicemail.listui.error;
 
 import android.content.Context;
-import android.preference.PreferenceManager;
 import android.provider.VoicemailContract.Status;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.Nullable;
+import androidx.preference.PreferenceManager;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.PerAccountSharedPreferences;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.voicemail.listui.error.VoicemailErrorMessage.Action;
 import com.android.voicemail.VoicemailClient;
 import com.android.voicemail.VoicemailComponent;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -162,7 +165,6 @@ public class OmtpVoicemailMessageCreator {
         && status.quotaTotal != Status.QUOTA_UNAVAILABLE) {
       return createInboxErrorMessage(context, status, statusReader);
     }
-    Logger.get(context).logImpression(DialerImpression.Type.VVM_QUOTA_CHECK_UNAVAILABLE);
     return null;
   }
 
@@ -193,14 +195,10 @@ public class OmtpVoicemailMessageCreator {
 
     if (!shouldShowPromoForArchive) {
       if (isFull) {
-        Logger.get(context)
-            .logImpression(DialerImpression.Type.VVM_USER_SHOWN_VM_FULL_ERROR_MESSAGE);
         return new VoicemailErrorMessage(
             context.getString(R.string.voicemail_error_inbox_full_title),
             context.getString(R.string.voicemail_error_inbox_full_message));
       } else {
-        Logger.get(context)
-            .logImpression(DialerImpression.Type.VVM_USER_SHOWN_VM_ALMOST_FULL_ERROR_MESSAGE);
         return new VoicemailErrorMessage(
             context.getString(R.string.voicemail_error_inbox_near_full_title),
             context.getString(R.string.voicemail_error_inbox_near_full_message));
@@ -209,23 +207,15 @@ public class OmtpVoicemailMessageCreator {
 
     String title;
     CharSequence message;
-    DialerImpression.Type enabledImpression;
-    DialerImpression.Type dismissedImpression;
     String dismissedKey;
 
     if (isFull) {
-      Logger.get(context).logImpression(DialerImpression.Type.VVM_USER_SHOWN_VM_FULL_PROMO);
       title = context.getString(R.string.voicemail_error_inbox_full_turn_archive_on_title);
       message = context.getText(R.string.voicemail_error_inbox_full_turn_archive_on_message);
-      enabledImpression = DialerImpression.Type.VVM_USER_ENABLED_ARCHIVE_FROM_VM_FULL_PROMO;
-      dismissedImpression = DialerImpression.Type.VVM_USER_DISMISSED_VM_FULL_PROMO;
       dismissedKey = VOICEMAIL_PROMO_DISMISSED_KEY;
     } else {
-      Logger.get(context).logImpression(DialerImpression.Type.VVM_USER_SHOWN_VM_ALMOST_FULL_PROMO);
       title = context.getString(R.string.voicemail_error_inbox_almost_full_turn_archive_on_title);
       message = context.getText(R.string.voicemail_error_inbox_almost_full_turn_archive_on_message);
-      enabledImpression = DialerImpression.Type.VVM_USER_ENABLED_ARCHIVE_FROM_VM_ALMOST_FULL_PROMO;
-      dismissedImpression = DialerImpression.Type.VVM_USER_DISMISSED_VM_ALMOST_FULL_PROMO;
       dismissedKey = VOICEMAIL_PROMO_ALMOST_FULL_DISMISSED_KEY;
     }
 
@@ -238,8 +228,6 @@ public class OmtpVoicemailMessageCreator {
         sharedPreferenceForAccount,
         title,
         message,
-        enabledImpression,
-        dismissedImpression,
         dismissedKey);
   }
 
@@ -262,22 +250,18 @@ public class OmtpVoicemailMessageCreator {
       PerAccountSharedPreferences sharedPreferenceForAccount,
       String title,
       CharSequence message,
-      DialerImpression.Type impressionToLogOnEnable,
-      DialerImpression.Type impressionToLogOnDismiss,
       String preferenceKeyToUpdate) {
     return new VoicemailErrorMessage(
         title,
         message,
         VoicemailErrorMessage.createTurnArchiveOnAction(
             context,
-            impressionToLogOnEnable,
             status,
             statusReader,
             voicemailClient,
             phoneAccountHandle),
         VoicemailErrorMessage.createDismissTurnArchiveOnAction(
             context,
-            impressionToLogOnDismiss,
             statusReader,
             sharedPreferenceForAccount,
             preferenceKeyToUpdate));

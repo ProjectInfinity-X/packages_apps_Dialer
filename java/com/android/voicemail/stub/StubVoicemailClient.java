@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,13 +19,17 @@ package com.android.voicemail.stub;
 
 import android.content.Context;
 import android.os.PersistableBundle;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
 import com.android.voicemail.PinChanger;
 import com.android.voicemail.VoicemailClient;
+
 import java.util.List;
+
 import javax.inject.Inject;
 
 /**
@@ -71,35 +76,6 @@ public final class StubVoicemailClient implements VoicemailClient {
       Context context, PhoneAccountHandle phoneAccountHandle, boolean value) {}
 
   @Override
-  public boolean isVoicemailTranscriptionAvailable(
-      Context context, PhoneAccountHandle phoneAccountHandle) {
-    return false;
-  }
-
-  @Override
-  public boolean isVoicemailTranscriptionEnabled(Context context, PhoneAccountHandle account) {
-    return false;
-  }
-
-  @Override
-  public boolean isVoicemailDonationAvailable(Context context, PhoneAccountHandle account) {
-    return false;
-  }
-
-  @Override
-  public boolean isVoicemailDonationEnabled(Context context, PhoneAccountHandle account) {
-    return false;
-  }
-
-  @Override
-  public void setVoicemailTranscriptionEnabled(
-      Context context, PhoneAccountHandle phoneAccountHandle, boolean enabled) {}
-
-  @Override
-  public void setVoicemailDonationEnabled(
-      Context context, PhoneAccountHandle phoneAccountHandle, boolean enabled) {}
-
-  @Override
   public boolean isActivated(Context context, PhoneAccountHandle phoneAccountHandle) {
     return false;
   }
@@ -109,7 +85,7 @@ public final class StubVoicemailClient implements VoicemailClient {
 
   @Override
   public PersistableBundle getConfig(
-      @NonNull Context context, @Nullable PhoneAccountHandle phoneAccountHandle) {
+          @NonNull Context context, @Nullable PhoneAccountHandle phoneAccountHandle) {
     return new PersistableBundle();
   }
 

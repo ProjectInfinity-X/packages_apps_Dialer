@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,21 +23,24 @@ import android.content.DialogInterface;
 import android.content.res.TypedArray;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import android.support.design.widget.BottomSheetDialogFragment;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.view.View.OnClickListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
 import android.view.WindowManager;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.DpUtil;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
 import com.android.incallui.incalluilock.InCallUiLock;
+import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -58,7 +62,7 @@ public class SmsBottomSheetFragment extends BottomSheetDialogFragment {
   @Nullable
   @Override
   public View onCreateView(
-      LayoutInflater layoutInflater, @Nullable ViewGroup viewGroup, @Nullable Bundle bundle) {
+          LayoutInflater layoutInflater, @Nullable ViewGroup viewGroup, @Nullable Bundle bundle) {
     LinearLayout layout = new LinearLayout(getContext());
     layout.setOrientation(LinearLayout.VERTICAL);
     List<CharSequence> items = getArguments().getCharSequenceArrayList(ARG_OPTIONS);
@@ -111,14 +115,11 @@ public class SmsBottomSheetFragment extends BottomSheetDialogFragment {
     textView.setLayoutParams(params);
 
     textView.setOnClickListener(
-        new OnClickListener() {
-          @Override
-          public void onClick(View v) {
-            FragmentUtils.getParentUnsafe(SmsBottomSheetFragment.this, SmsSheetHolder.class)
-                .smsSelected(text);
-            dismiss();
-          }
-        });
+            v -> {
+              FragmentUtils.getParentUnsafe(SmsBottomSheetFragment.this, SmsSheetHolder.class)
+                  .smsSelected(text);
+              dismiss();
+            });
     return textView;
   }
 

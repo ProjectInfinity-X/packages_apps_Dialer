@@ -16,15 +16,10 @@
 
 package com.android.dialer.phonenumbercache;
 
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.provider.CallLog;
 import android.provider.CallLog.Calls;
-import android.support.annotation.NonNull;
-import android.support.annotation.RequiresApi;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+
+import androidx.annotation.NonNull;
 
 /** The query for the call log table. */
 public final class CallLogQuery {
@@ -51,15 +46,11 @@ public final class CallLogQuery {
   public static final int ACCOUNT_ID = 19;
   public static final int FEATURES = 20;
   public static final int DATA_USAGE = 21;
-  public static final int TRANSCRIPTION = 22;
-  public static final int CACHED_PHOTO_URI = 23;
-  public static final int POST_DIAL_DIGITS = 24;
-  public static final int VIA_NUMBER = 25;
+  public static final int CACHED_PHOTO_URI = 22;
+  public static final int POST_DIAL_DIGITS = 23;
+  public static final int VIA_NUMBER = 24;
 
-  @RequiresApi(VERSION_CODES.O)
-  public static final int TRANSCRIPTION_STATE = 26;
-
-  private static final String[] PROJECTION_N =
+  private static final String[] PROJECTION =
       new String[] {
         Calls._ID, // 0
         Calls.NUMBER, // 1
@@ -83,26 +74,13 @@ public final class CallLogQuery {
         Calls.PHONE_ACCOUNT_ID, // 19
         Calls.FEATURES, // 20
         Calls.DATA_USAGE, // 21
-        Calls.TRANSCRIPTION, // 22
-        Calls.CACHED_PHOTO_URI, // 23
-        CallLog.Calls.POST_DIAL_DIGITS, // 24
-        CallLog.Calls.VIA_NUMBER // 25
+        Calls.CACHED_PHOTO_URI, // 22
+        CallLog.Calls.POST_DIAL_DIGITS, // 23
+        CallLog.Calls.VIA_NUMBER, // 24
       };
-
-  private static final String[] PROJECTION_O;
-
-  // TODO(mdooley): remove when this becomes a public api
-  // Copied from android.provider.CallLog.Calls
-  private static final String TRANSCRIPTION_STATE_COLUMN = "transcription_state";
-
-  static {
-    List<String> projectionList = new ArrayList<>(Arrays.asList(PROJECTION_N));
-    projectionList.add(TRANSCRIPTION_STATE_COLUMN);
-    PROJECTION_O = projectionList.toArray(new String[projectionList.size()]);
-  }
 
   @NonNull
   public static String[] getProjection() {
-    return VERSION.SDK_INT >= VERSION_CODES.O ? PROJECTION_O : PROJECTION_N;
+    return PROJECTION;
   }
 }

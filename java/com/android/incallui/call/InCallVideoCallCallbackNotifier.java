@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,8 +17,9 @@
 
 package com.android.incallui.call;
 
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import java.util.Collections;
 import java.util.Objects;
 import java.util.Set;
@@ -27,14 +29,15 @@ import java.util.concurrent.ConcurrentHashMap;
 public class InCallVideoCallCallbackNotifier {
 
   /** Singleton instance of this class. */
-  private static InCallVideoCallCallbackNotifier instance = new InCallVideoCallCallbackNotifier();
+  private static final InCallVideoCallCallbackNotifier instance =
+          new InCallVideoCallCallbackNotifier();
 
   /**
    * ConcurrentHashMap constructor params: 8 is initial table size, 0.9f is load factor before
    * resizing, 1 means we only expect a single thread to access the map so make only a single shard
    */
   private final Set<SurfaceChangeListener> surfaceChangeListeners =
-      Collections.newSetFromMap(new ConcurrentHashMap<SurfaceChangeListener, Boolean>(8, 0.9f, 1));
+      Collections.newSetFromMap(new ConcurrentHashMap<>(8, 0.9f, 1));
 
   /** Private constructor. Instance should only be acquired through getRunningInstance(). */
   private InCallVideoCallCallbackNotifier() {}

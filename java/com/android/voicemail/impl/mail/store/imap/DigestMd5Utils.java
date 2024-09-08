@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +17,16 @@
 
 package com.android.voicemail.impl.mail.store.imap;
 
-import android.annotation.TargetApi;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.util.ArrayMap;
 import android.util.Base64;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.mail.MailTransport;
 import com.android.voicemail.impl.mail.MessagingException;
 import com.android.voicemail.impl.mail.store.ImapStore;
+
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -33,7 +34,6 @@ import java.security.SecureRandom;
 import java.util.Map;
 
 /** Utilities for DIGEST-MD5. */
-@TargetApi(VERSION_CODES.O)
 public class DigestMd5Utils {
 
   private static final String TAG = "DigestMd5Utils";
@@ -56,19 +56,14 @@ public class DigestMd5Utils {
 
     private static final String CHARSET = "utf-8";
 
-    public String username;
-    public String password;
-    public String realm;
-    public String nonce;
-    public String nc;
-    public String cnonce;
-    public String digestUri;
-    public String qop;
-
-    @VisibleForTesting
-    Data() {
-      // Do nothing
-    }
+    public final String username;
+    public final String password;
+    public final String realm;
+    public final String nonce;
+    public final String nc;
+    public final String cnonce;
+    public final String digestUri;
+    public final String qop;
 
     public Data(ImapStore imapStore, MailTransport transport, Map<String, String> challenge) {
       username = imapStore.getUsername();
@@ -121,7 +116,7 @@ public class DigestMd5Utils {
 
     private static class ResponseBuilder {
 
-      private StringBuilder builder = new StringBuilder();
+      private final StringBuilder builder = new StringBuilder();
 
       public ResponseBuilder appendQuoted(String key, String value) {
         if (builder.length() != 0) {
@@ -154,7 +149,6 @@ public class DigestMd5Utils {
   * @param isResponseAuth is the response the one the server is returning us. response-auth has
   * different a2 format.
   */
-  @VisibleForTesting
   static String getResponse(Data data, boolean isResponseAuth) {
     StringBuilder a1 = new StringBuilder();
     a1.append(
@@ -231,7 +225,7 @@ public class DigestMd5Utils {
 
     private final String message;
     private int position = 0;
-    private Map<String, String> result = new ArrayMap<>();
+    private final Map<String, String> result = new ArrayMap<>();
 
     public DigestMessageParser(String message) {
       this.message = message;

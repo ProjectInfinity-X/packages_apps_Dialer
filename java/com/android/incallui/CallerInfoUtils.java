@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,13 +17,13 @@
 
 package com.android.incallui;
 
+import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+
 import android.content.Context;
-import android.content.Loader;
-import android.content.Loader.OnLoadCompleteListener;
 import android.net.Uri;
 import android.telecom.TelecomManager;
 import android.text.TextUtils;
-import com.android.contacts.common.model.Contact;
+
 import com.android.contacts.common.model.ContactLoader;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService;
@@ -31,6 +32,9 @@ import com.android.dialer.phonenumbercache.ContactInfo;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.incallui.call.DialerCall;
+
+import org.lineageos.lib.phone.SensitivePhoneNumbers;
+
 import java.util.Arrays;
 
 /** Utility methods for contact and caller info related functionality */
@@ -100,6 +104,7 @@ public class CallerInfoUtils {
         }
         number = modifyForSpecialCnapCases(context, info, number, info.numberPresentation);
       }
+      number = modifyPossibleSensitiveNumber(context, info, number);
       info.phoneNumber = number;
     }
 
@@ -138,6 +143,19 @@ public class CallerInfoUtils {
     CachedContactInfo cacheInfo = lookupService.buildCachedContactInfo(info);
     cacheInfo.setLookupKey(ci.lookupKeyOrNull);
     return cacheInfo;
+  }
+
+  static String modifyPossibleSensitiveNumber(Context context, CallerInfo ci, String number) {
+    if (ci == null || number == null) {
+      return number;
+    }
+    boolean isSensitiveNumber = SensitivePhoneNumbers.getInstance().isSensitiveNumber(context,
+        number, INVALID_SUBSCRIPTION_ID);
+    if (isSensitiveNumber) {
+      number = context.getString(R.string.unknown);
+      ci.numberPresentation = TelecomManager.PRESENTATION_UNKNOWN;
+    }
+    return number;
   }
 
   /**
@@ -188,7 +206,7 @@ public class CallerInfoUtils {
             && presentation == TelecomManager.PRESENTATION_ALLOWED)) {
       // For all special strings, change number & numberPrentation.
       if (isCnapSpecialCaseRestricted(number)) {
-        number = PhoneNumberHelper.getDisplayNameForRestrictedNumber(context).toString();
+        number = context.getString(R.string.private_num_non_verizon);
         ci.numberPresentation = TelecomManager.PRESENTATION_RESTRICTED;
       } else if (isCnapSpecialCaseUnknown(number)) {
         number = context.getString(R.string.unknown);
@@ -250,15 +268,11 @@ public class CallerInfoUtils {
     final ContactLoader loader =
         new ContactLoader(context, contactUri, true /* postViewNotification */);
     loader.registerListener(
-        0,
-        new OnLoadCompleteListener<Contact>() {
-          @Override
-          public void onLoadComplete(Loader<Contact> loader, Contact contact) {
-            try {
-              loader.reset();
-            } catch (RuntimeException e) {
-              LogUtil.e("CallerInfoUtils.onLoadComplete", "Error resetting loader", e);
-            }
+        0, (loader1, contact) -> {
+          try {
+            loader1.reset();
+          } catch (RuntimeException e) {
+            LogUtil.e("CallerInfoUtils.onLoadComplete", "Error resetting loader", e);
           }
         });
     loader.startLoading();

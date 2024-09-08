@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!--
   ~ Copyright (C) 2017 The Android Open Source Project
+  ~ Copyright (C) 2023 The LineageOS Project
   ~
   ~ Licensed under the Apache License, Version 2.0 (the "License");
   ~ you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
   -->
 <RelativeLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="@dimen/search_row_height"
@@ -44,7 +46,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical|start"
-        android:fontFamily="sans-serif"
+        android:fontFamily="@*android:string/config_bodyFontFamily"
         style="@style/Dialer.TextAppearance.Primary"/>
 
     <com.android.dialer.widget.BidiTextView
@@ -52,7 +54,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:gravity="center_vertical|start"
-        android:fontFamily="sans-serif"
+        android:fontFamily="@*android:string/config_bodyFontFamily"
         style="@style/Dialer.TextAppearance.Secondary"/>
   </LinearLayout>
 
@@ -62,9 +64,9 @@
       android:layout_height="@dimen/search_row_height"
       android:layout_alignParentEnd="true"
       android:padding="@dimen/call_to_action_padding"
-      android:tint="?colorIcon"
       android:visibility="gone"
-      android:scaleType="center"/>
+      android:scaleType="center"
+      app:tint="?colorIcon" />
 
   <ImageView
       android:id="@+id/work_icon"
@@ -74,7 +76,7 @@
       android:layout_centerVertical="true"
       android:padding="@dimen/call_to_action_padding"
       android:src="@drawable/ic_work_profile"
-      android:tint="?colorIcon"
       android:scaleType="centerInside"
-      android:visibility="gone"/>
+      android:visibility="gone"
+      app:tint="?colorIcon" />
 </RelativeLayout>

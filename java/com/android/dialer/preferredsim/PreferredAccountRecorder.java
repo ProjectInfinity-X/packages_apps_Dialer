@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +19,15 @@ package com.android.dialer.preferredsim;
 
 import android.content.ContentValues;
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
 import android.telecom.PhoneAccountHandle;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.preferredsim.PreferredSimFallbackContract.PreferredSim;
 import com.android.dialer.preferredsim.suggestion.SimSuggestionComponent;
 import com.android.dialer.preferredsim.suggestion.SuggestionProvider.Suggestion;
@@ -35,7 +36,8 @@ import com.android.dialer.preferredsim.suggestion.SuggestionProvider.Suggestion;
 public class PreferredAccountRecorder {
 
   @Nullable private final String number;
-  @Nullable private final Suggestion suggestion;
+  @Nullable
+  private final Suggestion suggestion;
   @Nullable private final String dataId;
 
   public PreferredAccountRecorder(
@@ -47,23 +49,12 @@ public class PreferredAccountRecorder {
 
   /**
    * Record the result from {@link
-   * com.android.contacts.common.widget.SelectPhoneAccountDialogFragment.SelectPhoneAccountListener#onPhoneAccountSelected}
+   * com.android.contacts.common.widget.SelectPhoneAccountDialogFragment.SelectPhoneAccountListener
+   * #onPhoneAccountSelected}
    */
   public void record(
       Context context, PhoneAccountHandle selectedAccountHandle, boolean setDefault) {
-
-    if (suggestion != null) {
-      if (suggestion.phoneAccountHandle.equals(selectedAccountHandle)) {
-        Logger.get(context)
-            .logImpression(DialerImpression.Type.DUAL_SIM_SELECTION_SUGGESTED_SIM_SELECTED);
-      } else {
-        Logger.get(context)
-            .logImpression(DialerImpression.Type.DUAL_SIM_SELECTION_NON_SUGGESTED_SIM_SELECTED);
-      }
-    }
-
     if (dataId != null && setDefault) {
-      Logger.get(context).logImpression(DialerImpression.Type.DUAL_SIM_SELECTION_PREFERRED_SET);
       DialerExecutorComponent.get(context)
           .dialerExecutorFactory()
           .createNonUiTaskBuilder(new WritePreferredAccountWorker())
@@ -87,8 +78,8 @@ public class PreferredAccountRecorder {
     private final PhoneAccountHandle phoneAccountHandle;
     private final boolean remember;
 
-    public UserSelectionReporter(
-        @NonNull PhoneAccountHandle phoneAccountHandle, @Nullable String number, boolean remember) {
+    public UserSelectionReporter(@NonNull PhoneAccountHandle phoneAccountHandle,
+                                 @Nullable String number, boolean remember) {
       this.phoneAccountHandle = Assert.isNotNull(phoneAccountHandle);
       this.number = Assert.isNotNull(number);
       this.remember = remember;
@@ -138,7 +129,7 @@ public class PreferredAccountRecorder {
               PreferredSimFallbackContract.CONTENT_URI,
               values,
               PreferredSim.DATA_ID + " = ?",
-              new String[] {String.valueOf(input.dataId)});
+              new String[] {input.dataId});
       return null;
     }
   }

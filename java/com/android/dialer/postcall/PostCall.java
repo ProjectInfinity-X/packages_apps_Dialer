@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2020-2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,29 +17,29 @@
 
 package com.android.dialer.postcall;
 
+import static android.telephony.SubscriptionManager.INVALID_SUBSCRIPTION_ID;
+
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.support.annotation.Nullable;
-import android.support.design.widget.BaseTransientBottomBar.BaseCallback;
-import android.support.design.widget.Snackbar;
 import android.telephony.TelephonyManager;
 import android.view.View;
 import android.view.View.OnClickListener;
+
+import androidx.annotation.Nullable;
+import androidx.preference.PreferenceManager;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProvider;
-import com.android.dialer.configprovider.ConfigProviderComponent;
-import com.android.dialer.enrichedcall.EnrichedCallCapabilities;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.storage.StorageComponent;
 import com.android.dialer.util.DialerUtils;
 import com.android.dialer.util.IntentUtil;
+import com.google.android.material.snackbar.BaseTransientBottomBar;
+import com.google.android.material.snackbar.Snackbar;
+
+import org.lineageos.lib.phone.SensitivePhoneNumbers;
 
 /** Helper class to handle all post call actions. */
 public class PostCall {
@@ -74,39 +75,24 @@ public class PostCall {
     LogUtil.i("PostCall.promptUserToSendMessage", "returned from call, showing post call SnackBar");
     String number = Assert.isNotNull(getPhoneNumber(activity));
     String message = activity.getString(R.string.post_call_message);
-    EnrichedCallManager manager = EnrichedCallComponent.get(activity).getEnrichedCallManager();
-    EnrichedCallCapabilities capabilities = manager.getCapabilities(number);
     LogUtil.i(
         "PostCall.promptUserToSendMessage",
-        "number: %s, capabilities: %s",
-        LogUtil.sanitizePhoneNumber(number),
-        capabilities);
+        "number: %s",
+        LogUtil.sanitizePhoneNumber(number));
 
-    boolean isRcsPostCall = capabilities != null && capabilities.isPostCallCapable();
-    String actionText =
-        isRcsPostCall
-            ? activity.getString(R.string.post_call_add_message)
-            : activity.getString(R.string.post_call_send_message);
+    String actionText =activity.getString(R.string.post_call_send_message);
 
     OnClickListener onClickListener =
-        v -> {
-          Logger.get(activity)
-              .logImpression(DialerImpression.Type.POST_CALL_PROMPT_USER_TO_SEND_MESSAGE_CLICKED);
-          activity.startActivity(PostCallActivity.newIntent(activity, number, isRcsPostCall));
-        };
+        v -> activity.startActivity(PostCallActivity.newIntent(activity, number, false));
 
-    int durationMs =
-        (int)
-            ConfigProviderComponent.get(activity)
-                .getConfigProvider()
-                .getLong("post_call_prompt_duration_ms", 8_000);
+    int durationMs = 8_000;
     activeSnackbar =
         Snackbar.make(rootView, message, durationMs)
             .setAction(actionText, onClickListener)
             .setActionTextColor(
-                activity.getResources().getColor(R.color.dialer_snackbar_action_text_color));
+                activity.getResources().getColor(R.color.dialer_snackbar_action_text_color,
+                        activity.getTheme()));
     activeSnackbar.show();
-    Logger.get(activity).logImpression(DialerImpression.Type.POST_CALL_PROMPT_USER_TO_SEND_MESSAGE);
     StorageComponent.get(activity)
         .unencryptedSharedPrefs()
         .edit()
@@ -123,9 +109,6 @@ public class PostCall {
     String number = Assert.isNotNull(getPhoneNumber(activity));
     OnClickListener onClickListener =
         v -> {
-          Logger.get(activity)
-              .logImpression(
-                  DialerImpression.Type.POST_CALL_PROMPT_USER_TO_VIEW_SENT_MESSAGE_CLICKED);
           Intent intent = IntentUtil.getSendSmsIntent(number);
           DialerUtils.startActivityWithErrorToast(activity, intent);
         };
@@ -134,9 +117,10 @@ public class PostCall {
         Snackbar.make(rootView, message, Snackbar.LENGTH_LONG)
             .setAction(addMessage, onClickListener)
             .setActionTextColor(
-                activity.getResources().getColor(R.color.dialer_snackbar_action_text_color))
+                activity.getResources().getColor(R.color.dialer_snackbar_action_text_color,
+                        activity.getTheme()))
             .addCallback(
-                new BaseCallback<Snackbar>() {
+                new BaseTransientBottomBar.BaseCallback<Snackbar>() {
                   @Override
                   public void onDismissed(Snackbar snackbar, int i) {
                     super.onDismissed(snackbar, i);
@@ -144,8 +128,6 @@ public class PostCall {
                   }
                 });
     activeSnackbar.show();
-    Logger.get(activity)
-        .logImpression(DialerImpression.Type.POST_CALL_PROMPT_USER_TO_VIEW_SENT_MESSAGE);
     StorageComponent.get(activity)
         .unencryptedSharedPrefs()
         .edit()
@@ -180,20 +162,6 @@ public class PostCall {
         .apply();
   }
 
-  /**
-   * Restart performance recording if there is a recent call (disconnect time to now is under
-   * threshold)
-   */
-  public static void restartPerformanceRecordingIfARecentCallExist(Context context) {
-    long disconnectTimeMillis =
-        StorageComponent.get(context)
-            .unencryptedSharedPrefs()
-            .getLong(PostCall.KEY_POST_CALL_CALL_DISCONNECT_TIME, -1);
-    if (disconnectTimeMillis != -1 && PerformanceReport.isRecording()) {
-      PerformanceReport.startRecording();
-    }
-  }
-
   private static void clear(Context context) {
     activeSnackbar = null;
 
@@ -217,16 +185,19 @@ public class PostCall {
     long callDurationMillis = disconnectTimeMillis - connectTimeMillis;
 
     boolean callDisconnectedByUser = manager.getBoolean(KEY_POST_CALL_DISCONNECT_PRESSED, false);
+    String number = manager.getString(KEY_POST_CALL_CALL_NUMBER, null);
 
-    ConfigProvider binding = ConfigProviderComponent.get(context).getConfigProvider();
+    boolean isSensitiveNumber = SensitivePhoneNumbers.getInstance().isSensitiveNumber(context,
+            number, INVALID_SUBSCRIPTION_ID);
+
     return disconnectTimeMillis != -1
         && connectTimeMillis != -1
         && isSimReady(context)
-        && binding.getLong("postcall_last_call_threshold", 30_000) > timeSinceDisconnect
-        && (connectTimeMillis == 0
-            || binding.getLong("postcall_call_duration_threshold", 35_000) > callDurationMillis)
+        && 30_000 > timeSinceDisconnect
+        && (connectTimeMillis == 0 || 35_000 > callDurationMillis)
         && getPhoneNumber(context) != null
-        && callDisconnectedByUser;
+        && callDisconnectedByUser
+        && !isSensitiveNumber;
   }
 
   private static boolean shouldPromptUserToViewSentMessage(Context context) {
@@ -243,9 +214,12 @@ public class PostCall {
   }
 
   private static boolean isEnabled(Context context) {
-    return ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean("enable_post_call_prod", true);
+
+    SharedPreferences mPrefs = PreferenceManager.getDefaultSharedPreferences(context);
+
+    boolean mEnabled = mPrefs.getBoolean("enable_post_call", true);
+
+    return mEnabled;
   }
 
   private static boolean isSimReady(Context context) {

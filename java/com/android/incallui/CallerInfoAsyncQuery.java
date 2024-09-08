@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -29,16 +30,19 @@ import android.os.Message;
 import android.os.Trace;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.Directory;
-import android.support.annotation.MainThread;
-import android.support.annotation.RequiresPermission;
-import android.support.annotation.WorkerThread;
 import android.text.TextUtils;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.RequiresPermission;
+import androidx.annotation.WorkerThread;
+
+import com.android.dialer.R;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService.CachedContactInfo;
 import com.android.dialer.phonenumbercache.ContactInfoHelper;
 import com.android.dialer.phonenumbercache.PhoneNumberCache;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
-import com.android.dialer.strictmode.StrictModeUtils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
@@ -161,7 +165,7 @@ public class CallerInfoAsyncQuery {
     cw.countryIso = info.countryIso;
 
     // check to see if these are recognized numbers, and use shortcuts if we can.
-    if (PhoneNumberHelper.isLocalEmergencyNumber(context, info.phoneNumber)) {
+    if (PhoneNumberHelper.isEmergencyNumber(context, info.phoneNumber)) {
       cw.event = EVENT_EMERGENCY_NUMBER;
     } else if (info.isVoiceMailNumber()) {
       cw.event = EVENT_VOICEMAIL_NUMBER;
@@ -188,7 +192,7 @@ public class CallerInfoAsyncQuery {
       OnQueryCompleteListener listener,
       Object cookie) {
     Trace.beginSection("CallerInfoAsyncQuery.startOtherDirectoriesQuery");
-    long[] directoryIds = StrictModeUtils.bypass(() -> getDirectoryIds(context));
+    long[] directoryIds = getDirectoryIds(context);
     int size = directoryIds.length;
     if (size == 0) {
       Trace.endSection();
@@ -437,7 +441,7 @@ public class CallerInfoAsyncQuery {
         Log.d(
             this,
             "notifying listener: "
-                + cw.listener.getClass().toString()
+                + cw.listener.getClass()
                 + " for token: "
                 + token
                 + callerInfo);

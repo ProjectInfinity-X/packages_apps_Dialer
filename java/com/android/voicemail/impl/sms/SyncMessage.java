@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +17,11 @@
 package com.android.voicemail.impl.sms;
 
 import android.os.Bundle;
-import android.support.annotation.Nullable;
-import com.android.voicemail.impl.NeededForTesting;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.impl.OmtpConstants;
+
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Locale;
@@ -93,7 +96,6 @@ public class SyncMessage {
   }
 
   /** @return the number of new messages stored on the voicemail server. */
-  @NeededForTesting
   public int getNewMessageCount() {
     return newMessageCount;
   }
@@ -110,7 +112,6 @@ public class SyncMessage {
    * @return the content type of the new message.
    *     <p>Expected to be set only for {@link OmtpConstants#NEW_MESSAGE}
    */
-  @NeededForTesting
   public String getContentType() {
     return contentType;
   }

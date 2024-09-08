@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,9 +17,10 @@
 
 package com.android.dialer.common.concurrent;
 
-import android.app.FragmentManager;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.FragmentManager;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.NonUiParallel;
@@ -29,11 +31,13 @@ import com.android.dialer.common.concurrent.DialerExecutor.Builder;
 import com.android.dialer.common.concurrent.DialerExecutor.FailureListener;
 import com.android.dialer.common.concurrent.DialerExecutor.SuccessListener;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
+
 import javax.inject.Inject;
 
 /** The production {@link DialerExecutorFactory}. */
@@ -85,7 +89,8 @@ public class DefaultDialerExecutorFactory implements DialerExecutorFactory {
         throwable -> {
           throw new RuntimeException(throwable);
         };
-    @Nullable final ScheduledExecutorService serialExecutorService;
+    @Nullable
+    final ScheduledExecutorService serialExecutorService;
     @Nullable final Executor parallelExecutor;
 
     BaseTaskBuilder(

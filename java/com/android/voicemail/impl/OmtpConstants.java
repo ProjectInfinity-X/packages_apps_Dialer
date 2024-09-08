@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -115,23 +116,14 @@ public class OmtpConstants {
   public static final String PROVISIONING_STATUS = "st";
   /** See {@link OmtpConstants#RETURN_CODE_VALUES} */
   public static final String RETURN_CODE = "rc";
-  /** URL to send users to for activation VVM */
-  public static final String SUBSCRIPTION_URL = "rs";
   /** IMAP4/SMTP server IP address or fully qualified domain name */
   public static final String SERVER_ADDRESS = "srv";
-  /** Phone number to access voicemails through Telephony User Interface */
-  public static final String TUI_ACCESS_NUMBER = "tui";
 
   public static final String TUI_PASSWORD_LENGTH = "pw_len";
-  /** Number to send client origination SMS */
-  public static final String CLIENT_SMS_DESTINATION_NUMBER = "dn";
 
   public static final String IMAP_PORT = "ipt";
   public static final String IMAP_USER_NAME = "u";
   public static final String IMAP_PASSWORD = "pw";
-  public static final String SMTP_PORT = "spt";
-  public static final String SMTP_USER_NAME = "smtp_u";
-  public static final String SMTP_PASSWORD = "smtp_pw";
 
   /**
    * User provisioning status values.
@@ -241,7 +233,7 @@ public class OmtpConstants {
     return String.format("%s.%s.%s", manufacturer, model, version);
   }
 
-  private static final String truncate(String string, int length) {
+  private static String truncate(String string, int length) {
     return string.substring(0, Math.min(length, string.length()));
   }
 

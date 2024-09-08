@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,13 +18,16 @@
 package com.android.dialer.calldetails;
 
 import android.content.Context;
-import android.support.annotation.CallSuper;
-import android.support.annotation.MainThread;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.annotation.CallSuper;
+import androidx.annotation.MainThread;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView.ViewHolder;
+
+import com.android.dialer.R;
 import com.android.dialer.calldetails.CallDetailsEntries.CallDetailsEntry;
 import com.android.dialer.calldetails.CallDetailsEntryViewHolder.CallDetailsEntryListener;
 import com.android.dialer.calldetails.CallDetailsFooterViewHolder.DeleteCallDetailsListener;
@@ -32,8 +36,8 @@ import com.android.dialer.calldetails.CallDetailsHeaderViewHolder.CallDetailsHea
 import com.android.dialer.calllogutils.CallTypeHelper;
 import com.android.dialer.calllogutils.CallbackActionHelper;
 import com.android.dialer.calllogutils.CallbackActionHelper.CallbackAction;
+import com.android.dialer.callrecord.CallRecordingDataStore;
 import com.android.dialer.common.Assert;
-import com.android.dialer.duo.DuoComponent;
 import com.android.dialer.glidephotomanager.PhotoInfo;
 
 /**
@@ -51,6 +55,7 @@ abstract class CallDetailsAdapterCommon extends RecyclerView.Adapter<RecyclerVie
   private final ReportCallIdListener reportCallIdListener;
   private final DeleteCallDetailsListener deleteCallDetailsListener;
   private final CallTypeHelper callTypeHelper;
+  private final CallRecordingDataStore callRecordingDataStore;
 
   private CallDetailsEntries callDetailsEntries;
 
@@ -75,14 +80,15 @@ abstract class CallDetailsAdapterCommon extends RecyclerView.Adapter<RecyclerVie
       CallDetailsEntryListener callDetailsEntryListener,
       CallDetailsHeaderListener callDetailsHeaderListener,
       ReportCallIdListener reportCallIdListener,
-      DeleteCallDetailsListener deleteCallDetailsListener) {
+      DeleteCallDetailsListener deleteCallDetailsListener,
+      CallRecordingDataStore callRecordingDataStore) {
     this.callDetailsEntries = callDetailsEntries;
     this.callDetailsEntryListener = callDetailsEntryListener;
     this.callDetailsHeaderListener = callDetailsHeaderListener;
     this.reportCallIdListener = reportCallIdListener;
     this.deleteCallDetailsListener = deleteCallDetailsListener;
-    this.callTypeHelper =
-        new CallTypeHelper(context.getResources(), DuoComponent.get(context).getDuo());
+    this.callRecordingDataStore = callRecordingDataStore;
+    this.callTypeHelper = new CallTypeHelper(context.getResources());
   }
 
   @Override
@@ -123,7 +129,7 @@ abstract class CallDetailsAdapterCommon extends RecyclerView.Adapter<RecyclerVie
           getPhotoInfo(),
           entry,
           callTypeHelper,
-          !entry.getHistoryResultsList().isEmpty() && position != getItemCount() - 2);
+          callRecordingDataStore);
     }
   }
 
@@ -162,7 +168,6 @@ abstract class CallDetailsAdapterCommon extends RecyclerView.Adapter<RecyclerVie
     Assert.checkState(!callDetailsEntries.getEntriesList().isEmpty());
 
     CallDetailsEntry entry = callDetailsEntries.getEntries(0);
-    return CallbackActionHelper.getCallbackAction(
-        getNumber(), entry.getFeatures(), entry.getIsDuoCall());
+    return CallbackActionHelper.getCallbackAction(getNumber(), entry.getFeatures());
   }
 }

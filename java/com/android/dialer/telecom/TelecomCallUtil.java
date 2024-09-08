@@ -18,15 +18,19 @@ package com.android.dialer.telecom;
 
 import android.content.Context;
 import android.net.Uri;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.WorkerThread;
 import android.telecom.Call;
 import android.telephony.PhoneNumberUtils;
+import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.location.GeoUtil;
-import com.google.common.base.Optional;
+
+import java.util.Optional;
 
 /**
  * Class to provide a standard interface for obtaining information from the underlying
@@ -37,10 +41,10 @@ import com.google.common.base.Optional;
 public class TelecomCallUtil {
 
   /** Returns Whether the call handle is an emergency number. */
-  public static boolean isEmergencyCall(@NonNull Call call) {
+  public static boolean isEmergencyCall(TelephonyManager telephonyManager, @NonNull Call call) {
     Assert.isNotNull(call);
     Uri handle = call.getDetails().getHandle();
-    return PhoneNumberUtils.isEmergencyNumber(handle == null ? "" : handle.getSchemeSpecificPart());
+    return telephonyManager.isEmergencyNumber(handle == null ? "" : handle.getSchemeSpecificPart());
   }
 
   /**
@@ -86,7 +90,7 @@ public class TelecomCallUtil {
     }
     String rawNumber = getNumber(call);
     if (TextUtils.isEmpty(rawNumber)) {
-      return Optional.absent();
+      return Optional.empty();
     }
     return Optional.of(PhoneNumberUtils.normalizeNumber(rawNumber));
   }
@@ -97,16 +101,16 @@ public class TelecomCallUtil {
    * GeoUtil#getCurrentCountryIso(Context)} is used.
    *
    * <p>If the number cannot be formatted (because for example it is invalid), returns {@link
-   * Optional#absent()}.
+   * Optional#empty()} ()}.
    */
   @WorkerThread
   public static Optional<String> getValidE164Number(Context appContext, Call call) {
     Assert.isWorkerThread();
     String rawNumber = getNumber(call);
     if (TextUtils.isEmpty(rawNumber)) {
-      return Optional.absent();
+      return Optional.empty();
     }
-    return Optional.fromNullable(
+    return Optional.ofNullable(
         PhoneNumberUtils.formatNumberToE164(rawNumber, GeoUtil.getCurrentCountryIso(appContext)));
   }
 }

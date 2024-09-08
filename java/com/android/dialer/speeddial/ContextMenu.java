@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,20 +18,21 @@
 package com.android.dialer.speeddial;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
-import android.support.v7.widget.PopupMenu;
-import android.support.v7.widget.PopupMenu.OnMenuItemClickListener;
 import android.text.TextUtils;
 import android.view.Gravity;
 import android.view.MenuItem;
 import android.view.View;
+
+import androidx.annotation.NonNull;
+import androidx.appcompat.widget.PopupMenu;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
 import com.android.dialer.speeddial.loader.SpeedDialUiItem;
 
 /** {@link PopupMenu} which presents contact options for starred contacts. */
-public class ContextMenu extends PopupMenu implements OnMenuItemClickListener {
+public class ContextMenu extends PopupMenu implements PopupMenu.OnMenuItemClickListener {
 
   private final ContextMenuItemListener listener;
 
@@ -115,13 +117,7 @@ public class ContextMenu extends PopupMenu implements OnMenuItemClickListener {
     return true;
   }
 
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  public boolean isVisible() {
-    return visible;
-  }
-
   /** Listener to report user clicks on menu items. */
-  @VisibleForTesting(otherwise = VisibleForTesting.PACKAGE_PRIVATE)
   public interface ContextMenuItemListener {
 
     /** Called when the user selects "voice call" or "video call" option from the context menu. */

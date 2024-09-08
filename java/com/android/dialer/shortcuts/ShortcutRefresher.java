@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,15 +18,17 @@
 package com.android.dialer.shortcuts;
 
 import android.content.Context;
-import android.os.Build;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+
 import com.android.contacts.common.list.ContactEntry;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
 import com.android.dialer.speeddial.loader.SpeedDialUiItem;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,14 +40,6 @@ public final class ShortcutRefresher {
   public static void refresh(@NonNull Context context, List<ContactEntry> contacts) {
     Assert.isMainThread();
     Assert.isNotNull(context);
-
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N_MR1) {
-      return;
-    }
-
-    if (!Shortcuts.areDynamicShortcutsEnabled(context)) {
-      return;
-    }
 
     DialerExecutorComponent.get(context)
         .dialerExecutorFactory()

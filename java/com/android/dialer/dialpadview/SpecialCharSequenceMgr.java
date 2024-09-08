@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2006 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +19,6 @@ package com.android.dialer.dialpadview;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.AlertDialog;
-import android.app.DialogFragment;
 import android.app.KeyguardManager;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
@@ -29,13 +27,8 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
-import android.graphics.Bitmap;
-import android.graphics.Bitmap.Config;
-import android.graphics.Color;
 import android.net.Uri;
 import android.provider.Settings;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.PhoneNumberUtils;
@@ -45,18 +38,22 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewGroup.LayoutParams;
-import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.WindowManager;
 import android.widget.EditText;
-import android.widget.ImageView;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.fragment.app.DialogFragment;
+
 import com.android.common.io.MoreCloseables;
 import com.android.contacts.common.database.NoNullCursorAsyncQueryHandler;
 import com.android.contacts.common.util.ContactDisplayUtils;
 import com.android.contacts.common.widget.SelectPhoneAccountDialogFragment;
 import com.android.contacts.common.widget.SelectPhoneAccountDialogFragment.SelectPhoneAccountListener;
 import com.android.contacts.common.widget.SelectPhoneAccountDialogOptionsUtil;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.compat.telephony.TelephonyManagerCompat;
@@ -64,11 +61,9 @@ import com.android.dialer.oem.MotorolaUtils;
 import com.android.dialer.oem.TranssionUtils;
 import com.android.dialer.telecom.TelecomUtil;
 import com.android.dialer.util.PermissionsUtil;
-import com.google.zxing.BarcodeFormat;
-import com.google.zxing.MultiFormatWriter;
-import com.google.zxing.WriterException;
-import com.google.zxing.common.BitMatrix;
-import java.util.Arrays;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
 import java.util.List;
 import java.util.Locale;
 
@@ -78,7 +73,7 @@ import java.util.Locale;
 public class SpecialCharSequenceMgr {
   private static final String TAG_SELECT_ACCT_FRAGMENT = "tag_select_acct_fragment";
 
-  @VisibleForTesting static final String MMI_IMEI_DISPLAY = "*#06#";
+  private static final String MMI_IMEI_DISPLAY = "*#06#";
   private static final String MMI_REGULATORY_INFO_DISPLAY = "*#07#";
   /** ***** This code is used to handle SIM Contact queries ***** */
   private static final String ADN_PHONE_NUMBER_COLUMN_NAME = "number";
@@ -184,7 +179,7 @@ public class SpecialCharSequenceMgr {
     // accessed from the emergency dialer.
     KeyguardManager keyguardManager =
         (KeyguardManager) context.getSystemService(Context.KEYGUARD_SERVICE);
-    if (keyguardManager.inKeyguardRestrictedInputMode()) {
+    if (keyguardManager.isKeyguardLocked()) {
       return false;
     }
 
@@ -241,7 +236,8 @@ public class SpecialCharSequenceMgr {
                           subscriptionAccountHandles)
                       .build(),
                   callback);
-          dialogFragment.show(((Activity) context).getFragmentManager(), TAG_SELECT_ACCT_FRAGMENT);
+          dialogFragment.show(((AppCompatActivity) context).getSupportFragmentManager(),
+                  TAG_SELECT_ACCT_FRAGMENT);
         }
 
         return true;
@@ -298,7 +294,8 @@ public class SpecialCharSequenceMgr {
                 SelectPhoneAccountDialogOptionsUtil.builderWithAccounts(subscriptionAccountHandles)
                     .build(),
                 listener);
-        dialogFragment.show(((Activity) context).getFragmentManager(), TAG_SELECT_ACCT_FRAGMENT);
+        dialogFragment.show(((AppCompatActivity) context).getSupportFragmentManager(),
+                TAG_SELECT_ACCT_FRAGMENT);
       }
       return true;
     }
@@ -316,38 +313,31 @@ public class SpecialCharSequenceMgr {
         (TelephonyManager) context.getSystemService(Context.TELEPHONY_SERVICE);
 
     if (telephonyManager != null && input.equals(MMI_IMEI_DISPLAY)) {
-      int labelResId =
-          (telephonyManager.getPhoneType() == TelephonyManager.PHONE_TYPE_GSM)
-              ? R.string.imei
-              : R.string.meid;
 
       View customView = LayoutInflater.from(context).inflate(R.layout.dialog_deviceids, null);
       ViewGroup holder = customView.findViewById(R.id.deviceids_holder);
 
       if (TelephonyManagerCompat.getPhoneCount(telephonyManager) > 1) {
-        for (int slot = 0; slot < telephonyManager.getPhoneCount(); slot++) {
-          String deviceId = telephonyManager.getDeviceId(slot);
-          if (!TextUtils.isEmpty(deviceId)) {
-            addDeviceIdRow(
-                holder,
-                deviceId,
-                /* showDecimal */
-                context.getResources().getBoolean(R.bool.show_device_id_in_hex_and_decimal),
-                /* showBarcode */ false);
+        for (int slot = 0; slot < telephonyManager.getActiveModemCount(); slot++) {
+          String Imei = telephonyManager.getImei(slot);
+          String title = context.getString(R.string.imei) + (slot + 1);
+          if (!TextUtils.isEmpty(Imei)) {
+            addDeviceIdRow(holder, title, Imei);
           }
         }
       } else {
-        addDeviceIdRow(
-            holder,
-            telephonyManager.getDeviceId(),
-            /* showDecimal */
-            context.getResources().getBoolean(R.bool.show_device_id_in_hex_and_decimal),
-            /* showBarcode */
-            context.getResources().getBoolean(R.bool.show_device_id_as_barcode));
+        addDeviceIdRow(holder, context.getString(R.string.imei), telephonyManager.getImei());
       }
 
-      new AlertDialog.Builder(context)
-          .setTitle(labelResId)
+      try {
+        String meid = telephonyManager.getMeid();
+        addDeviceIdRow(holder, context.getString(R.string.meid), meid);
+      } catch (Exception e) {
+        LogUtil.e("SpecialCharSequenceMgr.handleDeviceIdDisplay", "unable to get MEID", e);
+      }
+
+      new MaterialAlertDialogBuilder(context)
+          .setTitle(R.string.device_identification_title)
           .setView(customView)
           .setPositiveButton(android.R.string.ok, null)
           .setCancelable(false)
@@ -359,8 +349,7 @@ public class SpecialCharSequenceMgr {
     return false;
   }
 
-  private static void addDeviceIdRow(
-      ViewGroup holder, String deviceId, boolean showDecimal, boolean showBarcode) {
+  private static void addDeviceIdRow(ViewGroup holder, String title, String deviceId) {
     if (TextUtils.isEmpty(deviceId)) {
       return;
     }
@@ -370,43 +359,12 @@ public class SpecialCharSequenceMgr {
             LayoutInflater.from(holder.getContext()).inflate(R.layout.row_deviceid, holder, false);
     holder.addView(row);
 
-    // Remove the check digit, if exists. This digit is a checksum of the ID.
-    // See https://en.wikipedia.org/wiki/International_Mobile_Equipment_Identity
-    // and https://en.wikipedia.org/wiki/Mobile_equipment_identifier
-    String hex = deviceId.length() == 15 ? deviceId.substring(0, 14) : deviceId;
+    ((TextView) row.findViewById(R.id.deviceid_title)).setText(title);
+    ((TextView) row.findViewById(R.id.deviceid_hex)).setText(deviceId);
+  }
 
-    // If this is the valid length IMEI or MEID (14 digits), show it in all formats, otherwise fall
-    // back to just showing the raw hex
-    if (hex.length() == 14 && showDecimal) {
-      ((TextView) row.findViewById(R.id.deviceid_hex)).setText(hex);
-      ((TextView) row.findViewById(R.id.deviceid_dec)).setText(getDecimalFromHex(hex));
-      row.findViewById(R.id.deviceid_dec_label).setVisibility(View.VISIBLE);
-    } else {
-      row.findViewById(R.id.deviceid_hex_label).setVisibility(View.GONE);
-      ((TextView) row.findViewById(R.id.deviceid_hex)).setText(deviceId);
-    }
-
-    final ImageView barcode = row.findViewById(R.id.deviceid_barcode);
-    if (showBarcode) {
-      // Wait until the layout pass has completed so we the barcode is measured before drawing. We
-      // do this by adding a layout listener and setting the bitmap after getting the callback.
-      barcode
-          .getViewTreeObserver()
-          .addOnGlobalLayoutListener(
-              new OnGlobalLayoutListener() {
-                @Override
-                public void onGlobalLayout() {
-                  barcode.getViewTreeObserver().removeOnGlobalLayoutListener(this);
-                  Bitmap barcodeBitmap =
-                      generateBarcode(hex, barcode.getWidth(), barcode.getHeight());
-                  if (barcodeBitmap != null) {
-                    barcode.setImageBitmap(barcodeBitmap);
-                  }
-                }
-              });
-    } else {
-      barcode.setVisibility(View.GONE);
-    }
+  private static boolean checkSupportedRadioBitmask(long supportedRadioBitmask, long targetBitmask) {
+    return (targetBitmask & supportedRadioBitmask) > 0;
   }
 
   private static String getDecimalFromHex(String hex) {
@@ -443,32 +401,6 @@ public class SpecialCharSequenceMgr {
         .append(' ')
         .append(serialNum, 4, serialNum.length());
     return builder.toString();
-  }
-
-  /**
-   * This method generates a 2d barcode using the zxing library. Each pixel of the bitmap is either
-   * black or white painted vertically. We determine which color using the BitMatrix.get(x, y)
-   * method.
-   */
-  private static Bitmap generateBarcode(String hex, int width, int height) {
-    MultiFormatWriter writer = new MultiFormatWriter();
-    String data = Uri.encode(hex);
-
-    try {
-      BitMatrix bitMatrix = writer.encode(data, BarcodeFormat.CODE_128, width, 1);
-      Bitmap bitmap = Bitmap.createBitmap(bitMatrix.getWidth(), height, Config.RGB_565);
-
-      for (int i = 0; i < bitMatrix.getWidth(); i++) {
-        // Paint columns of width 1
-        int[] column = new int[height];
-        Arrays.fill(column, bitMatrix.get(i, 0) ? Color.BLACK : Color.WHITE);
-        bitmap.setPixels(column, 0, 1, i, 0, 1, height);
-      }
-      return bitmap;
-    } catch (WriterException e) {
-      LogUtil.e("SpecialCharSequenceMgr.generateBarcode", "error generating barcode", e);
-    }
-    return null;
   }
 
   private static boolean handleRegulatoryInfoDisplay(Context context, String input) {
@@ -539,8 +471,8 @@ public class SpecialCharSequenceMgr {
     public int contactNum;
 
     // Used to identify the query request.
-    private int token;
-    private QueryHandler handler;
+    private final int token;
+    private final QueryHandler handler;
 
     // The text field we're going to update
     private EditText textField;

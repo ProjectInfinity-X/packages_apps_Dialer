@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,6 +17,7 @@
 package com.android.voicemail.impl.mail;
 
 import android.util.ArrayMap;
+
 import java.util.Map;
 
 /**
@@ -36,9 +38,9 @@ public class PackedString {
 
   private static final char DELIMITER_TAG = '\2';
 
-  private String string;
+  private final String string;
   private ArrayMap<String, String> exploded;
-  private static final ArrayMap<String, String> EMPTY_MAP = new ArrayMap<String, String>();
+  private static final ArrayMap<String, String> EMPTY_MAP = new ArrayMap<>();
 
   /**
    * Create a packed string using an already-packed string (e.g. from database)
@@ -73,7 +75,7 @@ public class PackedString {
     if (exploded == null) {
       exploded = explode(string);
     }
-    return new ArrayMap<String, String>(exploded);
+    return new ArrayMap<>(exploded);
   }
 
   /** Read out all values into a map. */
@@ -81,7 +83,7 @@ public class PackedString {
     if (packed == null || packed.length() == 0) {
       return EMPTY_MAP;
     }
-    ArrayMap<String, String> map = new ArrayMap<String, String>();
+    ArrayMap<String, String> map = new ArrayMap<>();
 
     int length = packed.length();
     int elementStartIndex = 0;
@@ -118,11 +120,11 @@ public class PackedString {
    * PackedString representations.
    */
   public static class Builder {
-    ArrayMap<String, String> map;
+    final ArrayMap<String, String> map;
 
     /** Create a builder that's empty (for filling) */
     public Builder() {
-      map = new ArrayMap<String, String>();
+      map = new ArrayMap<>();
     }
 
     /** Create a builder using the values of an existing PackedString (for editing). */

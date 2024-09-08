@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,10 +20,11 @@ package com.android.dialer.app.calllog;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.support.v4.util.Pair;
+
+import androidx.core.util.Pair;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import me.leolin.shortcutbadger.ShortcutBadger;
 
 /**
  * Receives broadcasts that should trigger a refresh of the missed call notification. This includes
@@ -63,7 +65,6 @@ public class MissedCallNotificationReceiver extends BroadcastReceiver {
               LogUtil.i(
                   "MissedCallNotificationReceiver.onReceive",
                   "update missed call notifications successful");
-              updateBadgeCount(context, count);
               pendingResult.finish();
             })
         .onFailure(
@@ -75,14 +76,5 @@ public class MissedCallNotificationReceiver extends BroadcastReceiver {
             })
         .build()
         .executeParallel(new Pair<>(count, phoneNumber));
-  }
-
-  private static void updateBadgeCount(Context context, int count) {
-    boolean success = ShortcutBadger.applyCount(context, count);
-    LogUtil.i(
-        "MissedCallNotificationReceiver.updateBadgeCount",
-        "update badge count: %d success: %b",
-        count,
-        success);
   }
 }

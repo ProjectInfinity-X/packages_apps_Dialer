@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,17 +18,19 @@
 package com.android.incallui;
 
 import android.content.Context;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.activecalls.ActiveCallInfo;
 import com.android.dialer.activecalls.ActiveCallsComponent;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.state.DialerCallState;
-import com.google.common.base.Optional;
 import com.google.common.collect.ImmutableList;
 
+import java.util.Optional;
+
 /** Updates {@link com.android.dialer.activecalls.ActiveCalls} */
-@SuppressWarnings("Guava")
 public class ActiveCallsCallListListener implements CallList.Listener {
 
   private final Context appContext;

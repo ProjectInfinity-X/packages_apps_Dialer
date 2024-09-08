@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@ package com.android.dialer.simulator.impl;
 
 import android.net.Uri;
 import android.os.Bundle;
-import android.support.annotation.NonNull;
 import android.telecom.Connection;
 import android.telecom.ConnectionRequest;
 import android.telecom.ConnectionService;
@@ -27,12 +27,16 @@ import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.ThreadUtil;
 import com.android.dialer.simulator.Simulator;
 import com.android.dialer.simulator.SimulatorComponent;
 import com.android.dialer.simulator.SimulatorConnectionsBank;
+
 import java.util.ArrayList;
 import java.util.List;
 

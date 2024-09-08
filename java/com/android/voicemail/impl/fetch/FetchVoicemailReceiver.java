@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +16,7 @@
  */
 package com.android.voicemail.impl.fetch;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.content.BroadcastReceiver;
 import android.content.ComponentName;
 import android.content.ContentResolver;
@@ -24,16 +25,16 @@ import android.content.Intent;
 import android.database.Cursor;
 import android.net.Network;
 import android.net.Uri;
-import android.os.Build.VERSION_CODES;
 import android.provider.VoicemailContract;
 import android.provider.VoicemailContract.Voicemails;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.VoicemailComponent;
 import com.android.voicemail.impl.VoicemailStatus;
 import com.android.voicemail.impl.VvmLog;
@@ -41,11 +42,11 @@ import com.android.voicemail.impl.imap.ImapHelper;
 import com.android.voicemail.impl.imap.ImapHelper.InitializingException;
 import com.android.voicemail.impl.sync.VvmAccountManager;
 import com.android.voicemail.impl.sync.VvmNetworkRequestCallback;
+
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
 
 /** handles {@link VoicemailContract#ACTION_FETCH_VOICEMAIL} */
-@TargetApi(VERSION_CODES.O)
 public class FetchVoicemailReceiver extends BroadcastReceiver {
 
   private static final String TAG = "FetchVoicemailReceiver";
@@ -116,14 +117,15 @@ public class FetchVoicemailReceiver extends BroadcastReceiver {
             }
           }
 
-          phoneAccount =
-              new PhoneAccountHandle(
-                  ComponentName.unflattenFromString(cursor.getString(PHONE_ACCOUNT_COMPONENT_NAME)),
-                  cursor.getString(PHONE_ACCOUNT_ID));
-          TelephonyManager telephonyManager =
-              context
-                  .getSystemService(TelephonyManager.class)
-                  .createForPhoneAccountHandle(phoneAccount);
+          TelephonyManager telephonyManager = null;
+          ComponentName componentName = ComponentName.unflattenFromString(
+                  cursor.getString(PHONE_ACCOUNT_COMPONENT_NAME));
+          if (componentName != null) {
+            phoneAccount =
+                    new PhoneAccountHandle(componentName, cursor.getString(PHONE_ACCOUNT_ID));
+            telephonyManager = context.getSystemService(TelephonyManager.class)
+                    .createForPhoneAccountHandle(phoneAccount);
+          }
           if (telephonyManager == null) {
             // can happen when trying to fetch voicemails from a SIM that is no longer on the
             // device
@@ -154,12 +156,10 @@ public class FetchVoicemailReceiver extends BroadcastReceiver {
    * format. There's a chance of M phone account collisions on multi-SIM devices, but visual
    * voicemail is not supported on M multi-SIM.
    */
+  @SuppressLint("MissingPermission")
   @Nullable
   private static PhoneAccountHandle getAccountFromMarshmallowAccount(
       Context context, PhoneAccountHandle oldAccount) {
-    if (!BuildCompat.isAtLeastN()) {
-      return null;
-    }
     for (PhoneAccountHandle handle :
         context.getSystemService(TelecomManager.class).getCallCapablePhoneAccounts()) {
       if (getIccSerialNumberFromFullIccSerialNumber(handle.getId()).equals(oldAccount.getId())) {
@@ -198,38 +198,34 @@ public class FetchVoicemailReceiver extends BroadcastReceiver {
 
   private void fetchVoicemail(final Network network, final VoicemailStatus.Editor status) {
     Executor executor = Executors.newCachedThreadPool();
-    executor.execute(
-        new Runnable() {
-          @Override
-          public void run() {
-            if (networkCallback != null) {
-                networkCallback.waitForIpv4();
+    executor.execute(() -> {
+      if (networkCallback != null) {
+          networkCallback.waitForIpv4();
+      }
+      try {
+        while (retryCount > 0) {
+          VvmLog.i(TAG, "fetching voicemail, retry count=" + retryCount);
+          try (ImapHelper imapHelper =
+              new ImapHelper(context, phoneAccount, network, status)) {
+            boolean success =
+                imapHelper.fetchVoicemailPayload(
+                    new VoicemailFetchedCallback(context, uri, phoneAccount), uid);
+            if (!success && retryCount > 0) {
+              VvmLog.i(TAG, "fetch voicemail failed, retrying");
+              retryCount--;
+            } else {
+              return;
             }
-            try {
-              while (retryCount > 0) {
-                VvmLog.i(TAG, "fetching voicemail, retry count=" + retryCount);
-                try (ImapHelper imapHelper =
-                    new ImapHelper(context, phoneAccount, network, status)) {
-                  boolean success =
-                      imapHelper.fetchVoicemailPayload(
-                          new VoicemailFetchedCallback(context, uri, phoneAccount), uid);
-                  if (!success && retryCount > 0) {
-                    VvmLog.i(TAG, "fetch voicemail failed, retrying");
-                    retryCount--;
-                  } else {
-                    return;
-                  }
-                } catch (InitializingException e) {
-                  VvmLog.w(TAG, "Can't retrieve Imap credentials ", e);
-                  return;
-                }
-              }
-            } finally {
-              if (networkCallback != null) {
-                networkCallback.releaseNetwork();
-              }
-            }
+          } catch (InitializingException e) {
+            VvmLog.w(TAG, "Can't retrieve Imap credentials ", e);
+            return;
           }
-        });
+        }
+      } finally {
+        if (networkCallback != null) {
+          networkCallback.releaseNetwork();
+        }
+      }
+    });
   }
 }

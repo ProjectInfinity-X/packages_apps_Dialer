@@ -26,7 +26,9 @@
   <com.android.dialer.app.voicemail.VoicemailPlaybackLayout
     android:id="@+id/voicemail_playback_layout"
     android:layout_width="match_parent"
-    android:layout_height="wrap_content"/>
+    android:layout_height="wrap_content"
+    android:background="@android:color/transparent"
+    android:paddingBottom="5dp"/>
 
   <View
     android:layout_width="match_parent"
@@ -39,7 +41,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_call_white_24"/>
+      android:src="@drawable/quantum_ic_call_vd_theme_24"/>
 
     <LinearLayout
       android:layout_width="match_parent"
@@ -73,40 +75,12 @@
   </LinearLayout>
 
   <LinearLayout
-      android:id="@+id/set_up_video_action"
-      style="@style/CallLogActionStyle">
-
-    <ImageView
-        style="@style/CallLogActionIconStyle"
-        android:src="@drawable/quantum_ic_videocam_vd_white_24"/>
-
-    <TextView
-        style="@style/CallLogActionTextStyle"
-        android:text="@string/call_log_action_set_up_video"/>
-
-  </LinearLayout>
-
-  <LinearLayout
-      android:id="@+id/invite_video_action"
-      style="@style/CallLogActionStyle">
-
-    <ImageView
-        style="@style/CallLogActionIconStyle"
-        android:src="@drawable/quantum_ic_videocam_vd_white_24"/>
-
-    <TextView
-        style="@style/CallLogActionTextStyle"
-        android:text="@string/call_log_action_invite_video"/>
-
-  </LinearLayout>
-
-  <LinearLayout
     android:id="@+id/create_new_contact_action"
     style="@style/CallLogActionStyle">
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_person_add_white_24"/>
+      android:src="@drawable/quantum_ic_person_add_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -120,7 +94,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_person_white_24"/>
+      android:src="@drawable/quantum_ic_person_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -134,7 +108,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_message_white_24"/>
+      android:src="@drawable/quantum_ic_message_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -157,27 +131,13 @@
   </LinearLayout>
 
   <LinearLayout
-    android:id="@+id/call_compose_action"
-    style="@style/CallLogActionStyle">
-
-    <ImageView
-      style="@style/CallLogActionIconStyle"
-      android:src="@drawable/ic_phone_attach"/>
-
-    <TextView
-      style="@style/CallLogActionTextStyle"
-      android:text="@string/share_and_call"/>
-
-  </LinearLayout>
-
-  <LinearLayout
     android:id="@+id/report_not_spam_action"
     style="@style/CallLogActionStyle"
     android:visibility="gone">
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/ic_not_spam"/>
+      android:src="@drawable/quantum_ic_report_off_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -191,7 +151,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_block_white_24"/>
+      android:src="@drawable/quantum_ic_block_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -205,7 +165,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_block_white_24"/>
+      android:src="@drawable/quantum_ic_block_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -219,7 +179,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/ic_unblock"/>
+      android:src="@drawable/quantum_ic_unblock_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -232,7 +192,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_info_outline_white_24"/>
+      android:src="@drawable/quantum_ic_info_outline_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"
@@ -247,7 +207,7 @@
 
     <ImageView
       style="@style/CallLogActionIconStyle"
-      android:src="@drawable/quantum_ic_send_white_24"/>
+      android:src="@drawable/quantum_ic_send_vd_theme_24"/>
 
     <TextView
       style="@style/CallLogActionTextStyle"

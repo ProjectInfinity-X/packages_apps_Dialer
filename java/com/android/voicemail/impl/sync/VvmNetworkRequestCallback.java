@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,7 +16,6 @@
  */
 package com.android.voicemail.impl.sync;
 
-import android.annotation.TargetApi;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.InetAddresses;
@@ -24,12 +24,13 @@ import android.net.Network;
 import android.net.NetworkCapabilities;
 import android.net.NetworkRequest;
 import android.os.ConditionVariable;
-import android.os.Build.VERSION_CODES;
 import android.os.Handler;
 import android.os.Looper;
-import android.support.annotation.CallSuper;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.TelephonyManager;
+
+import androidx.annotation.CallSuper;
+
 import com.android.dialer.common.Assert;
 import com.android.voicemail.impl.OmtpEvents;
 import com.android.voicemail.impl.OmtpVvmCarrierConfigHelper;
@@ -40,7 +41,6 @@ import com.android.voicemail.impl.VvmLog;
  * Base class for network request call backs for visual voicemail syncing with the Imap server. This
  * handles retries and network requests.
  */
-@TargetApi(VERSION_CODES.O)
 public abstract class VvmNetworkRequestCallback extends ConnectivityManager.NetworkCallback {
 
   private static final String TAG = "VvmNetworkRequest";
@@ -51,9 +51,9 @@ public abstract class VvmNetworkRequestCallback extends ConnectivityManager.Netw
   public static final String NETWORK_REQUEST_FAILED_TIMEOUT = "timeout";
   public static final String NETWORK_REQUEST_FAILED_LOST = "lost";
 
-  protected Context context;
-  protected PhoneAccountHandle phoneAccount;
-  protected NetworkRequest networkRequest;
+  protected final Context context;
+  protected final PhoneAccountHandle phoneAccount;
+  protected final NetworkRequest networkRequest;
   private ConnectivityManager connectivityManager;
   private final OmtpVvmCarrierConfigHelper carrierConfigHelper;
   private final VoicemailStatus.Editor status;
@@ -152,7 +152,7 @@ public abstract class VvmNetworkRequestCallback extends ConnectivityManager.Netw
   }
 
   public void requestNetwork() {
-    if (requestSent == true) {
+    if (requestSent) {
       VvmLog.e(TAG, "requestNetwork() called twice");
       return;
     }
@@ -164,15 +164,11 @@ public abstract class VvmNetworkRequestCallback extends ConnectivityManager.Netw
      */
     Handler handler = new Handler(Looper.getMainLooper());
     handler.postDelayed(
-        new Runnable() {
-          @Override
-          public void run() {
-            if (resultReceived == false) {
-              onFailed(NETWORK_REQUEST_FAILED_TIMEOUT);
-            }
-          }
-        },
-        NETWORK_REQUEST_TIMEOUT_MILLIS);
+            () -> {
+              if (!resultReceived) {
+                onFailed(NETWORK_REQUEST_FAILED_TIMEOUT);
+              }},
+            NETWORK_REQUEST_TIMEOUT_MILLIS);
   }
 
   public void releaseNetwork() {

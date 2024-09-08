@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- Copyright (C) 2011 The Android Open Source Project
+     Copyright (C) 2023 The LineageOS Project
 
      Licensed under the Apache License, Version 2.0 (the "License");
      you may not use this file except in compliance with the License.
@@ -13,12 +14,14 @@
      See the License for the specific language governing permissions and
      limitations under the License.
 -->
-<view xmlns:android="http://schemas.android.com/apk/res/android"
+<view
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     class="com.android.dialer.dialpadview.DialpadFragment$DialpadSlidingRelativeLayout"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:orientation="horizontal">
+    android:orientation="horizontal"
+    android:forceDarkAllowed="false">
 
   <LinearLayout
       android:layout_width="match_parent"
@@ -32,11 +35,6 @@
         android:layout_height="0dp"
         android:layout_weight="1"
         android:background="#00000000"/>
-    <!-- Dialpad shadow -->
-    <View
-        android:layout_width="match_parent"
-        android:layout_height="@dimen/shadow_length"
-        android:background="@drawable/shadow_fade_up"/>
     <include layout="@layout/dialpad_view"/>
     <!-- "Dialpad chooser" UI, shown only when the user brings up the
              Dialer while a call is already in progress.
@@ -58,7 +56,7 @@
       android:layout_height="@dimen/floating_action_button_margin_bottom"
       android:layout_alignParentBottom="true"/>
 
-  <android.support.design.widget.FloatingActionButton
+  <com.android.dialer.widget.DialerFloatingActionButton
       android:id="@+id/dialpad_floating_action_button"
       android:layout_width="@dimen/floating_action_button_width"
       android:layout_height="@dimen/floating_action_button_height"

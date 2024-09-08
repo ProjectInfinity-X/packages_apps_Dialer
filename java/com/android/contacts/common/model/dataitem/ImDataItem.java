@@ -18,6 +18,7 @@ package com.android.contacts.common.model.dataitem;
 
 import android.content.ContentValues;
 import android.content.Context;
+import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Email;
 import android.provider.ContactsContract.CommonDataKinds.Im;
 import android.text.TextUtils;
@@ -39,12 +40,6 @@ public class ImDataItem extends DataItem {
   private ImDataItem(ContentValues values, boolean createdFromEmail) {
     super(values);
     mCreatedFromEmail = createdFromEmail;
-  }
-
-  public static ImDataItem createFromEmail(EmailDataItem item) {
-    final ImDataItem im = new ImDataItem(new ContentValues(item.getContentValues()), true);
-    im.setMimeType(Im.CONTENT_ITEM_TYPE);
-    return im;
   }
 
   public String getData() {
@@ -70,15 +65,6 @@ public class ImDataItem extends DataItem {
 
   public String getCustomProtocol() {
     return getContentValues().getAsString(Im.CUSTOM_PROTOCOL);
-  }
-
-  public int getChatCapability() {
-    Integer result = getContentValues().getAsInteger(Im.CHAT_CAPABILITY);
-    return result == null ? 0 : result;
-  }
-
-  public boolean isCreatedFromEmail() {
-    return mCreatedFromEmail;
   }
 
   @Override

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,16 +23,16 @@ import android.os.Bundle;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.SystemClock;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccount;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telecom.VideoProfile;
 import android.text.TextUtils;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.Assert;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.util.CallUtil;
 import com.google.auto.value.AutoValue;
 import com.google.common.collect.ImmutableMap;
@@ -40,9 +41,6 @@ import com.google.protobuf.InvalidProtocolBufferException;
 /** Creates an intent to start a new outgoing call. */
 @AutoValue
 public abstract class CallIntent implements Parcelable {
-  private static int lightbringerButtonAppearInExpandedCallLogItemCount = 0;
-  private static int lightbringerButtonAppearInCollapsedCallLogItemCount = 0;
-  private static int lightbringerButtonAppearInSearchCount = 0;
 
   abstract Uri number();
 
@@ -122,39 +120,10 @@ public abstract class CallIntent implements Parcelable {
 
     abstract ImmutableMap.Builder<String, Long> longPlaceCallExtrasBuilder();
 
-    public Builder addPlaceCallExtra(String key, String value) {
-      stringPlaceCallExtrasBuilder().put(key, value);
-      return this;
-    }
-
-    public Builder addPlaceCallExtra(String key, Long value) {
-      longPlaceCallExtrasBuilder().put(key, value);
-      return this;
-    }
-
     abstract CallIntent autoBuild();
 
     public Intent build() {
-      CallSpecificAppData.Builder builder =
-          CallSpecificAppData.newBuilder(callSpecificAppData())
-              .setLightbringerButtonAppearInExpandedCallLogItemCount(
-                  lightbringerButtonAppearInExpandedCallLogItemCount)
-              .setLightbringerButtonAppearInCollapsedCallLogItemCount(
-                  lightbringerButtonAppearInCollapsedCallLogItemCount)
-              .setLightbringerButtonAppearInSearchCount(lightbringerButtonAppearInSearchCount);
-      lightbringerButtonAppearInExpandedCallLogItemCount = 0;
-      lightbringerButtonAppearInCollapsedCallLogItemCount = 0;
-      lightbringerButtonAppearInSearchCount = 0;
-
-      if (PerformanceReport.isRecording()) {
-        builder
-            .setTimeSinceAppLaunch(PerformanceReport.getTimeSinceAppLaunch())
-            .setTimeSinceFirstClick(PerformanceReport.getTimeSinceFirstClick())
-            .addAllUiActionsSinceAppLaunch(PerformanceReport.getActions())
-            .addAllUiActionTimestampsSinceAppLaunch(PerformanceReport.getActionTimestamps())
-            .setStartingTabIndex(PerformanceReport.getStartingTabIndex());
-        PerformanceReport.stopRecording();
-      }
+      CallSpecificAppData.Builder builder = CallSpecificAppData.newBuilder(callSpecificAppData());
 
       setCallSpecificAppData(builder.build());
 
@@ -213,40 +182,6 @@ public abstract class CallIntent implements Parcelable {
     return bundle;
   }
 
-  public static void increaseLightbringerCallButtonAppearInExpandedCallLogItemCount() {
-    CallIntent.lightbringerButtonAppearInExpandedCallLogItemCount++;
-  }
-
-  public static void increaseLightbringerCallButtonAppearInCollapsedCallLogItemCount() {
-    CallIntent.lightbringerButtonAppearInCollapsedCallLogItemCount++;
-  }
-
-  public static void increaseLightbringerCallButtonAppearInSearchCount() {
-    CallIntent.lightbringerButtonAppearInSearchCount++;
-  }
-
-  @VisibleForTesting
-  public static int getLightbringerButtonAppearInExpandedCallLogItemCount() {
-    return lightbringerButtonAppearInExpandedCallLogItemCount;
-  }
-
-  @VisibleForTesting
-  public static int getLightbringerButtonAppearInCollapsedCallLogItemCount() {
-    return lightbringerButtonAppearInCollapsedCallLogItemCount;
-  }
-
-  @VisibleForTesting
-  public static int getLightbringerButtonAppearInSearchCount() {
-    return lightbringerButtonAppearInSearchCount;
-  }
-
-  @VisibleForTesting(otherwise = VisibleForTesting.NONE)
-  public static void clearLightbringerCounts() {
-    lightbringerButtonAppearInCollapsedCallLogItemCount = 0;
-    lightbringerButtonAppearInExpandedCallLogItemCount = 0;
-    lightbringerButtonAppearInSearchCount = 0;
-  }
-
   @Override
   public int describeContents() {
     return 0;
@@ -276,7 +211,7 @@ public abstract class CallIntent implements Parcelable {
         public CallIntent createFromParcel(Parcel source) {
           CallIntent.Builder callIntentBuilder = builder();
           ClassLoader classLoader = CallIntent.class.getClassLoader();
-          callIntentBuilder.setNumber(source.readParcelable(classLoader));
+          callIntentBuilder.setNumber(source.readParcelable(classLoader, Uri.class));
           CallSpecificAppData data;
           try {
             data = CallSpecificAppData.parseFrom(source.createByteArray());
@@ -285,7 +220,7 @@ public abstract class CallIntent implements Parcelable {
           }
           callIntentBuilder
               .setCallSpecificAppData(data)
-              .setPhoneAccountHandle(source.readParcelable(classLoader))
+              .setPhoneAccountHandle(source.readParcelable(classLoader, PhoneAccountHandle.class))
               .setIsVideoCall(source.readInt() != 0)
               .setCallSubject(source.readString())
               .setAllowAssistedDial(source.readInt() != 0);

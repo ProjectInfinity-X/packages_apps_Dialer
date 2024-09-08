@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,6 +18,7 @@ package com.android.voicemail.impl.mail.store;
 
 import android.util.ArraySet;
 import android.util.Base64;
+
 import com.android.voicemail.impl.OmtpEvents;
 import com.android.voicemail.impl.VvmLog;
 import com.android.voicemail.impl.mail.AuthenticationFailedException;
@@ -30,12 +32,14 @@ import com.android.voicemail.impl.mail.store.imap.ImapResponse;
 import com.android.voicemail.impl.mail.store.imap.ImapResponseParser;
 import com.android.voicemail.impl.mail.store.imap.ImapUtility;
 import com.android.voicemail.impl.mail.utils.LogUtils;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import javax.net.ssl.SSLException;
 
 /** A cacheable class that stores the details for a single IMAP connection. */
@@ -46,7 +50,7 @@ public class ImapConnection {
   private ImapStore imapStore;
   private MailTransport transport;
   private ImapResponseParser parser;
-  private Set<String> capabilities = new ArraySet<>();
+  private final Set<String> capabilities = new ArraySet<>();
 
   static final String IMAP_REDACTED_LOG = "[IMAP command redacted]";
 
@@ -167,6 +171,9 @@ public class ImapConnection {
 
   /** Attempts to convert the connection into secure connection. */
   private void maybeDoStartTls() throws IOException, MessagingException {
+    if (imapStore.getImapHelper().getConfig().useDirectTlsConnection()) {
+      return;
+    }
     // STARTTLS is required in the OMTP standard but not every implementation support it.
     // Make sure the server does have this capability
     if (hasCapability(ImapConstants.CAPABILITY_STARTTLS)) {
@@ -179,7 +186,7 @@ public class ImapConnection {
   }
 
   /** Logs into the IMAP server */
-  private void doLogin() throws IOException, MessagingException, AuthenticationFailedException {
+  private void doLogin() throws IOException, MessagingException {
     try {
       if (capabilities.contains(ImapConstants.CAPABILITY_AUTH_DIGEST_MD5)) {
         doDigestMd5Auth();
@@ -300,7 +307,7 @@ public class ImapConnection {
       }
     }
 
-    LogUtils.d(TAG, "Capabilities: " + capabilities.toString());
+    LogUtils.d(TAG, "Capabilities: " + capabilities);
   }
 
   private boolean hasCapability(String capability) {
@@ -379,7 +386,7 @@ public class ImapConnection {
    * @throws MessagingException
    */
   List<ImapResponse> getCommandResponses() throws IOException, MessagingException {
-    final List<ImapResponse> responses = new ArrayList<ImapResponse>();
+    final List<ImapResponse> responses = new ArrayList<>();
     ImapResponse response;
     do {
       response = parser.readResponse(false);

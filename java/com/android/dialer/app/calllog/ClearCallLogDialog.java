@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -17,23 +18,23 @@
 package com.android.dialer.app.calllog;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
-import android.app.DialogFragment;
-import android.app.FragmentManager;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface.OnClickListener;
 import android.os.Bundle;
 import android.provider.CallLog.Calls;
-import android.support.annotation.Nullable;
-import android.support.design.widget.Snackbar;
-import com.android.dialer.app.R;
+
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
+import androidx.fragment.app.DialogFragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.concurrent.DialerExecutor;
 import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService;
 import com.android.dialer.phonenumbercache.PhoneNumberCache;
 
@@ -57,7 +58,7 @@ public class ClearCallLogDialog extends DialogFragment {
         DialerExecutorComponent.get(getContext())
             .dialerExecutorFactory()
             .createUiTaskBuilder(
-                getFragmentManager(),
+                getChildFragmentManager(),
                 "clearCallLogTask",
                 new ClearCallLogWorker(getActivity().getApplicationContext()))
             .onSuccess(this::onSuccess)
@@ -101,6 +102,7 @@ public class ClearCallLogDialog extends DialogFragment {
     @Override
     public Void doInBackground(@Nullable Void unused) throws Throwable {
       appContext.getContentResolver().delete(Calls.CONTENT_URI, null, null);
+      appContext.getContentResolver().notifyChange(Calls.CONTENT_URI, null);
       CachedNumberLookupService cachedNumberLookupService =
           PhoneNumberCache.get(appContext).getCachedNumberLookupService();
       if (cachedNumberLookupService != null) {
@@ -118,20 +120,8 @@ public class ClearCallLogDialog extends DialogFragment {
       return;
     }
 
-    maybeShowEnrichedCallSnackbar(activity);
-
     if (progressDialog != null && progressDialog.isShowing()) {
       progressDialog.dismiss();
-    }
-  }
-
-  private void maybeShowEnrichedCallSnackbar(Activity activity) {
-    if (EnrichedCallComponent.get(activity).getEnrichedCallManager().hasStoredData()) {
-      Snackbar.make(
-              activity.findViewById(R.id.calllog_frame),
-              activity.getString(R.string.multiple_ec_data_deleted),
-              5_000)
-          .show();
     }
   }
 }

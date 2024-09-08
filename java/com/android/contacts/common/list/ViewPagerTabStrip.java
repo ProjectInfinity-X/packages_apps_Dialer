@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -23,13 +24,14 @@ import android.graphics.Paint;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.LinearLayout;
+
 import com.android.dialer.contacts.resources.R;
 import com.android.dialer.theme.base.ThemeComponent;
 
 public class ViewPagerTabStrip extends LinearLayout {
 
   private final Paint mSelectedUnderlinePaint;
-  private int mSelectedUnderlineThickness;
+  private final int mSelectedUnderlineThickness;
   private int mIndexForSelection;
   private float mSelectionOffset;
 

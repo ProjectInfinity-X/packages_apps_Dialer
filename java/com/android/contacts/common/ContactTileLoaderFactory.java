@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,12 +17,12 @@
 package com.android.contacts.common;
 
 import android.content.Context;
-import android.content.CursorLoader;
 import android.net.Uri;
 import android.provider.ContactsContract;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
-import android.support.annotation.VisibleForTesting;
+
+import androidx.loader.content.CursorLoader;
 
 /**
  * Used to create {@link CursorLoader} which finds contacts information from the strequents table.
@@ -35,8 +36,7 @@ public final class ContactTileLoaderFactory {
    * because the query is performed on the data table. In order to obtain the contact id for
    * strequent items, use Phone.contact_id instead.
    */
-  @VisibleForTesting
-  public static final String[] COLUMNS_PHONE_ONLY =
+  private static final String[] COLUMNS_PHONE_ONLY =
       new String[] {
         Contacts._ID,
         Contacts.DISPLAY_NAME_PRIMARY,
@@ -58,7 +58,6 @@ public final class ContactTileLoaderFactory {
             .buildUpon()
             .appendQueryParameter(ContactsContract.STREQUENT_PHONE_ONLY, "true")
             .build();
-
     return new CursorLoader(context, uri, COLUMNS_PHONE_ONLY, null, null, null);
   }
 }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -19,8 +20,6 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.TypedArray;
 import android.graphics.Outline;
-import android.support.v4.view.PagerAdapter;
-import android.support.v4.view.ViewPager;
 import android.util.AttributeSet;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -32,6 +31,10 @@ import android.widget.HorizontalScrollView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 import android.widget.Toast;
+
+import androidx.viewpager.widget.PagerAdapter;
+import androidx.viewpager.widget.ViewPager;
+
 import com.android.dialer.contacts.resources.R;
 
 /**
@@ -71,7 +74,7 @@ public class ViewPagerTabs extends HorizontalScrollView implements ViewPager.OnP
   ViewPager mPager;
   int mPrevSelected = -1;
   int mSidePadding;
-  private ViewPagerTabStrip mTabStrip;
+  private final ViewPagerTabStrip mTabStrip;
   private int[] mTabIcons;
   // For displaying the unread count next to the tab icon.
   private int[] mUnreadCounts;
@@ -181,13 +184,7 @@ public class ViewPagerTabs extends HorizontalScrollView implements ViewPager.OnP
       tabView = textView;
     }
 
-    tabView.setOnClickListener(
-        new OnClickListener() {
-          @Override
-          public void onClick(View v) {
-            mPager.setCurrentItem(getRtlPosition(position));
-          }
-        });
+    tabView.setOnClickListener(v -> mPager.setCurrentItem(getRtlPosition(position)));
 
     tabView.setOnLongClickListener(new OnTabLongClickListener(position));
 

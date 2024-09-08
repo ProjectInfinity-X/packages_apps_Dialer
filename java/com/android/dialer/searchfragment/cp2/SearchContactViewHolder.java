@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -22,47 +23,41 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
-import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.text.TextUtils;
 import android.view.View;
 import android.view.View.OnClickListener;
 import android.widget.ImageView;
 import android.widget.QuickContactBadge;
+
+import androidx.annotation.IntDef;
+import androidx.recyclerview.widget.RecyclerView;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.contactphoto.ContactPhotoManager;
-import com.android.dialer.dialercontact.DialerContact;
-import com.android.dialer.duo.DuoComponent;
-import com.android.dialer.enrichedcall.EnrichedCallCapabilities;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
 import com.android.dialer.lettertile.LetterTileDrawable;
 import com.android.dialer.searchfragment.common.Projections;
 import com.android.dialer.searchfragment.common.QueryBoldingUtil;
-import com.android.dialer.searchfragment.common.R;
 import com.android.dialer.searchfragment.common.RowClickListener;
 import com.android.dialer.searchfragment.common.SearchCursor;
 import com.android.dialer.widget.BidiTextView;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 
 /** ViewHolder for a contact row. */
-public final class SearchContactViewHolder extends ViewHolder implements OnClickListener {
+public final class SearchContactViewHolder extends RecyclerView.ViewHolder
+        implements OnClickListener {
 
   /** IntDef for the different types of actions that can be shown. */
   @Retention(RetentionPolicy.SOURCE)
   @IntDef({
     CallToAction.NONE,
-    CallToAction.VIDEO_CALL,
-    CallToAction.DUO_CALL,
-    CallToAction.SHARE_AND_CALL
+    CallToAction.VIDEO_CALL
   })
   @interface CallToAction {
     int NONE = 0;
     int VIDEO_CALL = 1;
-    int DUO_CALL = 2;
-    int SHARE_AND_CALL = 3;
   }
 
   private final RowClickListener listener;
@@ -74,7 +69,6 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
 
   private int position;
   private String number;
-  private DialerContact dialerContact;
   private @CallToAction int currentAction;
 
   public SearchContactViewHolder(View view, RowClickListener listener) {
@@ -93,7 +87,6 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
    * at the cursors set position.
    */
   public void bind(SearchCursor cursor, String query) {
-    dialerContact = getDialerContact(context, cursor);
     position = cursor.getPosition();
     number = cursor.getString(Projections.PHONE_NUMBER);
     String name = cursor.getString(Projections.DISPLAY_NAME);
@@ -102,7 +95,7 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
         TextUtils.isEmpty(label)
             ? number
             : context.getString(
-                com.android.dialer.contacts.resources.R.string.call_subject_type_and_number,
+                R.string.call_subject_type_and_number,
                 label,
                 number);
 
@@ -169,15 +162,6 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
         callToActionView.setVisibility(View.GONE);
         callToActionView.setOnClickListener(null);
         break;
-      case CallToAction.SHARE_AND_CALL:
-        callToActionView.setVisibility(View.VISIBLE);
-        callToActionView.setImageDrawable(
-            context.getDrawable(com.android.dialer.contacts.resources.R.drawable.ic_phone_attach));
-        callToActionView.setContentDescription(
-            context.getString(R.string.description_search_call_and_share));
-        callToActionView.setOnClickListener(this);
-        break;
-      case CallToAction.DUO_CALL:
       case CallToAction.VIDEO_CALL:
         callToActionView.setVisibility(View.VISIBLE);
         callToActionView.setImageDrawable(
@@ -200,61 +184,15 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
       return CallToAction.VIDEO_CALL;
     }
 
-    if (DuoComponent.get(context).getDuo().isReachable(context, number)) {
-      return CallToAction.DUO_CALL;
-    }
-
-    EnrichedCallManager manager = EnrichedCallComponent.get(context).getEnrichedCallManager();
-    EnrichedCallCapabilities capabilities = manager.getCapabilities(number);
-    if (capabilities != null && capabilities.isCallComposerCapable()) {
-      return CallToAction.SHARE_AND_CALL;
-    } else if (shouldRequestCapabilities(cursor, capabilities, query)) {
-      manager.requestCapabilities(number);
-    }
     return CallToAction.NONE;
-  }
-
-  /**
-   * An RPC is initiated for each number we request capabilities for, so to limit the network load
-   * and latency on slow networks, we only want to request capabilities for potential contacts the
-   * user is interested in calling. The requirements are that:
-   *
-   * <ul>
-   *   <li>The search query must be 3 or more characters; OR
-   *   <li>There must be 4 or fewer contacts listed in the cursor.
-   * </ul>
-   */
-  private static boolean shouldRequestCapabilities(
-      SearchCursor cursor,
-      @Nullable EnrichedCallCapabilities capabilities,
-      @Nullable String query) {
-    if (capabilities != null) {
-      return false;
-    }
-
-    if (query != null && query.length() >= 3) {
-      return true;
-    }
-
-    // TODO(calderwoodra): implement SearchCursor#getHeaderCount
-    if (cursor.getCount() <= 5) { // 4 contacts + 1 header row element
-      return true;
-    }
-    return false;
   }
 
   @Override
   public void onClick(View view) {
     if (view == callToActionView) {
       switch (currentAction) {
-        case CallToAction.SHARE_AND_CALL:
-          listener.openCallAndShare(dialerContact);
-          break;
         case CallToAction.VIDEO_CALL:
           listener.placeVideoCall(number, position);
-          break;
-        case CallToAction.DUO_CALL:
-          listener.placeDuoCall(number);
           break;
         case CallToAction.NONE:
         default:
@@ -264,41 +202,5 @@ public final class SearchContactViewHolder extends ViewHolder implements OnClick
     } else {
       listener.placeVoiceCall(number, position);
     }
-  }
-
-  private static DialerContact getDialerContact(Context context, Cursor cursor) {
-    DialerContact.Builder contact = DialerContact.newBuilder();
-    String displayName = cursor.getString(Projections.DISPLAY_NAME);
-    String number = cursor.getString(Projections.PHONE_NUMBER);
-    Uri contactUri =
-        Contacts.getLookupUri(
-            cursor.getLong(Projections.CONTACT_ID), cursor.getString(Projections.LOOKUP_KEY));
-
-    contact
-        .setNumber(number)
-        .setPhotoId(cursor.getLong(Projections.PHOTO_ID))
-        .setContactType(LetterTileDrawable.TYPE_DEFAULT)
-        .setNameOrNumber(displayName)
-        .setNumberLabel(
-            Phone.getTypeLabel(
-                    context.getResources(),
-                    cursor.getInt(Projections.PHONE_TYPE),
-                    cursor.getString(Projections.PHONE_LABEL))
-                .toString());
-
-    String photoUri = cursor.getString(Projections.PHOTO_URI);
-    if (photoUri != null) {
-      contact.setPhotoUri(photoUri);
-    }
-
-    if (contactUri != null) {
-      contact.setContactUri(contactUri.toString());
-    }
-
-    if (!TextUtils.isEmpty(displayName)) {
-      contact.setDisplayNumber(number);
-    }
-
-    return contact.build();
   }
 }

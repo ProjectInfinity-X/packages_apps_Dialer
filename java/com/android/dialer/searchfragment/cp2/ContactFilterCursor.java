@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -28,13 +29,16 @@ import android.os.Bundle;
 import android.provider.ContactsContract.CommonDataKinds.Nickname;
 import android.provider.ContactsContract.CommonDataKinds.Organization;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.support.annotation.IntDef;
-import android.support.annotation.Nullable;
-import android.support.v4.util.ArraySet;
 import android.text.TextUtils;
 import android.util.ArrayMap;
+
+import androidx.annotation.IntDef;
+import androidx.annotation.Nullable;
+import androidx.collection.ArraySet;
+
 import com.android.dialer.searchfragment.common.Projections;
 import com.android.dialer.searchfragment.common.QueryFilteringUtil;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
@@ -127,7 +131,7 @@ final class ContactFilterCursor implements Cursor {
     }
 
     // Sort the contacts back into the exact same order they were inside of {@code cursor}
-    Collections.sort(coalescedContacts, (o1, o2) -> compare(contactIdsToPosition, o1, o2));
+    coalescedContacts.sort((o1, o2) -> compare(contactIdsToPosition, o1, o2));
     MatrixCursor newCursor = new MatrixCursor(Projections.CP2_PROJECTION, coalescedContacts.size());
     for (Cp2Contact contact : coalescedContacts) {
       newCursor.addRow(contact.toCursorRow());
@@ -476,12 +480,12 @@ final class ContactFilterCursor implements Cursor {
 
   @Override
   public void deactivate() {
-    cursor.deactivate();
+
   }
 
   @Override
   public boolean requery() {
-    return cursor.requery();
+    return false;
   }
 
   @Override

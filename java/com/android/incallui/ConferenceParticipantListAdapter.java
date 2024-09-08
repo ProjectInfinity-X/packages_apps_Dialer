@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,7 +19,6 @@ package com.android.incallui;
 
 import android.content.Context;
 import android.net.Uri;
-import android.support.v4.util.ArrayMap;
 import android.telephony.PhoneNumberUtils;
 import android.text.BidiFormatter;
 import android.text.TextDirectionHeuristics;
@@ -32,6 +32,10 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.ListView;
 import android.widget.TextView;
+
+import androidx.collection.ArrayMap;
+
+import com.android.dialer.R;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.contactphoto.ContactPhotoManager;
 import com.android.dialer.contactphoto.ContactPhotoManager.DefaultImageRequest;
@@ -40,10 +44,9 @@ import com.android.incallui.ContactInfoCache.ContactCacheEntry;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.state.DialerCallState;
+
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -60,32 +63,23 @@ public class ConferenceParticipantListAdapter extends BaseAdapter {
   /** Contact photo manager to retrieve cached contact photo information. */
   private final ContactPhotoManager contactPhotoManager;
   /** Listener used to handle tap of the "disconnect' button for a participant. */
-  private View.OnClickListener disconnectListener =
-      new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-          DialerCall call = getCallFromView(view);
-          LogUtil.i(
-              "ConferenceParticipantListAdapter.mDisconnectListener.onClick", "call: " + call);
-          if (call != null) {
-            call.disconnect();
-          }
-        }
-      };
+  private final View.OnClickListener disconnectListener = view -> {
+    DialerCall call = getCallFromView(view);
+    LogUtil.i("ConferenceParticipantListAdapter.mDisconnectListener.onClick", "call: " + call);
+    if (call != null) {
+      call.disconnect();
+    }
+  };
   /** Listener used to handle tap of the "separate' button for a participant. */
-  private View.OnClickListener separateListener =
-      new View.OnClickListener() {
-        @Override
-        public void onClick(View view) {
-          DialerCall call = getCallFromView(view);
-          LogUtil.i("ConferenceParticipantListAdapter.mSeparateListener.onClick", "call: " + call);
-          if (call != null) {
-            call.splitFromConference();
-          }
-        }
-      };
+  private final View.OnClickListener separateListener = view -> {
+    DialerCall call = getCallFromView(view);
+    LogUtil.i("ConferenceParticipantListAdapter.mSeparateListener.onClick", "call: " + call);
+    if (call != null) {
+      call.splitFromConference();
+    }
+  };
   /** The conference participants to show in the ListView. */
-  private List<ParticipantInfo> conferenceParticipants = new ArrayList<>();
+  private final List<ParticipantInfo> conferenceParticipants = new ArrayList<>();
   /** {@code True} if the conference parent supports separating calls from the conference. */
   private boolean parentCanSeparate;
 
@@ -425,29 +419,24 @@ public class ConferenceParticipantListAdapter extends BaseAdapter {
 
   /** Sorts the participant list by contact name. */
   private void sortParticipantList() {
-    Collections.sort(
-        conferenceParticipants,
-        new Comparator<ParticipantInfo>() {
-          @Override
-          public int compare(ParticipantInfo p1, ParticipantInfo p2) {
-            // Contact names might be null, so replace with empty string.
-            ContactCacheEntry c1 = p1.getContactCacheEntry();
-            String p1Name =
-                ContactsComponent.get(getContext())
-                    .contactDisplayPreferences()
-                    .getSortName(c1.namePrimary, c1.nameAlternative);
-            p1Name = p1Name != null ? p1Name : "";
+    conferenceParticipants.sort((p1, p2) -> {
+      // Contact names might be null, so replace with empty string.
+      ContactCacheEntry c1 = p1.getContactCacheEntry();
+      String p1Name =
+              ContactsComponent.get(getContext())
+                      .contactDisplayPreferences()
+                      .getSortName(c1.namePrimary, c1.nameAlternative);
+      p1Name = p1Name != null ? p1Name : "";
 
-            ContactCacheEntry c2 = p2.getContactCacheEntry();
-            String p2Name =
-                ContactsComponent.get(getContext())
-                    .contactDisplayPreferences()
-                    .getSortName(c2.namePrimary, c2.nameAlternative);
-            p2Name = p2Name != null ? p2Name : "";
+      ContactCacheEntry c2 = p2.getContactCacheEntry();
+      String p2Name =
+              ContactsComponent.get(getContext())
+                      .contactDisplayPreferences()
+                      .getSortName(c2.namePrimary, c2.nameAlternative);
+      p2Name = p2Name != null ? p2Name : "";
 
-            return p1Name.compareToIgnoreCase(p2Name);
-          }
-        });
+      return p1Name.compareToIgnoreCase(p2Name);
+    });
   }
 
   private DialerCall getCallFromView(View view) {

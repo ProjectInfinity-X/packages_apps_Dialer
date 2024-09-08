@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,19 +21,13 @@ import static com.android.contacts.common.compat.CallCompat.Details.PROPERTY_ENT
 
 import android.Manifest;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManager;
-import android.os.BatteryManager;
 import android.os.Handler;
+import android.os.Looper;
 import android.os.Trace;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.v4.app.Fragment;
-import android.support.v4.content.ContextCompat;
 import android.telecom.Call.Details;
 import android.telecom.StatusHints;
 import android.telecom.TelecomManager;
@@ -43,13 +38,16 @@ import android.view.Display;
 import android.view.View;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.accessibility.AccessibilityManager;
+
+import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
+import androidx.fragment.app.Fragment;
+
 import com.android.contacts.common.ContactsUtils;
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.android.dialer.contacts.ContactsComponent;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.multimedia.MultimediaData;
 import com.android.dialer.oem.MotorolaUtils;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
@@ -66,8 +64,6 @@ import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
 import com.android.incallui.call.DialerCallListener;
 import com.android.incallui.call.state.DialerCallState;
-import com.android.incallui.calllocation.CallLocation;
-import com.android.incallui.calllocation.CallLocationComponent;
 import com.android.incallui.incall.protocol.ContactPhotoType;
 import com.android.incallui.incall.protocol.InCallScreen;
 import com.android.incallui.incall.protocol.InCallScreenDelegate;
@@ -76,6 +72,7 @@ import com.android.incallui.incall.protocol.PrimaryCallState.ButtonState;
 import com.android.incallui.incall.protocol.PrimaryInfo;
 import com.android.incallui.incall.protocol.SecondaryInfo;
 import com.android.incallui.videotech.utils.SessionModificationState;
+
 import java.lang.ref.WeakReference;
 
 /**
@@ -98,23 +95,8 @@ public class CallCardPresenter
    */
   private static final long ACCESSIBILITY_ANNOUNCEMENT_DELAY_MILLIS = 500;
 
-  /** Flag to allow the user's current location to be shown during emergency calls. */
-  private static final String CONFIG_ENABLE_EMERGENCY_LOCATION = "config_enable_emergency_location";
-
-  private static final boolean CONFIG_ENABLE_EMERGENCY_LOCATION_DEFAULT = true;
-
-  /**
-   * Make it possible to not get location during an emergency call if the battery is too low, since
-   * doing so could trigger gps and thus potentially cause the phone to die in the middle of the
-   * call.
-   */
-  private static final String CONFIG_MIN_BATTERY_PERCENT_FOR_EMERGENCY_LOCATION =
-      "min_battery_percent_for_emergency_location";
-
-  private static final long CONFIG_MIN_BATTERY_PERCENT_FOR_EMERGENCY_LOCATION_DEFAULT = 10;
-
   private final Context context;
-  private final Handler handler = new Handler();
+  private final Handler handler = new Handler(Looper.getMainLooper());
 
   private DialerCall primary;
   private String primaryNumber;
@@ -127,7 +109,6 @@ public class CallCardPresenter
   private boolean isInCallScreenReady;
   private boolean shouldSendAccessibilityEvent;
 
-  @NonNull private final CallLocation callLocation;
   private final Runnable sendAccessibilityEventRunnable =
       new Runnable() {
         @Override
@@ -146,7 +127,6 @@ public class CallCardPresenter
   public CallCardPresenter(Context context) {
     LogUtil.i("CallCardPresenter.constructor", null);
     this.context = Assert.isNotNull(context).getApplicationContext();
-    callLocation = CallLocationComponent.get(this.context).getCallLocation();
   }
 
   private static boolean hasCallSubject(DialerCall call) {
@@ -193,28 +173,6 @@ public class CallCardPresenter
     InCallPresenter.getInstance().addDetailsListener(this);
     InCallPresenter.getInstance().addInCallEventListener(this);
     isInCallScreenReady = true;
-
-    // Log location impressions
-    if (isOutgoingEmergencyCall(primary)) {
-      Logger.get(context).logImpression(DialerImpression.Type.EMERGENCY_NEW_EMERGENCY_CALL);
-    } else if (isIncomingEmergencyCall(primary) || isIncomingEmergencyCall(secondary)) {
-      Logger.get(context).logImpression(DialerImpression.Type.EMERGENCY_CALLBACK);
-    }
-
-    // Showing the location may have been skipped if the UI wasn't ready during previous layout.
-    if (shouldShowLocation()) {
-      inCallScreen.showLocationUi(getLocationFragment());
-
-      // Log location impressions
-      if (!hasLocationPermission()) {
-        Logger.get(context).logImpression(DialerImpression.Type.EMERGENCY_NO_LOCATION_PERMISSION);
-      } else if (isBatteryTooLowForEmergencyLocation()) {
-        Logger.get(context)
-            .logImpression(DialerImpression.Type.EMERGENCY_BATTERY_TOO_LOW_TO_GET_LOCATION);
-      } else if (!callLocation.canGetLocation(context)) {
-        Logger.get(context).logImpression(DialerImpression.Type.EMERGENCY_CANT_GET_LOCATION);
-      }
-    }
   }
 
   @Override
@@ -230,8 +188,6 @@ public class CallCardPresenter
     if (primary != null) {
       primary.removeListener(this);
     }
-
-    callLocation.close();
 
     primary = null;
     primaryContactInfo = null;
@@ -384,12 +340,6 @@ public class CallCardPresenter
 
   @Override
   public void onInternationalCallOnWifi() {}
-
-  @Override
-  public void onEnrichedCallSessionUpdate() {
-    LogUtil.enterBlock("CallCardPresenter.onEnrichedCallSessionUpdate");
-    updatePrimaryDisplayInfo();
-  }
 
   /** Handles a change to the child number by refreshing the primary call info. */
   @Override
@@ -547,26 +497,10 @@ public class CallCardPresenter
   }
 
   @Override
-  public void onCallStateButtonClicked() {
-    Intent broadcastIntent = Bindings.get(context).getCallStateButtonBroadcastIntent(context);
-    if (broadcastIntent != null) {
-      LogUtil.v(
-          "CallCardPresenter.onCallStateButtonClicked",
-          "sending call state button broadcast: " + broadcastIntent);
-      context.sendBroadcast(broadcastIntent, Manifest.permission.READ_PHONE_STATE);
-    }
-  }
-
-  @Override
   public void onManageConferenceClicked() {
     InCallActivity activity =
         (InCallActivity) (inCallScreen.getInCallScreenFragment().getActivity());
     activity.showConferenceFragment(true);
-  }
-
-  @Override
-  public void onShrinkAnimationComplete() {
-    InCallPresenter.getInstance().onShrinkAnimationComplete();
   }
 
   private void maybeStartSearch(DialerCall call, boolean isPrimary) {
@@ -654,10 +588,6 @@ public class CallCardPresenter
     boolean hasWorkCallProperty = primary.hasProperty(PROPERTY_ENTERPRISE_CALL);
 
     MultimediaData multimediaData = null;
-    if (primary.getEnrichedCallSession() != null) {
-      multimediaData = primary.getEnrichedCallSession().getMultimediaData();
-    }
-
     if (primary.isConferenceCall()) {
       LogUtil.v(
           "CallCardPresenter.updatePrimaryDisplayInfo",
@@ -676,7 +606,6 @@ public class CallCardPresenter
               .setIsSpam(false)
               .setIsLocalContact(false)
               .setAnsweringDisconnectsOngoingCall(false)
-              .setShouldShowLocation(shouldShowLocation())
               .setShowInCallButtonGrid(true)
               .setNumberPresentation(primary.getNumberPresentation())
               .build());
@@ -726,7 +655,6 @@ public class CallCardPresenter
               .setIsSpam(primary.isSpam())
               .setIsLocalContact(primaryContactInfo.isLocalContact())
               .setAnsweringDisconnectsOngoingCall(primary.answeringDisconnectsForegroundVideoCall())
-              .setShouldShowLocation(shouldShowLocation())
               .setContactInfoLookupKey(primaryContactInfo.lookupKey)
               .setMultimediaData(multimediaData)
               .setShowInCallButtonGrid(true)
@@ -738,7 +666,7 @@ public class CallCardPresenter
     }
 
     if (isInCallScreenReady) {
-      inCallScreen.showLocationUi(getLocationFragment());
+      inCallScreen.showLocationUi(null);
     } else {
       LogUtil.i("CallCardPresenter.updatePrimaryDisplayInfo", "UI not ready, not showing location");
     }
@@ -753,99 +681,6 @@ public class CallCardPresenter
       return true;
     }
     return false;
-  }
-
-  private Fragment getLocationFragment() {
-    if (!shouldShowLocation()) {
-      return null;
-    }
-    LogUtil.i("CallCardPresenter.getLocationFragment", "returning location fragment");
-    return callLocation.getLocationFragment(context);
-  }
-
-  private boolean shouldShowLocation() {
-    if (!ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean(CONFIG_ENABLE_EMERGENCY_LOCATION, CONFIG_ENABLE_EMERGENCY_LOCATION_DEFAULT)) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "disabled by config.");
-      return false;
-    }
-    if (!isPotentialEmergencyCall()) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "shouldn't show location");
-      return false;
-    }
-    if (!hasLocationPermission()) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "no location permission.");
-      return false;
-    }
-    if (isBatteryTooLowForEmergencyLocation()) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "low battery.");
-      return false;
-    }
-    if (inCallScreen.getInCallScreenFragment().getActivity().isInMultiWindowMode()) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "in multi-window mode");
-      return false;
-    }
-    if (primary.isVideoCall()) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "emergency video calls not supported");
-      return false;
-    }
-    if (!callLocation.canGetLocation(context)) {
-      LogUtil.i("CallCardPresenter.getLocationFragment", "can't get current location");
-      return false;
-    }
-    return true;
-  }
-
-  private boolean isPotentialEmergencyCall() {
-    if (isOutgoingEmergencyCall(primary)) {
-      LogUtil.i("CallCardPresenter.shouldShowLocation", "new emergency call");
-      return true;
-    } else if (isIncomingEmergencyCall(primary)) {
-      LogUtil.i("CallCardPresenter.shouldShowLocation", "potential emergency callback");
-      return true;
-    } else if (isIncomingEmergencyCall(secondary)) {
-      LogUtil.i("CallCardPresenter.shouldShowLocation", "has potential emergency callback");
-      return true;
-    }
-    return false;
-  }
-
-  private static boolean isOutgoingEmergencyCall(@Nullable DialerCall call) {
-    return call != null && !call.isIncoming() && call.isEmergencyCall();
-  }
-
-  private static boolean isIncomingEmergencyCall(@Nullable DialerCall call) {
-    return call != null && call.isIncoming() && call.isPotentialEmergencyCallback();
-  }
-
-  private boolean hasLocationPermission() {
-    return ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION)
-        == PackageManager.PERMISSION_GRANTED;
-  }
-
-  private boolean isBatteryTooLowForEmergencyLocation() {
-    Intent batteryStatus =
-        context.registerReceiver(null, new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
-    int status = batteryStatus.getIntExtra(BatteryManager.EXTRA_STATUS, -1);
-    if (status == BatteryManager.BATTERY_STATUS_CHARGING
-        || status == BatteryManager.BATTERY_STATUS_FULL) {
-      // Plugged in or full battery
-      return false;
-    }
-    int level = batteryStatus.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
-    int scale = batteryStatus.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
-    float batteryPercent = (100f * level) / scale;
-    long threshold =
-        ConfigProviderComponent.get(context)
-            .getConfigProvider()
-            .getLong(
-                CONFIG_MIN_BATTERY_PERCENT_FOR_EMERGENCY_LOCATION,
-                CONFIG_MIN_BATTERY_PERCENT_FOR_EMERGENCY_LOCATION_DEFAULT);
-    LogUtil.i(
-        "CallCardPresenter.isBatteryTooLowForEmergencyLocation",
-        "percent charged: " + batteryPercent + ", min required charge: " + threshold);
-    return batteryPercent < threshold;
   }
 
   private void updateSecondaryDisplayInfo() {
@@ -925,8 +760,9 @@ public class CallCardPresenter
       // Return the label for the gateway app on outgoing calls.
       final PackageManager pm = context.getPackageManager();
       try {
-        ApplicationInfo info =
-            pm.getApplicationInfo(primary.getGatewayInfo().getGatewayProviderPackageName(), 0);
+        ApplicationInfo info = pm.getApplicationInfo(
+                primary.getGatewayInfo().getGatewayProviderPackageName(),
+                PackageManager.ApplicationInfoFlags.of(0));
         return pm.getApplicationLabel(info).toString();
       } catch (PackageManager.NameNotFoundException e) {
         LogUtil.e("CallCardPresenter.getConnectionLabel", "gateway Application Not Found.", e);
@@ -1002,11 +838,6 @@ public class CallCardPresenter
       return;
     }
 
-    Logger.get(context)
-        .logCallImpression(
-            DialerImpression.Type.IN_CALL_SWAP_SECONDARY_BUTTON_PRESSED,
-            primary.getUniqueCallId(),
-            primary.getTimeAddedMs());
     LogUtil.i(
         "CallCardPresenter.onSecondaryInfoClicked", "swapping call to foreground: " + secondary);
     secondary.unhold();
@@ -1094,7 +925,7 @@ public class CallCardPresenter
       return false;
     }
 
-    AccessibilityEvent event = AccessibilityEvent.obtain(AccessibilityEvent.TYPE_ANNOUNCEMENT);
+    AccessibilityEvent event = new AccessibilityEvent(AccessibilityEvent.TYPE_ANNOUNCEMENT);
     inCallScreen.dispatchPopulateAccessibilityEvent(event);
     View view = inCallScreen.getInCallScreenFragment().getView();
     view.getParent().requestSendAccessibilityEvent(view, event);
@@ -1170,7 +1001,7 @@ public class CallCardPresenter
     private final boolean isPrimary;
 
     public ContactLookupCallback(CallCardPresenter callCardPresenter, boolean isPrimary) {
-      this.callCardPresenter = new WeakReference<CallCardPresenter>(callCardPresenter);
+      this.callCardPresenter = new WeakReference<>(callCardPresenter);
       this.isPrimary = isPrimary;
     }
 

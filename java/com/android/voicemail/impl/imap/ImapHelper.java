@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +19,12 @@ package com.android.voicemail.impl.imap;
 import android.content.Context;
 import android.net.ConnectivityManager;
 import android.net.Network;
-import android.net.NetworkInfo;
-import android.support.annotation.Nullable;
+import android.net.NetworkCapabilities;
 import android.telecom.PhoneAccountHandle;
 import android.util.Base64;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.PinChanger;
 import com.android.voicemail.PinChanger.ChangePinResult;
 import com.android.voicemail.impl.OmtpConstants;
@@ -51,6 +54,9 @@ import com.android.voicemail.impl.mail.store.imap.ImapConstants;
 import com.android.voicemail.impl.mail.store.imap.ImapResponse;
 import com.android.voicemail.impl.mail.utils.LogUtils;
 import com.android.voicemail.impl.sync.OmtpVvmSyncService.TranscriptionFetchedCallback;
+
+import org.apache.commons.io.IOUtils;
+
 import java.io.BufferedOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.Closeable;
@@ -59,7 +65,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
-import org.apache.commons.io.IOUtils;
 
 /** A helper interface to abstract commands sent across IMAP interface for a given account. */
 public class ImapHelper implements Closeable {
@@ -67,7 +72,7 @@ public class ImapHelper implements Closeable {
   private static final String TAG = "ImapHelper";
 
   private ImapFolder folder;
-  private ImapStore imapStore;
+  private final ImapStore imapStore;
 
   private final Context context;
   private final PhoneAccountHandle phoneAccount;
@@ -120,6 +125,10 @@ public class ImapHelper implements Closeable {
       int port = Integer.parseInt(prefs.getString(OmtpConstants.IMAP_PORT, null));
       int auth = ImapStore.FLAG_NONE;
 
+      if (serverName != null) {
+        serverName = serverName.replaceFirst("[12]:", "");
+      }
+
       int sslPort = this.config.getSslPort();
       if (sslPort != 0) {
         port = sslPort;
@@ -130,7 +139,7 @@ public class ImapHelper implements Closeable {
     } catch (NumberFormatException e) {
       handleEvent(OmtpEvents.DATA_INVALID_PORT);
       LogUtils.w(TAG, "Could not parse port number");
-      throw new InitializingException("cannot initialize ImapHelper:" + e.toString());
+      throw new InitializingException("cannot initialize ImapHelper:" + e);
     }
   }
 
@@ -142,11 +151,12 @@ public class ImapHelper implements Closeable {
   public boolean isRoaming() {
     ConnectivityManager connectivityManager =
         (ConnectivityManager) context.getSystemService(Context.CONNECTIVITY_SERVICE);
-    NetworkInfo info = connectivityManager.getNetworkInfo(network);
-    if (info == null) {
+    NetworkCapabilities capabilities = connectivityManager.getNetworkCapabilities(network);
+    if (capabilities == null) {
       return false;
     }
-    return info.isRoaming();
+    return !capabilities.hasCapability(NetworkCapabilities.NET_CAPABILITY_NOT_ROAMING);
+
   }
 
   public OmtpVvmCarrierConfigHelper getConfig() {
@@ -203,7 +213,7 @@ public class ImapHelper implements Closeable {
    * @return A list of voicemail objects containing data about voicemails stored on the server.
    */
   public List<Voicemail> fetchAllVoicemails() {
-    List<Voicemail> result = new ArrayList<Voicemail>();
+    List<Voicemail> result = new ArrayList<>();
     Message[] messages;
     try {
       folder = openImapFolder(ImapFolder.MODE_READ_WRITE);
@@ -324,7 +334,7 @@ public class ImapHelper implements Closeable {
       VoicemailPayload voicemailPayload = fetchVoicemailPayload(message);
       callback.setVoicemailContent(voicemailPayload);
       return true;
-    } catch (MessagingException e) {
+    } catch (MessagingException ignored) {
     } finally {
       closeImapFolder();
     }

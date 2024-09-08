@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -15,16 +16,16 @@
  */
 package com.android.voicemail.impl.sync;
 
-import android.annotation.TargetApi;
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.os.Build.VERSION_CODES;
 import android.os.UserManager;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.VisibleForTesting;
 import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.util.ArraySet;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.PerAccountSharedPreferences;
 import com.android.dialer.common.concurrent.ThreadUtil;
@@ -34,6 +35,7 @@ import com.android.voicemail.impl.OmtpConstants;
 import com.android.voicemail.impl.VisualVoicemailPreferences;
 import com.android.voicemail.impl.VoicemailStatus;
 import com.android.voicemail.impl.sms.StatusMessage;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
@@ -47,11 +49,10 @@ import java.util.Set;
  * #removeAccount(Context, PhoneAccountHandle)} should be called to clear the connection information
  * and allow reactivation.
  */
-@TargetApi(VERSION_CODES.O)
 public class VvmAccountManager {
   public static final String TAG = "VvmAccountManager";
 
-  @VisibleForTesting static final String IS_ACCOUNT_ACTIVATED = "is_account_activated";
+  private static final String IS_ACCOUNT_ACTIVATED = "is_account_activated";
 
   private static final Set<ActivationStateListener> listeners = new ArraySet<>();
 
@@ -95,6 +96,7 @@ public class VvmAccountManager {
     return preferences.getBoolean(IS_ACCOUNT_ACTIVATED, false);
   }
 
+  @SuppressLint("MissingPermission")
   @NonNull
   public static List<PhoneAccountHandle> getActiveAccounts(Context context) {
     List<PhoneAccountHandle> results = new ArrayList<>();

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * This file is derived in part from code issued under the following license.
  *
@@ -21,9 +22,11 @@ package com.android.dialer.oem;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
-import android.support.annotation.VisibleForTesting;
+
 import com.android.dialer.common.LogUtil;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -37,11 +40,11 @@ public class MotorolaHiddenMenuKeySequence {
 
   private static MotorolaHiddenMenuKeySequence instance = null;
 
-  @VisibleForTesting final List<String> hiddenKeySequences = new ArrayList<>();
-  @VisibleForTesting final List<String> hiddenKeySequenceIntents = new ArrayList<>();
-  @VisibleForTesting final List<String> hiddenKeyPatterns = new ArrayList<>();
-  @VisibleForTesting final List<String> hiddenKeyPatternIntents = new ArrayList<>();
-  @VisibleForTesting boolean featureHiddenMenuEnabled = false;
+  private final List<String> hiddenKeySequences = new ArrayList<>();
+  private final List<String> hiddenKeySequenceIntents = new ArrayList<>();
+  private final List<String> hiddenKeyPatterns = new ArrayList<>();
+  private final List<String> hiddenKeyPatternIntents = new ArrayList<>();
+  private boolean featureHiddenMenuEnabled = false;
 
   /**
    * Handle input char sequence.
@@ -70,13 +73,7 @@ public class MotorolaHiddenMenuKeySequence {
     return instance;
   }
 
-  @VisibleForTesting
-  static void setInstanceForTest(MotorolaHiddenMenuKeySequence instance) {
-    MotorolaHiddenMenuKeySequence.instance = instance;
-  }
-
-  @VisibleForTesting
-  MotorolaHiddenMenuKeySequence(
+  private MotorolaHiddenMenuKeySequence(
       Context context, SystemPropertiesAccessor systemPropertiesAccessor) {
     if (MotorolaUtils.isSupportingHiddenMenu(context)) {
       Collections.addAll(
@@ -164,7 +161,8 @@ public class MotorolaHiddenMenuKeySequence {
       intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP | Intent.FLAG_ACTIVITY_NEW_TASK);
       intent.putExtra(EXTRA_HIDDEN_MENU_CODE, input);
 
-      ResolveInfo resolveInfo = context.getPackageManager().resolveActivity(intent, 0);
+      ResolveInfo resolveInfo = context.getPackageManager().resolveActivity(intent,
+              PackageManager.ResolveInfoFlags.of(0));
 
       if (resolveInfo != null
           && resolveInfo.activityInfo != null

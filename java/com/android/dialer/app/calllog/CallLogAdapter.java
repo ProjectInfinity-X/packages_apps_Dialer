@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2011 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,27 +19,16 @@ package com.android.dialer.app.calllog;
 
 import android.app.Activity;
 import android.content.ContentUris;
-import android.content.DialogInterface;
-import android.content.DialogInterface.OnCancelListener;
 import android.content.res.Resources;
 import android.database.Cursor;
 import android.net.Uri;
-import android.os.AsyncTask;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Looper;
 import android.os.Trace;
+import android.provider.BlockedNumberContract;
 import android.provider.CallLog;
 import android.provider.ContactsContract.CommonDataKinds.Phone;
-import android.support.annotation.MainThread;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.annotation.WorkerThread;
-import android.support.v7.app.AlertDialog;
-import android.support.v7.app.AppCompatActivity;
-import android.support.v7.widget.RecyclerView;
-import android.support.v7.widget.RecyclerView.ViewHolder;
 import android.telecom.PhoneAccountHandle;
 import android.telephony.PhoneNumberUtils;
 import android.text.TextUtils;
@@ -52,8 +42,18 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
+
+import androidx.annotation.MainThread;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.annotation.WorkerThread;
+import androidx.appcompat.app.AlertDialog;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.recyclerview.widget.RecyclerView;
+import androidx.recyclerview.widget.RecyclerView.ViewHolder;
+
 import com.android.contacts.common.ContactsUtils;
-import com.android.dialer.app.R;
+import com.android.dialer.R;
 import com.android.dialer.app.calllog.CallLogFragment.CallLogFragmentListener;
 import com.android.dialer.app.calllog.CallLogGroupBuilder.GroupCreator;
 import com.android.dialer.app.calllog.calllogcache.CallLogCache;
@@ -68,44 +68,26 @@ import com.android.dialer.calllogutils.PhoneCallDetails;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils.FragmentUtilListener;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.common.concurrent.AsyncTaskExecutor;
-import com.android.dialer.common.concurrent.AsyncTaskExecutors;
-import com.android.dialer.compat.android.provider.VoicemailCompat;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.android.dialer.contacts.ContactsComponent;
-import com.android.dialer.duo.Duo;
-import com.android.dialer.duo.DuoComponent;
-import com.android.dialer.duo.DuoListener;
-import com.android.dialer.enrichedcall.EnrichedCallCapabilities;
-import com.android.dialer.enrichedcall.EnrichedCallComponent;
-import com.android.dialer.enrichedcall.EnrichedCallManager;
 import com.android.dialer.logging.ContactSource;
 import com.android.dialer.logging.ContactSource.Type;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
-import com.android.dialer.logging.LoggingBindings.ContactsProviderMatchInfo;
-import com.android.dialer.logging.UiAction;
 import com.android.dialer.main.MainActivityPeer;
-import com.android.dialer.performancereport.PerformanceReport;
 import com.android.dialer.phonenumbercache.CallLogQuery;
 import com.android.dialer.phonenumbercache.ContactInfo;
 import com.android.dialer.phonenumbercache.ContactInfoHelper;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
-import com.android.dialer.spam.SpamComponent;
 import com.android.dialer.telecom.TelecomUtil;
 import com.android.dialer.util.PermissionsUtil;
-import com.google.i18n.phonenumbers.NumberParseException;
-import com.google.i18n.phonenumbers.PhoneNumberUtil;
-import com.google.i18n.phonenumbers.Phonenumber.PhoneNumber;
+
 import java.util.ArrayList;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /** Adapter class to fill in data for the Call Log. */
 public class CallLogAdapter extends GroupingListAdapter
-    implements GroupCreator, OnVoicemailDeletedListener, DuoListener {
+    implements GroupCreator, OnVoicemailDeletedListener {
 
   // Types of activities the call log adapter is used for
   public static final int ACTIVITY_TYPE_CALL_LOG = 1;
@@ -121,11 +103,6 @@ public class CallLogAdapter extends GroupingListAdapter
 
   public static final String LOAD_DATA_TASK_IDENTIFIER = "load_data";
 
-  public static final String ENABLE_CALL_LOG_MULTI_SELECT = "enable_call_log_multiselect";
-  public static final boolean ENABLE_CALL_LOG_MULTI_SELECT_FLAG = true;
-
-  @VisibleForTesting static final String FILTER_EMERGENCY_CALLS_FLAG = "filter_emergency_calls";
-
   protected final Activity activity;
   protected final VoicemailPlaybackPresenter voicemailPlaybackPresenter;
   /** Cache for repeated requests to Telecom/Telephony. */
@@ -134,7 +111,8 @@ public class CallLogAdapter extends GroupingListAdapter
   private final CallFetcher callFetcher;
   private final OnActionModeStateChangedListener actionModeStateChangedListener;
   private final MultiSelectRemoveView multiSelectRemoveView;
-  @NonNull private final FilteredNumberAsyncQueryHandler filteredNumberAsyncQueryHandler;
+  @NonNull
+  private final FilteredNumberAsyncQueryHandler filteredNumberAsyncQueryHandler;
   private final int activityType;
 
   /** Instance of helper class for managing views. */
@@ -142,8 +120,7 @@ public class CallLogAdapter extends GroupingListAdapter
   /** Helper to group call log entries. */
   private final CallLogGroupBuilder callLogGroupBuilder;
 
-  private final AsyncTaskExecutor asyncTaskExecutor = AsyncTaskExecutors.createAsyncTaskExecutor();
-  private ContactInfoCache contactInfoCache;
+  private final ContactInfoCache contactInfoCache;
   // Tracks the position of the currently expanded list item.
   private int currentlyExpandedPosition = RecyclerView.NO_POSITION;
   // Tracks the rowId of the currently expanded list item, so the position can be updated if there
@@ -156,16 +133,6 @@ public class CallLogAdapter extends GroupingListAdapter
   public boolean selectAllMode = false;
   public boolean deselectAllMode = false;
   private final SparseArray<String> selectedItems = new SparseArray<>();
-
-  /**
-   * Maps a raw input number to match info. We only log one MatchInfo per raw input number to reduce
-   * the amount of data logged.
-   *
-   * <p>Note that this has to be a {@link ConcurrentMap} as the match info for each row in the UI is
-   * loaded in a background thread spawned when the ViewHolder is bound.
-   */
-  private final ConcurrentMap<String, ContactsProviderMatchInfo> contactsProviderMatchInfos =
-      new ConcurrentHashMap<>();
 
   private final ActionMode.Callback actionModeCallback =
       new ActionMode.Callback() {
@@ -198,7 +165,6 @@ public class CallLogAdapter extends GroupingListAdapter
         @Override
         public boolean onActionItemClicked(ActionMode mode, MenuItem item) {
           if (item.getItemId() == R.id.action_bar_delete_menu_item) {
-            Logger.get(activity).logImpression(DialerImpression.Type.MULTISELECT_TAP_DELETE_ICON);
             if (selectedItems.size() > 0) {
               showDeleteSelectedItemsDialog();
             }
@@ -235,48 +201,18 @@ public class CallLogAdapter extends GroupingListAdapter
                 .getResources()
                 .getQuantityString(
                     R.plurals.delete_voicemails_confirmation_dialog_title, selectedItems.size()))
-        .setPositiveButton(
-            R.string.voicemailMultiSelectDeleteConfirm,
-            new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(final DialogInterface dialog, final int button) {
-                LogUtil.i(
-                    "CallLogAdapter.showDeleteSelectedItemsDialog",
-                    "onClick, these items to delete " + voicemailsToDeleteOnConfirmation);
-                deleteSelectedItems(voicemailsToDeleteOnConfirmation);
-                actionMode.finish();
-                dialog.cancel();
-                Logger.get(activity)
-                    .logImpression(
-                        DialerImpression.Type.MULTISELECT_DELETE_ENTRY_VIA_CONFIRMATION_DIALOG);
-              }
-            })
-        .setOnCancelListener(
-            new OnCancelListener() {
-              @Override
-              public void onCancel(DialogInterface dialogInterface) {
-                Logger.get(activity)
-                    .logImpression(
-                        DialerImpression.Type
-                            .MULTISELECT_CANCEL_CONFIRMATION_DIALOG_VIA_CANCEL_TOUCH);
-                dialogInterface.cancel();
-              }
-            })
-        .setNegativeButton(
-            R.string.voicemailMultiSelectDeleteCancel,
-            new DialogInterface.OnClickListener() {
-              @Override
-              public void onClick(final DialogInterface dialog, final int button) {
-                Logger.get(activity)
-                    .logImpression(
-                        DialerImpression.Type
-                            .MULTISELECT_CANCEL_CONFIRMATION_DIALOG_VIA_CANCEL_BUTTON);
-                dialog.cancel();
-              }
-            })
+        .setPositiveButton(R.string.voicemailMultiSelectDeleteConfirm, (dialog, button) -> {
+          LogUtil.i(
+                  "CallLogAdapter.showDeleteSelectedItemsDialog",
+                  "onClick, these items to delete " + voicemailsToDeleteOnConfirmation);
+          deleteSelectedItems(voicemailsToDeleteOnConfirmation);
+          actionMode.finish();
+          dialog.cancel();
+        })
+        .setOnCancelListener(dialogInterface -> dialogInterface.cancel())
+        .setNegativeButton(R.string.voicemailMultiSelectDeleteCancel,
+                (dialog, button) -> dialog.cancel())
         .show();
-    Logger.get(activity)
-        .logImpression(DialerImpression.Type.MULTISELECT_DISPLAY_DELETE_CONFIRMATION_DIALOG);
   }
 
   private void deleteSelectedItems(SparseArray<String> voicemailsToDelete) {
@@ -291,19 +227,11 @@ public class CallLogAdapter extends GroupingListAdapter
       new View.OnLongClickListener() {
         @Override
         public boolean onLongClick(View v) {
-          if (ConfigProviderComponent.get(v.getContext())
-                  .getConfigProvider()
-                  .getBoolean(ENABLE_CALL_LOG_MULTI_SELECT, ENABLE_CALL_LOG_MULTI_SELECT_FLAG)
-              && voicemailPlaybackPresenter != null) {
+          if (voicemailPlaybackPresenter != null) {
             if (v.getId() == R.id.primary_action_view || v.getId() == R.id.quick_contact_photo) {
               if (actionMode == null) {
-                Logger.get(activity)
-                    .logImpression(
-                        DialerImpression.Type.MULTISELECT_LONG_PRESS_ENTER_MULTI_SELECT_MODE);
                 actionMode = v.startActionMode(actionModeCallback);
               }
-              Logger.get(activity)
-                  .logImpression(DialerImpression.Type.MULTISELECT_LONG_PRESS_TAP_ENTRY);
               CallLogListItemViewHolder viewHolder = (CallLogListItemViewHolder) v.getTag();
               viewHolder.quickContactView.setVisibility(View.GONE);
               viewHolder.checkBoxView.setVisibility(View.VISIBLE);
@@ -315,18 +243,11 @@ public class CallLogAdapter extends GroupingListAdapter
         }
       };
 
-  @VisibleForTesting
-  public View.OnClickListener getExpandCollapseListener() {
-    return expandCollapseListener;
-  }
-
   /** The OnClickListener used to expand or collapse the action buttons of a call log entry. */
   private final View.OnClickListener expandCollapseListener =
       new View.OnClickListener() {
         @Override
         public void onClick(View v) {
-          PerformanceReport.recordClick(UiAction.Type.CLICK_CALL_LOG_ITEM);
-
           CallLogListItemViewHolder viewHolder = (CallLogListItemViewHolder) v.getTag();
           if (viewHolder == null) {
             return;
@@ -337,12 +258,8 @@ public class CallLogAdapter extends GroupingListAdapter
             multiSelectRemoveView.setSelectAllModeToFalse();
             int id = getVoicemailId(viewHolder.voicemailUri);
             if (selectedItems.get(id) != null) {
-              Logger.get(activity)
-                  .logImpression(DialerImpression.Type.MULTISELECT_SINGLE_PRESS_UNSELECT_ENTRY);
               uncheckMarkCallLogEntry(viewHolder, id);
             } else {
-              Logger.get(activity)
-                  .logImpression(DialerImpression.Type.MULTISELECT_SINGLE_PRESS_SELECT_ENTRY);
               checkMarkCallLogEntry(viewHolder);
               // select all check box logic
               if (getItemCount() == selectedItems.size()) {
@@ -360,33 +277,6 @@ public class CallLogAdapter extends GroupingListAdapter
           if (voicemailPlaybackPresenter != null) {
             // Always reset the voicemail playback state on expand or collapse.
             voicemailPlaybackPresenter.resetAll();
-          }
-
-          // If enriched call capabilities were unknown on the initial load,
-          // viewHolder.isCallComposerCapable may be unset. Check here if we have the capabilities
-          // as a last attempt at getting them before showing the expanded view to the user
-          EnrichedCallCapabilities capabilities = null;
-
-          if (viewHolder.number != null) {
-            capabilities = getEnrichedCallManager().getCapabilities(viewHolder.number);
-          }
-
-          if (capabilities == null) {
-            capabilities = EnrichedCallCapabilities.NO_CAPABILITIES;
-          }
-
-          viewHolder.isCallComposerCapable = capabilities.isCallComposerCapable();
-
-          if (capabilities.isTemporarilyUnavailable()) {
-            LogUtil.i(
-                "mExpandCollapseListener.onClick",
-                "%s is temporarily unavailable, requesting capabilities",
-                LogUtil.sanitizePhoneNumber(viewHolder.number));
-            // Refresh the capabilities when temporarily unavailable.
-            // Similarly to when we request capabilities the first time, the 'Share and call' button
-            // won't pop in with the new capabilities. Instead the row needs to be collapsed and
-            // expanded again.
-            getEnrichedCallManager().requestCapabilities(viewHolder.number);
           }
 
           if (viewHolder.rowId == currentlyExpandedRowId) {
@@ -439,8 +329,6 @@ public class CallLogAdapter extends GroupingListAdapter
 
   private void updateActionBar() {
     if (actionMode == null && selectedItems.size() > 0) {
-      Logger.get(activity)
-          .logImpression(DialerImpression.Type.MULTISELECT_ROTATE_AND_SHOW_ACTION_MODE);
       activity.startActionMode(actionModeCallback);
     }
     if (actionMode != null) {
@@ -475,7 +363,7 @@ public class CallLogAdapter extends GroupingListAdapter
    * if removing an item, it will be shown as an invisible view. This simplifies the calculation of
    * item position.
    */
-  @NonNull private Set<Long> hiddenRowIds = new ArraySet<>();
+  @NonNull private final Set<Long> hiddenRowIds = new ArraySet<>();
   /**
    * Holds a list of URIs that are pending deletion or undo. If the activity ends before the undo
    * timeout, all of the pending URIs will be deleted.
@@ -486,7 +374,7 @@ public class CallLogAdapter extends GroupingListAdapter
    */
   @NonNull private final Set<Uri> hiddenItemUris = new ArraySet<>();
 
-  private CallLogListItemViewHolder.OnClickListener blockReportSpamListener;
+  private final CallLogListItemViewHolder.OnClickListener blockReportSpamListener;
 
   /**
    * Map, keyed by call ID, used to track the callback action for a call. Calls associated with the
@@ -511,8 +399,6 @@ public class CallLogAdapter extends GroupingListAdapter
   private final Map<Long, Integer> dayGroups = new ArrayMap<>();
 
   private boolean loading = true;
-
-  private boolean isSpamEnabled;
 
   public CallLogAdapter(
       Activity activity,
@@ -552,7 +438,7 @@ public class CallLogAdapter extends GroupingListAdapter
         new PhoneCallDetailsHelper(this.activity, resources, this.callLogCache);
     callLogListItemHelper =
         new CallLogListItemHelper(phoneCallDetailsHelper, resources, this.callLogCache);
-    callLogGroupBuilder = new CallLogGroupBuilder(activity.getApplicationContext(), this);
+    callLogGroupBuilder = new CallLogGroupBuilder(this);
     this.filteredNumberAsyncQueryHandler = Assert.isNotNull(filteredNumberAsyncQueryHandler);
 
     blockReportSpamListener =
@@ -569,10 +455,6 @@ public class CallLogAdapter extends GroupingListAdapter
   }
 
   private void expandViewHolderActions(CallLogListItemViewHolder viewHolder) {
-    if (!TextUtils.isEmpty(viewHolder.voicemailUri)) {
-      Logger.get(activity).logImpression(DialerImpression.Type.VOICEMAIL_EXPAND_ENTRY);
-    }
-
     int lastExpandedPosition = currentlyExpandedPosition;
     // Show the actions for the clicked list item.
     viewHolder.showActions(true);
@@ -667,27 +549,14 @@ public class CallLogAdapter extends GroupingListAdapter
     }
   }
 
-  public void clearFilteredNumbersCache() {
-    filteredNumberAsyncQueryHandler.clearCache();
-  }
-
   public void onResume() {
-    contactsProviderMatchInfos.clear();
     if (PermissionsUtil.hasPermission(activity, android.Manifest.permission.READ_CONTACTS)) {
       contactInfoCache.start();
     }
-    isSpamEnabled = SpamComponent.get(activity).spamSettings().isSpamEnabled();
-    getDuo().registerListener(this);
     notifyDataSetChanged();
   }
 
   public void onPause() {
-    // The call log can be resumed/paused without loading any contacts. Don't log these events.
-    if (!contactsProviderMatchInfos.isEmpty()) {
-      Logger.get(activity).logContactsProviderMetrics(contactsProviderMatchInfos.values());
-    }
-
-    getDuo().unregisterListener(this);
     pauseCache();
     for (Uri uri : hiddenItemUris) {
       CallLogAsyncTaskUtil.deleteVoicemail(activity, uri, null);
@@ -695,15 +564,13 @@ public class CallLogAdapter extends GroupingListAdapter
   }
 
   public void onStop() {
-    getEnrichedCallManager().clearCachedData();
   }
 
   public CallLogAlertManager getAlertManager() {
     return callLogAlertManager;
   }
 
-  @VisibleForTesting
-  /* package */ void pauseCache() {
+  private void pauseCache() {
     contactInfoCache.stop();
     callLogCache.reset();
   }
@@ -727,7 +594,7 @@ public class CallLogAdapter extends GroupingListAdapter
    * @param parent the parent view.
    * @return The {@link ViewHolder}.
    */
-  private ViewHolder createCallLogEntryViewHolder(ViewGroup parent) {
+  private RecyclerView.ViewHolder createCallLogEntryViewHolder(ViewGroup parent) {
     LayoutInflater inflater = LayoutInflater.from(activity);
     View view = inflater.inflate(R.layout.call_log_list_item, parent, false);
     CallLogListItemViewHolder viewHolder =
@@ -759,7 +626,7 @@ public class CallLogAdapter extends GroupingListAdapter
    * @param position The position of the entry.
    */
   @Override
-  public void onBindViewHolder(ViewHolder viewHolder, int position) {
+  public void onBindViewHolder(@NonNull ViewHolder viewHolder, int position) {
     Trace.beginSection("onBindViewHolder: " + position);
     switch (getItemViewType(position)) {
       case VIEW_TYPE_ALERT:
@@ -779,7 +646,7 @@ public class CallLogAdapter extends GroupingListAdapter
       updateCheckMarkedStatusOfEntry(views);
 
       if (views.asyncTask != null) {
-        views.asyncTask.cancel(true);
+        views.asyncTask.cancel();
       }
     }
   }
@@ -842,22 +709,7 @@ public class CallLogAdapter extends GroupingListAdapter
   }
 
   private boolean isHiddenRow(@Nullable String number, long rowId) {
-    if (isHideableEmergencyNumberRow(number)) {
-      return true;
-    }
-    if (hiddenRowIds.contains(rowId)) {
-      return true;
-    }
-    return false;
-  }
-
-  private boolean isHideableEmergencyNumberRow(@Nullable String number) {
-    if (!ConfigProviderComponent.get(activity)
-        .getConfigProvider()
-        .getBoolean(FILTER_EMERGENCY_CALLS_FLAG, false)) {
-      return false;
-    }
-    return number != null && PhoneNumberUtils.isEmergencyNumber(number);
+    return hiddenRowIds.contains(rowId);
   }
 
   private void loadAndRender(
@@ -869,72 +721,71 @@ public class CallLogAdapter extends GroupingListAdapter
     // Reset block and spam information since this view could be reused which may contain
     // outdated data.
     viewHolder.isSpam = false;
-    viewHolder.blockId = null;
-    viewHolder.isSpamFeatureEnabled = false;
+    viewHolder.isBlocked = false;
 
-    // Attempt to set the isCallComposerCapable field. If capabilities are unknown for this number,
-    // the value will be false while capabilities are requested. mExpandCollapseListener will
-    // attempt to set the field properly in that case
-    viewHolder.isCallComposerCapable = isCallComposerCapable(viewHolder.number);
     viewHolder.setDetailedPhoneDetails(callDetailsEntries);
-    final AsyncTask<Void, Void, Boolean> loadDataTask =
-        new AsyncTask<Void, Void, Boolean>() {
-          @Override
-          protected Boolean doInBackground(Void... params) {
-            viewHolder.blockId =
-                filteredNumberAsyncQueryHandler.getBlockedIdSynchronous(
-                    viewHolder.number, viewHolder.countryIso);
-            details.isBlocked = viewHolder.blockId != null;
-            if (isCancelled()) {
-              return false;
-            }
-            if (isSpamEnabled) {
-              viewHolder.isSpamFeatureEnabled = true;
-              // Only display the call as a spam call if there are incoming calls in the list.
-              // Call log cards with only outgoing calls should never be displayed as spam.
-              viewHolder.isSpam =
-                  details.hasIncomingCalls()
-                      && SpamComponent.get(activity)
-                          .spam()
-                          .checkSpamStatusSynchronous(viewHolder.number, viewHolder.countryIso);
-              details.isSpam = viewHolder.isSpam;
-            }
-            return !isCancelled() && loadData(viewHolder, rowId, details);
-          }
-
-          @Override
-          protected void onPostExecute(Boolean success) {
-            viewHolder.isLoaded = true;
-            if (success) {
-              viewHolder.callbackAction = getCallbackAction(viewHolder.rowId);
-              int currentDayGroup = getDayGroup(viewHolder.rowId);
-              if (currentDayGroup != details.previousGroup) {
-                viewHolder.dayGroupHeaderVisibility = View.VISIBLE;
-                viewHolder.dayGroupHeaderText = getGroupDescription(currentDayGroup);
-              } else {
-                viewHolder.dayGroupHeaderVisibility = View.GONE;
-              }
-              render(viewHolder, details, rowId);
-            }
-          }
-        };
+    final LoadDataTask loadDataTask = new LoadDataTask(viewHolder, details, rowId);
 
     viewHolder.asyncTask = loadDataTask;
-    asyncTaskExecutor.submit(LOAD_DATA_TASK_IDENTIFIER, loadDataTask);
+    loadDataTask.execute();
   }
 
-  @MainThread
-  private boolean isCallComposerCapable(@Nullable String number) {
-    if (number == null) {
-      return false;
+  public interface LoadDataTaskInterface {
+     void execute();
+     void cancel();
+  }
+
+  private class LoadDataTask implements LoadDataTaskInterface {
+
+    private boolean mIsCancelled = false;
+    private final CallLogListItemViewHolder mViewHolder;
+    private final PhoneCallDetails mDetails;
+    private final long mRowId;
+
+    private final ExecutorService mExecutor;
+    private final Handler mHandler;
+
+    public LoadDataTask(CallLogListItemViewHolder viewHolder, PhoneCallDetails details,
+                        long rowId) {
+      mExecutor = Executors.newSingleThreadExecutor();
+      mHandler = new Handler(Looper.getMainLooper());
+      mViewHolder = viewHolder;
+      mDetails = details;
+      mRowId = rowId;
     }
 
-    EnrichedCallCapabilities capabilities = getEnrichedCallManager().getCapabilities(number);
-    if (capabilities == null) {
-      getEnrichedCallManager().requestCapabilities(number);
-      return false;
+    public void execute() {
+      mExecutor.execute(() -> {
+        final boolean success;
+        mViewHolder.isBlocked = BlockedNumberContract.canCurrentUserBlockNumbers(activity) &&
+                BlockedNumberContract.isBlocked(activity, mViewHolder.number);
+        mDetails.isBlocked = mViewHolder.isBlocked;
+        if (mIsCancelled) {
+          success = false;
+        } else {
+          success = !mIsCancelled && loadData(mViewHolder, mRowId, mDetails);
+        }
+
+        mHandler.post(() -> {
+          mViewHolder.isLoaded = true;
+          if (success) {
+            mViewHolder.callbackAction = getCallbackAction(mViewHolder.rowId);
+            int currentDayGroup = getDayGroup(mViewHolder.rowId);
+            if (currentDayGroup != mDetails.previousGroup) {
+              mViewHolder.dayGroupHeaderVisibility = View.VISIBLE;
+              mViewHolder.dayGroupHeaderText = getGroupDescription(currentDayGroup);
+            } else {
+              mViewHolder.dayGroupHeaderVisibility = View.GONE;
+            }
+            render(mViewHolder, mDetails, mRowId);
+          }
+        });
+      });
     }
-    return capabilities.isCallComposerCapable();
+
+    public void cancel() {
+      mIsCancelled = true;
+    }
   }
 
   /**
@@ -950,10 +801,6 @@ public class CallLogAdapter extends GroupingListAdapter
     final String viaNumber = cursor.getString(CallLogQuery.VIA_NUMBER);
     final int numberPresentation = cursor.getInt(CallLogQuery.NUMBER_PRESENTATION);
     final ContactInfo cachedContactInfo = ContactInfoHelper.getContactInfo(cursor);
-    final int transcriptionState =
-        (VERSION.SDK_INT >= VERSION_CODES.O)
-            ? cursor.getInt(CallLogQuery.TRANSCRIPTION_STATE)
-            : VoicemailCompat.TRANSCRIPTION_NOT_STARTED;
     final PhoneCallDetails details =
         new PhoneCallDetails(number, numberPresentation, postDialDigits);
     details.viaNumber = viaNumber;
@@ -962,8 +809,6 @@ public class CallLogAdapter extends GroupingListAdapter
     details.duration = cursor.getLong(CallLogQuery.DURATION);
     details.features = getCallFeatures(cursor, count);
     details.geocode = cursor.getString(CallLogQuery.GEOCODED_LOCATION);
-    details.transcription = cursor.getString(CallLogQuery.TRANSCRIPTION);
-    details.transcriptionState = transcriptionState;
     details.callTypes = getCallTypes(cursor, count);
 
     details.accountComponentName = cursor.getString(CallLogQuery.ACCOUNT_COMPONENT_NAME);
@@ -1015,9 +860,6 @@ public class CallLogAdapter extends GroupingListAdapter
 
 
       String phoneAccountComponentName = cursor.getString(CallLogQuery.ACCOUNT_COMPONENT_NAME);
-      if (DuoComponent.get(activity).getDuo().isDuoAccount(phoneAccountComponentName)) {
-        entry.setIsDuoCall(true);
-      }
 
       entries.addEntries(entry.build());
       cursor.moveToNext();
@@ -1059,11 +901,7 @@ public class CallLogAdapter extends GroupingListAdapter
               details.number + details.postDialDigits,
               details.countryIso,
               details.cachedContactInfo,
-              position
-                  < ConfigProviderComponent.get(activity)
-                      .getConfigProvider()
-                      .getLong("number_of_call_to_do_remote_lookup", 5L));
-      logCp2Metrics(details, info);
+              position < 5L);
     }
     CharSequence formattedNumber =
         info.formattedNumber == null
@@ -1346,24 +1184,6 @@ public class CallLogAdapter extends GroupingListAdapter
   }
 
   /**
-   * Sets whether processing of requests for contact details should be enabled.
-   *
-   * <p>This method should be called in tests to disable such processing of requests when not
-   * needed.
-   */
-  @VisibleForTesting
-  void disableRequestProcessingForTest() {
-    // TODO: Remove this and test the cache directly.
-    contactInfoCache.disableRequestProcessing();
-  }
-
-  @VisibleForTesting
-  void injectContactInfoForTest(String number, String countryIso, ContactInfo contactInfo) {
-    // TODO: Remove this and test the cache directly.
-    contactInfoCache.injectContactInfoForTest(number, countryIso, contactInfo);
-  }
-
-  /**
    * Stores the callback action associated with a call in the call log.
    *
    * @param rowId The row ID of the current call.
@@ -1430,21 +1250,6 @@ public class CallLogAdapter extends GroupingListAdapter
     }
   }
 
-  @NonNull
-  private EnrichedCallManager getEnrichedCallManager() {
-    return EnrichedCallComponent.get(activity).getEnrichedCallManager();
-  }
-
-  @NonNull
-  private Duo getDuo() {
-    return DuoComponent.get(activity).getDuo();
-  }
-
-  @Override
-  public void onDuoStateChanged() {
-    notifyDataSetChanged();
-  }
-
   public void onAllSelected() {
     selectAllMode = true;
     deselectAllMode = false;
@@ -1467,45 +1272,6 @@ public class CallLogAdapter extends GroupingListAdapter
     selectedItems.clear();
     updateActionBar();
     notifyDataSetChanged();
-  }
-
-  @WorkerThread
-  private void logCp2Metrics(PhoneCallDetails details, ContactInfo contactInfo) {
-    if (details == null) {
-      return;
-    }
-    CharSequence inputNumber = details.number;
-    if (inputNumber == null) {
-      return;
-    }
-
-    ContactsProviderMatchInfo.Builder matchInfo =
-        ContactsProviderMatchInfo.builder()
-            .setInputNumberLength(PhoneNumberUtils.normalizeNumber(inputNumber.toString()).length())
-            .setInputNumberHasPostdialDigits(
-                !PhoneNumberUtils.extractPostDialPortion(inputNumber.toString()).isEmpty()
-                    || (details.postDialDigits != null && !details.postDialDigits.isEmpty()));
-
-    PhoneNumberUtil phoneNumberUtil = PhoneNumberUtil.getInstance();
-    try {
-      PhoneNumber phoneNumber = phoneNumberUtil.parse(inputNumber, details.countryIso);
-      matchInfo.setInputNumberValid(phoneNumberUtil.isValidNumber(phoneNumber));
-    } catch (NumberParseException e) {
-      // Do nothing
-      matchInfo.setInputNumberValid(false);
-    }
-
-    if (contactInfo != null
-        && contactInfo.number != null
-        && contactInfo.sourceType == Type.SOURCE_TYPE_DIRECTORY) {
-      matchInfo
-          .setMatchedContact(true)
-          .setMatchedNumberLength(PhoneNumberUtils.normalizeNumber(contactInfo.number).length())
-          .setMatchedNumberHasPostdialDigits(
-              !PhoneNumberUtils.extractPostDialPortion(contactInfo.number).isEmpty());
-    }
-
-    contactsProviderMatchInfos.put(inputNumber.toString(), matchInfo.build());
   }
 
   /** Interface used to initiate a refresh of the content. */

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2014 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,16 +21,19 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.Point;
 import android.os.Handler;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+import android.os.Looper;
 import android.telecom.InCallService.VideoCall;
 import android.telecom.VideoProfile;
 import android.telecom.VideoProfile.CameraCapabilities;
 import android.view.Surface;
 import android.view.SurfaceView;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.configprovider.ConfigProviderComponent;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.incallui.InCallPresenter.InCallDetailsListener;
 import com.android.incallui.InCallPresenter.InCallOrientationListener;
@@ -48,6 +52,7 @@ import com.android.incallui.videosurface.protocol.VideoSurfaceDelegate;
 import com.android.incallui.videosurface.protocol.VideoSurfaceTexture;
 import com.android.incallui.videotech.utils.SessionModificationState;
 import com.android.incallui.videotech.utils.VideoUtils;
+
 import java.util.Objects;
 
 /**
@@ -85,7 +90,7 @@ public class VideoCallPresenter
 
   private static boolean isVideoMode = false;
 
-  private final Handler handler = new Handler();
+  private final Handler handler = new Handler(Looper.getMainLooper());
   private VideoCallScreen videoCallScreen;
 
   /** The current context. */
@@ -127,24 +132,20 @@ public class VideoCallPresenter
    * enter fullscreen mode if the dialpad is visible (doing so would make it impossible to exit the
    * dialpad).
    */
-  private Runnable autoFullscreenRunnable =
-      new Runnable() {
-        @Override
-        public void run() {
-          if (autoFullScreenPending
-              && !InCallPresenter.getInstance().isDialpadVisible()
-              && isVideoMode) {
+  private final Runnable autoFullscreenRunnable = () -> {
+    if (autoFullScreenPending
+            && !InCallPresenter.getInstance().isDialpadVisible()
+            && isVideoMode) {
 
-            LogUtil.v("VideoCallPresenter.mAutoFullScreenRunnable", "entering fullscreen mode");
-            InCallPresenter.getInstance().setFullScreen(true);
-            autoFullScreenPending = false;
-          } else {
-            LogUtil.v(
-                "VideoCallPresenter.mAutoFullScreenRunnable",
-                "skipping scheduled fullscreen mode.");
-          }
-        }
-      };
+      LogUtil.v("VideoCallPresenter.mAutoFullScreenRunnable", "entering fullscreen mode");
+      InCallPresenter.getInstance().setFullScreen(true);
+      autoFullScreenPending = false;
+    } else {
+      LogUtil.v(
+              "VideoCallPresenter.mAutoFullScreenRunnable",
+              "skipping scheduled fullscreen mode.");
+    }
+  };
 
   private boolean isVideoCallScreenUiReady;
 
@@ -1101,12 +1102,6 @@ public class VideoCallPresenter
           "VideoCallPresenter.shouldShowCameraPermissionToast", "already shown for this call");
       return false;
     }
-    if (!ConfigProviderComponent.get(context)
-        .getConfigProvider()
-        .getBoolean("camera_permission_dialog_allowed", true)) {
-      LogUtil.i("VideoCallPresenter.shouldShowCameraPermissionToast", "disabled by config");
-      return false;
-    }
     return !VideoUtils.hasCameraPermission(context)
         || !PermissionsUtil.hasCameraPrivacyToastShown(context);
   }
@@ -1122,7 +1117,7 @@ public class VideoCallPresenter
     Activity activity = videoCallScreen.getVideoCallScreenFragment().getActivity();
     if (activity != null) {
       Point screenSize = new Point();
-      activity.getWindowManager().getDefaultDisplay().getSize(screenSize);
+      activity.getDisplay().getSize(screenSize);
       getRemoteVideoSurfaceTexture().setSurfaceDimensions(screenSize);
     }
   }

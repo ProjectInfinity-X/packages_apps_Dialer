@@ -38,5 +38,5 @@
 # NEWER CLEAN STEPS MUST BE AT THE END OF THE LIST
 # ************************************************
 
-$(call add-clean-step, (cd packages/apps/Dialer; git clean -f java/com/android/voicemail/impl/com/google/internal/communications/voicemailtranscription/v1/VoicemailTranscriptionServiceGrpc.java >&2) || true)
 $(call add-clean-step, rm -rf $(PRODUCT_OUT)/system/priv-app/Dialer)
+$(call add-clean-step, rm -rf $(OUT_DIR)/target/common/obj/APPS/Dialer_intermediates)

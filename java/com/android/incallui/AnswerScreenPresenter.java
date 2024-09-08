@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,16 +19,16 @@ package com.android.incallui;
 
 import android.content.Context;
 import android.os.SystemClock;
-import android.support.annotation.FloatRange;
-import android.support.annotation.NonNull;
-import android.support.v4.os.UserManagerCompat;
 import android.telecom.VideoProfile;
+
+import androidx.annotation.FloatRange;
+import androidx.annotation.NonNull;
+import androidx.core.os.UserManagerCompat;
+
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
 import com.android.dialer.common.concurrent.ThreadUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.incallui.answer.protocol.AnswerScreen;
 import com.android.incallui.answer.protocol.AnswerScreenDelegate;
 import com.android.incallui.answerproximitysensor.AnswerProximitySensor;
@@ -45,7 +46,8 @@ public class AnswerScreenPresenter
     implements AnswerScreenDelegate, DialerCall.CannedTextResponsesLoadedListener {
   private static final int ACCEPT_REJECT_CALL_TIME_OUT_IN_MILLIS = 5000;
 
-  @NonNull private final Context context;
+  @NonNull
+  private final Context context;
   @NonNull private final AnswerScreen answerScreen;
   @NonNull private final DialerCall call;
   private long actionPerformedTimeMillis;
@@ -94,17 +96,7 @@ public class AnswerScreenPresenter
 
   @Override
   public void onAnswer(boolean answerVideoAsAudio) {
-
-    DialerCall incomingCall = CallList.getInstance().getIncomingCall();
-    InCallActivity inCallActivity =
-        (InCallActivity) answerScreen.getAnswerScreenFragment().getActivity();
-    ListenableFuture<Void> answerPrecondition;
-
-    if (incomingCall != null && inCallActivity != null) {
-      answerPrecondition = inCallActivity.getSpeakEasyCallManager().onNewIncomingCall(incomingCall);
-    } else {
-      answerPrecondition = Futures.immediateFuture(null);
-    }
+    ListenableFuture<Void> answerPrecondition = Futures.immediateFuture(null);
 
     Futures.addCallback(
         answerPrecondition,
@@ -129,18 +121,8 @@ public class AnswerScreenPresenter
 
     if (answerScreen.isVideoUpgradeRequest()) {
       if (answerVideoAsAudio) {
-        Logger.get(context)
-            .logCallImpression(
-                DialerImpression.Type.VIDEO_CALL_REQUEST_ACCEPTED_AS_AUDIO,
-                call.getUniqueCallId(),
-                call.getTimeAddedMs());
         call.getVideoTech().acceptVideoRequestAsAudio();
       } else {
-        Logger.get(context)
-            .logCallImpression(
-                DialerImpression.Type.VIDEO_CALL_REQUEST_ACCEPTED,
-                call.getUniqueCallId(),
-                call.getTimeAddedMs());
         call.getVideoTech().acceptVideoRequest(context);
       }
     } else {
@@ -155,27 +137,11 @@ public class AnswerScreenPresenter
   @Override
   public void onReject() {
     if (answerScreen.isVideoUpgradeRequest()) {
-      Logger.get(context)
-          .logCallImpression(
-              DialerImpression.Type.VIDEO_CALL_REQUEST_DECLINED,
-              call.getUniqueCallId(),
-              call.getTimeAddedMs());
       call.getVideoTech().declineVideoRequest();
     } else {
       call.reject(false /* rejectWithMessage */, null);
     }
     addTimeoutCheck();
-  }
-
-  @Override
-  public void onSpeakEasyCall() {
-    LogUtil.enterBlock("AnswerScreenPresenter.onSpeakEasyCall");
-    DialerCall incomingCall = CallList.getInstance().getIncomingCall();
-    if (incomingCall == null) {
-      LogUtil.i("AnswerScreenPresenter.onSpeakEasyCall", "incomingCall == null");
-      return;
-    }
-    incomingCall.setIsSpeakEasyCall(true);
   }
 
   @Override
@@ -263,9 +229,6 @@ public class AnswerScreenPresenter
 
     @Override
     public void onInternationalCallOnWifi() {}
-
-    @Override
-    public void onEnrichedCallSessionUpdate() {}
   }
 
   private boolean isSmsResponseAllowed(DialerCall call) {

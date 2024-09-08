@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,9 +26,6 @@ import android.graphics.PorterDuff.Mode;
 import android.graphics.drawable.Drawable;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.support.annotation.ColorInt;
-import android.support.annotation.DrawableRes;
-import android.support.annotation.StringRes;
 import android.text.TextUtils.TruncateAt;
 import android.util.AttributeSet;
 import android.view.Gravity;
@@ -36,6 +34,13 @@ import android.widget.Checkable;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+
+import androidx.annotation.ColorInt;
+import androidx.annotation.DrawableRes;
+import androidx.annotation.StringRes;
+import androidx.core.content.res.ResourcesCompat;
+
+import com.android.dialer.R;
 
 /** A button to show on the incall screen */
 public class CheckableLabeledButton extends LinearLayout implements Checkable {
@@ -46,7 +51,8 @@ public class CheckableLabeledButton extends LinearLayout implements Checkable {
   private boolean isChecked;
   private OnCheckedChangeListener onCheckedChangeListener;
   private ImageView iconView;
-  @DrawableRes private int iconResource = 0;
+  @DrawableRes
+  private int iconResource = 0;
   private TextView labelView;
   private Drawable background;
   private Drawable backgroundMore;
@@ -67,10 +73,10 @@ public class CheckableLabeledButton extends LinearLayout implements Checkable {
     CharSequence labelText;
     boolean enabled;
 
-    backgroundMore =
-        getResources().getDrawable(R.drawable.incall_button_background_more, context.getTheme());
-    background =
-        getResources().getDrawable(R.drawable.incall_button_background, context.getTheme());
+    backgroundMore = ResourcesCompat.getDrawable(getResources(),
+            R.drawable.incall_button_background_more, context.getTheme());
+    background = ResourcesCompat.getDrawable(getResources(),
+            R.drawable.incall_button_background, context.getTheme());
 
     TypedArray typedArray =
         context.obtainStyledAttributes(attrs, R.styleable.CheckableLabeledButton);
@@ -154,6 +160,10 @@ public class CheckableLabeledButton extends LinearLayout implements Checkable {
 
   public void setLabelText(@StringRes int stringRes) {
     labelView.setText(stringRes);
+  }
+
+  public void setLabelText(CharSequence label) {
+    labelView.setText(label);
   }
 
   /** Shows or hides a little down arrow to indicate that the button will pop up a menu. */

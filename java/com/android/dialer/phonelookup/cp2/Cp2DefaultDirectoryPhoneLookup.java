@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -25,18 +26,18 @@ import android.provider.ContactsContract.CommonDataKinds.Phone;
 import android.provider.ContactsContract.Contacts;
 import android.provider.ContactsContract.DeletedContacts;
 import android.provider.ContactsContract.Directory;
-import android.support.annotation.Nullable;
-import android.support.v4.util.ArrayMap;
-import android.support.v4.util.ArraySet;
 import android.text.TextUtils;
+
+import androidx.annotation.Nullable;
+import androidx.collection.ArrayMap;
+import androidx.collection.ArraySet;
+
 import com.android.dialer.DialerPhoneNumber;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.common.concurrent.Annotations.BackgroundExecutor;
 import com.android.dialer.common.concurrent.Annotations.LightweightExecutor;
-import com.android.dialer.configprovider.ConfigProvider;
 import com.android.dialer.inject.ApplicationContext;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.phonelookup.PhoneLookup;
 import com.android.dialer.phonelookup.PhoneLookupInfo;
 import com.android.dialer.phonelookup.PhoneLookupInfo.Cp2Info;
@@ -54,6 +55,7 @@ import com.google.common.util.concurrent.ListenableFuture;
 import com.google.common.util.concurrent.ListeningExecutorService;
 import com.google.common.util.concurrent.MoreExecutors;
 import com.google.protobuf.InvalidProtocolBufferException;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -61,6 +63,7 @@ import java.util.Map.Entry;
 import java.util.Set;
 import java.util.concurrent.Callable;
 import java.util.function.Predicate;
+
 import javax.inject.Inject;
 
 /** PhoneLookup implementation for contacts in the default directory. */
@@ -73,10 +76,10 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
   private final SharedPreferences sharedPreferences;
   private final ListeningExecutorService backgroundExecutorService;
   private final ListeningExecutorService lightweightExecutorService;
-  private final ConfigProvider configProvider;
   private final MissingPermissionsOperations missingPermissionsOperations;
 
-  @Nullable private Long currentLastTimestampProcessed;
+  @Nullable
+  private Long currentLastTimestampProcessed;
 
   @Inject
   Cp2DefaultDirectoryPhoneLookup(
@@ -84,13 +87,11 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
       @Unencrypted SharedPreferences sharedPreferences,
       @BackgroundExecutor ListeningExecutorService backgroundExecutorService,
       @LightweightExecutor ListeningExecutorService lightweightExecutorService,
-      ConfigProvider configProvider,
       MissingPermissionsOperations missingPermissionsOperations) {
     this.appContext = appContext;
     this.sharedPreferences = sharedPreferences;
     this.backgroundExecutorService = backgroundExecutorService;
     this.lightweightExecutorService = lightweightExecutorService;
-    this.configProvider = configProvider;
     this.missingPermissionsOperations = missingPermissionsOperations;
   }
 
@@ -351,8 +352,8 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
           try (Cursor cursor =
               queryPhoneLookup(new String[] {ContactsContract.PhoneLookup.CONTACT_ID}, rawNumber)) {
             if (cursor == null) {
-              LogUtil.w(
-                  "Cp2DefaultDirectoryPhoneLookup.queryPhoneLookupTableForContactIdsBasedOnRawNumber",
+              LogUtil.w("Cp2DefaultDirectoryPhoneLookup." +
+                              "queryPhoneLookupTableForContactIdsBasedOnRawNumber",
                   "null cursor");
               return contactIds;
             }
@@ -556,7 +557,6 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
     PartitionedNumbers partitionedNumbers = new PartitionedNumbers(existingInfoMap.keySet());
 
     int invalidNumberCount = partitionedNumbers.invalidNumbers().size();
-    Logger.get(appContext).logAnnotatedCallLogMetrics(invalidNumberCount);
 
     if (invalidNumberCount > getMaxSupportedInvalidNumbers()) {
       for (String invalidNumber : partitionedNumbers.invalidNumbers()) {
@@ -854,7 +854,7 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
             Phone.CONTENT_URI,
             projection,
             Phone.NORMALIZED_NUMBER + " IN (" + questionMarks(validE164Numbers.size()) + ")",
-            validE164Numbers.toArray(new String[validE164Numbers.size()]),
+            validE164Numbers.toArray(new String[0]),
             null);
   }
 
@@ -971,6 +971,6 @@ public final class Cp2DefaultDirectoryPhoneLookup implements PhoneLookup<Cp2Info
    * if there are too many we fall back to querying CP2 at render time.
    */
   private long getMaxSupportedInvalidNumbers() {
-    return configProvider.getLong("cp2_phone_lookup_max_invalid_numbers", 5);
+    return 5;
   }
 }

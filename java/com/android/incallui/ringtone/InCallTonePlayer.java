@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,10 +19,13 @@ package com.android.incallui.ringtone;
 
 import android.media.AudioManager;
 import android.media.ToneGenerator;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
+
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import com.android.incallui.Log;
 import com.android.incallui.async.PausableExecutor;
+
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
@@ -36,7 +40,8 @@ public class InCallTonePlayer {
 
   public static final int VOLUME_RELATIVE_HIGH_PRIORITY = 80;
 
-  @NonNull private final ToneGeneratorFactory toneGeneratorFactory;
+  @NonNull
+  private final ToneGeneratorFactory toneGeneratorFactory;
   @NonNull private final PausableExecutor executor;
   private @Nullable CountDownLatch numPlayingTones;
 
@@ -73,13 +78,7 @@ public class InCallTonePlayer {
     }
     final ToneGeneratorInfo info = getToneGeneratorInfo(tone);
     numPlayingTones = new CountDownLatch(1);
-    executor.execute(
-        new Runnable() {
-          @Override
-          public void run() {
-            playOnBackgroundThread(info);
-          }
-        });
+    executor.execute(() -> playOnBackgroundThread(info));
   }
 
   private ToneGeneratorInfo getToneGeneratorInfo(int tone) {
@@ -108,15 +107,8 @@ public class InCallTonePlayer {
       Log.v(this, "Starting tone " + info);
       toneGenerator = toneGeneratorFactory.newInCallToneGenerator(info.stream, info.volume);
       toneGenerator.startTone(info.tone);
-      /*
-       * During tests, this will block until the tests call mExecutor.ackMilestone. This call
-       * allows for synchronization to the point where the tone has started playing.
-       */
-      executor.milestone();
       if (numPlayingTones != null) {
         numPlayingTones.await(info.toneLengthMillis, TimeUnit.MILLISECONDS);
-        // Allows for synchronization to the point where the tone has completed playing.
-        executor.milestone();
       }
     } catch (InterruptedException e) {
       Log.w(this, "Interrupted while playing in-call tone.");
@@ -127,8 +119,6 @@ public class InCallTonePlayer {
       if (numPlayingTones != null) {
         numPlayingTones.countDown();
       }
-      // Allows for synchronization to the point where this background thread has cleaned up.
-      executor.milestone();
     }
   }
 

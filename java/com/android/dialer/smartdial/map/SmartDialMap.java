@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,11 +17,12 @@
 
 package com.android.dialer.smartdial.map;
 
-import android.support.v4.util.SimpleArrayMap;
-import com.google.common.base.Optional;
+import androidx.collection.SimpleArrayMap;
+
+import java.util.Optional;
 
 /** Definition for utilities that supports smart dial in different languages. */
-@SuppressWarnings("Guava")
+
 abstract class SmartDialMap {
 
   /**
@@ -56,7 +58,7 @@ abstract class SmartDialMap {
    * <p>The provided character is expected to be a normalized character. See {@link
    * SmartDialMap#normalizeCharacter(char)} for details.
    *
-   * <p>An {@link Optional#absent()} is returned if the provided character can't be mapped to a key
+   * <p>An {@link Optional#empty()} ()} is returned if the provided character can't be mapped to a key
    * on the dialpad.
    */
   protected Optional<Byte> getDialpadIndex(char ch) {
@@ -68,7 +70,7 @@ abstract class SmartDialMap {
       return Optional.of((byte) (getCharToKeyMap().get(ch) - '0'));
     }
 
-    return Optional.absent();
+    return Optional.empty();
   }
 
   /**
@@ -77,20 +79,20 @@ abstract class SmartDialMap {
    * <p>The provided character is expected to be a normalized character. See {@link
    * SmartDialMap#normalizeCharacter(char)} for details.
    *
-   * <p>An {@link Optional#absent()} is returned if the provided character can't be mapped to a key
+   * <p>An {@link Optional#empty()} ()} is returned if the provided character can't be mapped to a key
    * on the dialpad.
    */
   protected Optional<Character> getDialpadNumericCharacter(char ch) {
     return isValidDialpadAlphabeticChar(ch)
         ? Optional.of(getCharToKeyMap().get(ch))
-        : Optional.absent();
+        : Optional.empty();
   }
 
   /**
    * Converts uppercase characters to lower case ones, and on a best effort basis, strips accents
    * from accented characters.
    *
-   * <p>An {@link Optional#absent()} is returned if the provided character can't be mapped to a key
+   * <p>An {@link Optional#empty()} ()} is returned if the provided character can't be mapped to a key
    * on the dialpad.
    */
   abstract Optional<Character> normalizeCharacter(char ch);

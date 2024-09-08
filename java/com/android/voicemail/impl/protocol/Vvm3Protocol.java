@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,16 +17,15 @@
 
 package com.android.voicemail.impl.protocol;
 
-import android.annotation.TargetApi;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.net.Network;
-import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
-import android.support.annotation.Nullable;
 import android.telecom.PhoneAccountHandle;
 import android.text.TextUtils;
-import com.android.dialer.logging.DialerImpression;
+
+import androidx.annotation.Nullable;
+
 import com.android.voicemail.PinChanger;
 import com.android.voicemail.VoicemailComponent;
 import com.android.voicemail.impl.ActivationTask;
@@ -45,7 +45,7 @@ import com.android.voicemail.impl.sms.Vvm3MessageSender;
 import com.android.voicemail.impl.sync.VvmNetworkRequest;
 import com.android.voicemail.impl.sync.VvmNetworkRequest.NetworkWrapper;
 import com.android.voicemail.impl.sync.VvmNetworkRequest.RequestFailedException;
-import com.android.voicemail.impl.utils.LoggerUtils;
+
 import java.io.IOException;
 import java.security.SecureRandom;
 import java.util.Locale;
@@ -55,7 +55,6 @@ import java.util.Locale;
  *
  * <p>Used by carriers such as Verizon Wireless
  */
-@TargetApi(VERSION_CODES.O)
 public class Vvm3Protocol extends VisualVoicemailProtocol {
 
   private static final String TAG = "Vvm3Protocol";
@@ -126,8 +125,6 @@ public class Vvm3Protocol extends VisualVoicemailProtocol {
       return;
     }
 
-    LoggerUtils.logImpressionOnMainThread(
-        config.getContext(), DialerImpression.Type.VVM_PROVISIONING_STARTED);
     if (OmtpConstants.SUBSCRIBER_UNKNOWN.equals(message.getProvisioningStatus())) {
       VvmLog.i(TAG, "Provisioning status: Unknown");
       if (VVM3_UNKNOWN_SUBSCRIBER_CAN_SUBSCRIBE_RESPONSE_CODE.equals(message.getReturnCode())) {
@@ -240,8 +237,6 @@ public class Vvm3Protocol extends VisualVoicemailProtocol {
           // Only close new user tutorial if the PIN has been changed.
           helper.closeNewUserTutorial();
           VvmLog.i(TAG, "new user: NUT closed");
-          LoggerUtils.logImpressionOnMainThread(
-              config.getContext(), DialerImpression.Type.VVM_PROVISIONING_COMPLETED);
           config.requestStatus(null);
         }
       } catch (InitializingException | MessagingException | IOException e) {

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2018 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -20,6 +21,7 @@ import android.content.Context;
 import android.telecom.CallAudioState;
 import android.view.View;
 import android.widget.PopupWindow;
+
 import com.android.incallui.incall.protocol.InCallButtonUiDelegate;
 
 /** Audio select menu for RTT call. */
@@ -71,10 +73,7 @@ public class AudioSelectMenu extends PopupWindow {
     } else if (audioState.getRoute() == itemRoute) {
       item.setChecked(true);
     }
-    item.setOnClickListener(
-        (v) -> {
-          inCallButtonUiDelegate.setAudioRoute(itemRoute);
-        });
+    item.setOnClickListener(v -> inCallButtonUiDelegate.setAudioRoute(itemRoute));
   }
 
   void setAudioState(CallAudioState audioState) {

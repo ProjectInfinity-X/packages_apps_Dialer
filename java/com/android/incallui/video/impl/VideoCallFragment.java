@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,9 +19,9 @@ package com.android.incallui.video.impl;
 
 import android.Manifest.permission;
 import android.content.Context;
-import android.content.pm.PackageManager;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
+import android.graphics.Insets;
 import android.graphics.Outline;
 import android.graphics.Point;
 import android.graphics.drawable.Animatable;
@@ -30,14 +31,6 @@ import android.renderscript.Allocation;
 import android.renderscript.Element;
 import android.renderscript.RenderScript;
 import android.renderscript.ScriptIntrinsicBlur;
-import android.support.annotation.ColorInt;
-import android.support.annotation.NonNull;
-import android.support.annotation.Nullable;
-import android.support.annotation.VisibleForTesting;
-import android.support.v4.app.Fragment;
-import android.support.v4.app.FragmentTransaction;
-import android.support.v4.view.animation.FastOutLinearInInterpolator;
-import android.support.v4.view.animation.LinearOutSlowInInterpolator;
 import android.telecom.CallAudioState;
 import android.text.TextUtils;
 import android.view.LayoutInflater;
@@ -50,6 +43,7 @@ import android.view.View.OnSystemUiVisibilityChangeListener;
 import android.view.ViewGroup;
 import android.view.ViewGroup.MarginLayoutParams;
 import android.view.ViewOutlineProvider;
+import android.view.WindowInsets;
 import android.view.accessibility.AccessibilityEvent;
 import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.Interpolator;
@@ -57,6 +51,17 @@ import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
+
+import androidx.activity.result.ActivityResultLauncher;
+import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentTransaction;
+import androidx.interpolator.view.animation.FastOutLinearInInterpolator;
+import androidx.interpolator.view.animation.LinearOutSlowInInterpolator;
+
+import com.android.dialer.R;
 import com.android.dialer.common.Assert;
 import com.android.dialer.common.FragmentUtils;
 import com.android.dialer.common.LogUtil;
@@ -95,13 +100,12 @@ public class VideoCallFragment extends Fragment
         AudioRouteSelectorPresenter,
         OnSystemUiVisibilityChangeListener {
 
-  @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
-  static final String ARG_CALL_ID = "call_id";
+  private static final String ARG_CALL_ID = "call_id";
 
   private static final String TAG_VIDEO_CHARGES_ALERT = "tag_video_charges_alert";
 
-  @VisibleForTesting static final float BLUR_PREVIEW_RADIUS = 16.0f;
-  @VisibleForTesting static final float BLUR_PREVIEW_SCALE_FACTOR = 1.0f;
+  private static final float BLUR_PREVIEW_RADIUS = 16.0f;
+  private static final float BLUR_PREVIEW_SCALE_FACTOR = 1.0f;
   private static final float BLUR_REMOTE_RADIUS = 25.0f;
   private static final float BLUR_REMOTE_SCALE_FACTOR = 0.25f;
   private static final float ASPECT_RATIO_MATCH_THRESHOLD = 0.2f;
@@ -182,6 +186,19 @@ public class VideoCallFragment extends Fragment
         }
       };
 
+  private final ActivityResultLauncher<String> cameraPermissionLauncher = registerForActivityResult(
+          new ActivityResultContracts.RequestPermission(),
+          grantResult -> {
+            if (grantResult) {
+              LogUtil.i("VideoCallFragment.onRequestPermissionsResult",
+                      "Camera permission granted.");
+              videoCallScreenDelegate.onCameraPermissionGranted();
+            } else {
+              LogUtil.i("VideoCallFragment.onRequestPermissionsResult",
+                      "Camera permission denied.");
+            }
+          });
+
   public static VideoCallFragment newInstance(String callId) {
     Bundle bundle = new Bundle();
     bundle.putString(ARG_CALL_ID, Assert.isNotNull(callId));
@@ -199,23 +216,6 @@ public class VideoCallFragment extends Fragment
     inCallButtonUiDelegate =
         FragmentUtils.getParent(this, InCallButtonUiDelegateFactory.class)
             .newInCallButtonUiDelegate();
-    if (savedInstanceState != null) {
-      inCallButtonUiDelegate.onRestoreInstanceState(savedInstanceState);
-    }
-  }
-
-  @Override
-  public void onRequestPermissionsResult(
-      int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-    if (requestCode == CAMERA_PERMISSION_REQUEST_CODE) {
-      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-        LogUtil.i("VideoCallFragment.onRequestPermissionsResult", "Camera permission granted.");
-        videoCallScreenDelegate.onCameraPermissionGranted();
-      } else {
-        LogUtil.i("VideoCallFragment.onRequestPermissionsResult", "Camera permission denied.");
-      }
-    }
-    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
   }
 
   @Nullable
@@ -252,60 +252,29 @@ public class VideoCallFragment extends Fragment
     onHoldContainer = view.findViewById(R.id.videocall_on_hold_banner);
     remoteVideoOff = (TextView) view.findViewById(R.id.videocall_remote_video_off);
     remoteVideoOff.setAccessibilityLiveRegion(View.ACCESSIBILITY_LIVE_REGION_POLITE);
-    remoteOffBlurredImageView =
-        (ImageView) view.findViewById(R.id.videocall_remote_off_blurred_image_view);
+    remoteOffBlurredImageView = view.findViewById(R.id.videocall_remote_off_blurred_image_view);
     endCallButton = view.findViewById(R.id.videocall_end_call);
     endCallButton.setOnClickListener(this);
-    previewTextureView = (TextureView) view.findViewById(R.id.videocall_video_preview);
+    previewTextureView = view.findViewById(R.id.videocall_video_preview);
     previewTextureView.setClipToOutline(true);
-    previewOffOverlay.setOnClickListener(
-        new OnClickListener() {
-          @Override
-          public void onClick(View v) {
-            checkCameraPermission();
-          }
-        });
-    remoteTextureView = (TextureView) view.findViewById(R.id.videocall_video_remote);
+    previewOffOverlay.setOnClickListener(v -> checkCameraPermission());
+    remoteTextureView = view.findViewById(R.id.videocall_video_remote);
     greenScreenBackgroundView = view.findViewById(R.id.videocall_green_screen_background);
     fullscreenBackgroundView = view.findViewById(R.id.videocall_fullscreen_background);
 
     remoteTextureView.addOnLayoutChangeListener(
-        new OnLayoutChangeListener() {
-          @Override
-          public void onLayoutChange(
-              View v,
-              int left,
-              int top,
-              int right,
-              int bottom,
-              int oldLeft,
-              int oldTop,
-              int oldRight,
-              int oldBottom) {
-            LogUtil.i("VideoCallFragment.onLayoutChange", "remoteTextureView layout changed");
-            updateRemoteVideoScaling();
-            updateRemoteOffView();
-          }
-        });
+            (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+              LogUtil.i("VideoCallFragment.onLayoutChange", "remoteTextureView layout changed");
+              updateRemoteVideoScaling();
+              updateRemoteOffView();
+            });
 
     previewTextureView.addOnLayoutChangeListener(
-        new OnLayoutChangeListener() {
-          @Override
-          public void onLayoutChange(
-              View v,
-              int left,
-              int top,
-              int right,
-              int bottom,
-              int oldLeft,
-              int oldTop,
-              int oldRight,
-              int oldBottom) {
-            LogUtil.i("VideoCallFragment.onLayoutChange", "previewTextureView layout changed");
-            updatePreviewVideoScaling();
-            updatePreviewOffView();
-          }
-        });
+            (v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+              LogUtil.i("VideoCallFragment.onLayoutChange", "previewTextureView layout changed");
+              updatePreviewVideoScaling();
+              updatePreviewOffView();
+            });
 
     controls.addOnLayoutChangeListener(
         new OnLayoutChangeListener() {
@@ -364,12 +333,6 @@ public class VideoCallFragment extends Fragment
         contactGridManager.getContainerView().setVisibility(View.INVISIBLE);
         endCallButton.setVisibility(View.INVISIBLE);
     }
-  }
-
-  @Override
-  public void onSaveInstanceState(Bundle outState) {
-    super.onSaveInstanceState(outState);
-    inCallButtonUiDelegate.onSaveInstanceState(outState);
   }
 
   @Override
@@ -450,13 +413,7 @@ public class VideoCallFragment extends Fragment
         .translationY(0)
         .setInterpolator(linearOutSlowInInterpolator)
         .alpha(1)
-        .withStartAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                controls.setVisibility(View.VISIBLE);
-              }
-            })
+        .withStartAction(() -> controls.setVisibility(View.VISIBLE))
         .start();
 
     // Animate onHold to the shown state.
@@ -466,13 +423,7 @@ public class VideoCallFragment extends Fragment
         .translationY(0)
         .setInterpolator(linearOutSlowInInterpolator)
         .alpha(1)
-        .withStartAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                switchOnHoldCallController.setOnScreen();
-              }
-            });
+        .withStartAction(() -> switchOnHoldCallController.setOnScreen());
 
     View contactGridView = contactGridManager.getContainerView();
     // Animate contact grid to the shown state.
@@ -482,13 +433,7 @@ public class VideoCallFragment extends Fragment
         .translationY(0)
         .setInterpolator(linearOutSlowInInterpolator)
         .alpha(1)
-        .withStartAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                contactGridManager.show();
-              }
-            });
+        .withStartAction(() -> contactGridManager.show());
 
     endCallButton
         .animate()
@@ -496,13 +441,7 @@ public class VideoCallFragment extends Fragment
         .translationY(0)
         .setInterpolator(linearOutSlowInInterpolator)
         .alpha(1)
-        .withStartAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                endCallButton.setVisibility(View.VISIBLE);
-              }
-            })
+        .withStartAction(() -> endCallButton.setVisibility(View.VISIBLE))
         .start();
 
     // Animate all the preview controls up to make room for the navigation bar.
@@ -527,7 +466,6 @@ public class VideoCallFragment extends Fragment
     View view = getView();
     if (view != null) {
       // Code is more expressive with all flags present, even though some may be combined
-      // noinspection PointlessBitwiseExpression
       view.setSystemUiVisibility(View.SYSTEM_UI_FLAG_VISIBLE | View.SYSTEM_UI_FLAG_LAYOUT_STABLE);
     }
   }
@@ -576,14 +514,15 @@ public class VideoCallFragment extends Fragment
     if (getActivity().isInMultiWindowMode()) {
       return new Point();
     }
+    Insets insets = getView().getRootWindowInsets().getInsets(WindowInsets.Type.systemBars());
     if (isLandscape()) {
       int systemWindowInsetEnd =
           getView().getLayoutDirection() == View.LAYOUT_DIRECTION_RTL
-              ? getView().getRootWindowInsets().getSystemWindowInsetLeft()
-              : -getView().getRootWindowInsets().getSystemWindowInsetRight();
+              ? insets.left
+              : -insets.right;
       return new Point(systemWindowInsetEnd, 0);
     } else {
-      return new Point(0, -getView().getRootWindowInsets().getSystemWindowInsetBottom());
+      return new Point(0, -insets.bottom);
     }
   }
 
@@ -663,13 +602,7 @@ public class VideoCallFragment extends Fragment
         .translationY(offset.y)
         .setInterpolator(fastOutLinearInInterpolator)
         .alpha(0)
-        .withEndAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                endCallButton.setVisibility(View.INVISIBLE);
-              }
-            })
+        .withEndAction(() -> endCallButton.setVisibility(View.INVISIBLE))
         .setInterpolator(new FastOutLinearInInterpolator())
         .start();
 
@@ -909,14 +842,23 @@ public class VideoCallFragment extends Fragment
   }
 
   @Override
+  public void setCallRecordingState(boolean isRecording) {
+  }
+
+  @Override
+  public void setCallRecordingDuration(long durationMs) {
+  }
+
+  @Override
+  public void requestCallRecordingPermissions(String[] permissions) {
+  }
+
+  @Override
   public void updateButtonStates() {
     LogUtil.i("VideoCallFragment.updateButtonState", null);
     speakerButtonController.updateButtonState();
     switchOnHoldCallController.updateButtonState();
   }
-
-  @Override
-  public void updateInCallButtonUiColors(@ColorInt int color) {}
 
   @Override
   public Fragment getInCallButtonUiFragment() {
@@ -1090,7 +1032,7 @@ public class VideoCallFragment extends Fragment
 
   private boolean isLandscape() {
     // Choose orientation based on display orientation, not window orientation
-    int rotation = getActivity().getWindowManager().getDefaultDisplay().getRotation();
+    int rotation = getActivity().getDisplay().getRotation();
     return rotation == Surface.ROTATION_90 || rotation == Surface.ROTATION_270;
   }
 
@@ -1169,13 +1111,7 @@ public class VideoCallFragment extends Fragment
           wasRemoteVideoOff
               ? R.string.videocall_remote_video_on
               : R.string.videocall_remotely_resumed);
-      remoteVideoOff.postDelayed(
-          new Runnable() {
-            @Override
-            public void run() {
-              remoteVideoOff.setVisibility(View.GONE);
-            }
-          },
+      remoteVideoOff.postDelayed(() -> remoteVideoOff.setVisibility(View.GONE),
           VIDEO_OFF_VIEW_FADE_OUT_DELAY_IN_MILLIS);
     } else {
       remoteVideoOff.setText(
@@ -1190,7 +1126,6 @@ public class VideoCallFragment extends Fragment
         BLUR_REMOTE_SCALE_FACTOR);
   }
 
-  @VisibleForTesting
   void updateBlurredImageView(
       TextureView textureView,
       ImageView blurredImageView,
@@ -1294,13 +1229,7 @@ public class VideoCallFragment extends Fragment
     view.setVisibility(View.VISIBLE);
     view.animate()
         .alpha(endAlpha)
-        .withEndAction(
-            new Runnable() {
-              @Override
-              public void run() {
-                view.setVisibility(visibility);
-              }
-            })
+        .withEndAction(() -> view.setVisibility(visibility))
         .start();
   }
 
@@ -1334,7 +1263,7 @@ public class VideoCallFragment extends Fragment
     if (!VideoUtils.hasCameraPermissionAndShownPrivacyToast(getContext())) {
       videoCallScreenDelegate.onCameraPermissionDialogShown();
       if (!VideoUtils.hasCameraPermission(getContext())) {
-        requestPermissions(new String[] {permission.CAMERA}, CAMERA_PERMISSION_REQUEST_CODE);
+        cameraPermissionLauncher.launch(permission.CAMERA);
       } else {
         PermissionsUtil.showCameraPermissionToast(getContext());
         videoCallScreenDelegate.onCameraPermissionGranted();

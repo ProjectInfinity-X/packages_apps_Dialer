@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -16,17 +17,17 @@
 
 package com.android.dialer.compat.telephony;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
-import android.content.Intent;
-import android.net.Uri;
-import android.os.Build.VERSION;
-import android.os.Build.VERSION_CODES;
-import android.support.annotation.Nullable;
-import android.support.v4.os.BuildCompat;
 import android.telecom.PhoneAccountHandle;
+import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
+
+import androidx.annotation.Nullable;
+
 import com.android.dialer.common.LogUtil;
 import com.android.dialer.telecom.TelecomUtil;
+
 import java.lang.reflect.InvocationTargetException;
 
 /** Hidden APIs in {@link android.telephony.TelephonyManager}. */
@@ -49,10 +50,6 @@ public class TelephonyManagerCompat {
       "android.telephony.event.EVENT_NOTIFY_INTERNATIONAL_CALL_ON_WFC";
   public static final String EVENT_CALL_FORWARDED = "android.telephony.event.EVENT_CALL_FORWARDED";
 
-  public static final String TELEPHONY_MANAGER_CLASS = "android.telephony.TelephonyManager";
-
-  private static final String SECRET_CODE_ACTION = "android.provider.Telephony.SECRET_CODE";
-
   // TODO(erfanian): a bug Replace with the platform/telecom constant when available.
   /**
    * Indicates that the call being placed originated from a known contact.
@@ -66,11 +63,7 @@ public class TelephonyManagerCompat {
   public static final String ASSISTED_DIALING_EXTRAS =
       "android.telecom.extra.ASSISTED_DIALING_EXTRAS";
 
-  /** Indicates the Connection/Call used assisted dialing. */
-  public static final int PROPERTY_ASSISTED_DIALING_USED = 1 << 9;
-
-  public static final String EXTRA_IS_REFRESH =
-      BuildCompat.isAtLeastOMR1() ? "android.telephony.extra.IS_REFRESH" : "is_refresh";
+  public static final String EXTRA_IS_REFRESH = "android.telephony.extra.IS_REFRESH";
 
   /**
    * Indicates the call underwent Assisted Dialing; typically set as a feature available from the
@@ -97,17 +90,18 @@ public class TelephonyManagerCompat {
     if (telephonyManager == null) {
       return 1;
     }
-    return telephonyManager.getPhoneCount();
+    return telephonyManager.getActiveModemCount();
   }
 
   /**
    * Whether the phone supports TTY mode.
    *
-   * @param telephonyManager The telephony manager instance to use for method calls.
+   * @param telecomManager The TelecomManager manager instance to use for method calls.
    * @return {@code true} if the device supports TTY mode, and {@code false} otherwise.
    */
-  public static boolean isTtyModeSupported(@Nullable TelephonyManager telephonyManager) {
-    return telephonyManager != null && telephonyManager.isTtyModeSupported();
+  @SuppressLint("MissingPermission")
+  public static boolean isTtyModeSupported(@Nullable TelecomManager telecomManager) {
+    return telecomManager != null && telecomManager.isTtySupported();
   }
 
   /**
@@ -120,34 +114,6 @@ public class TelephonyManagerCompat {
   public static boolean isHearingAidCompatibilitySupported(
       @Nullable TelephonyManager telephonyManager) {
     return telephonyManager != null && telephonyManager.isHearingAidCompatibilitySupported();
-  }
-
-  /**
-   * Returns the URI for the per-account voicemail ringtone set in Phone settings.
-   *
-   * @param telephonyManager The telephony manager instance to use for method calls.
-   * @param accountHandle The handle for the {@link android.telecom.PhoneAccount} for which to
-   *     retrieve the voicemail ringtone.
-   * @return The URI for the ringtone to play when receiving a voicemail from a specific
-   *     PhoneAccount.
-   */
-  @Nullable
-  public static Uri getVoicemailRingtoneUri(
-      TelephonyManager telephonyManager, PhoneAccountHandle accountHandle) {
-    return telephonyManager.getVoicemailRingtoneUri(accountHandle);
-  }
-
-  /**
-   * Returns whether vibration is set for voicemail notification in Phone settings.
-   *
-   * @param telephonyManager The telephony manager instance to use for method calls.
-   * @param accountHandle The handle for the {@link android.telecom.PhoneAccount} for which to
-   *     retrieve the voicemail vibration setting.
-   * @return {@code true} if the vibration is set for this PhoneAccount, {@code false} otherwise.
-   */
-  public static boolean isVoicemailVibrationEnabled(
-      TelephonyManager telephonyManager, PhoneAccountHandle accountHandle) {
-    return telephonyManager.isVoicemailVibrationEnabled(accountHandle);
   }
 
   /**
@@ -166,44 +132,19 @@ public class TelephonyManagerCompat {
   }
 
   /**
-   * This method uses a new system API to check if visual voicemail is enabled TODO(twyen): restrict
-   * to N MR1, not needed in future SDK.
-   */
-  public static boolean isVisualVoicemailEnabled(
-      TelephonyManager telephonyManager, PhoneAccountHandle handle) {
-    try {
-      return (boolean)
-          TelephonyManager.class
-              .getMethod("isVisualVoicemailEnabled", PhoneAccountHandle.class)
-              .invoke(telephonyManager, handle);
-    } catch (NoSuchMethodException | IllegalAccessException | InvocationTargetException e) {
-      LogUtil.e("TelephonyManagerCompat.setVisualVoicemailEnabled", "failed", e);
-    }
-    return false;
-  }
-
-  /**
    * Handles secret codes to launch arbitrary activities.
    *
    * @param context the context to use
    * @param secretCode the secret code without the "*#*#" prefix and "#*#*" suffix
    */
   public static void handleSecretCode(Context context, String secretCode) {
-    // Must use system service on O+ to avoid using broadcasts, which are not allowed on O+.
-    if (BuildCompat.isAtLeastO()) {
-      if (!TelecomUtil.isDefaultDialer(context)) {
-        LogUtil.e(
-            "TelephonyManagerCompat.handleSecretCode",
-            "not default dialer, cannot send special code");
-        return;
-      }
-      context.getSystemService(TelephonyManager.class).sendDialerSpecialCode(secretCode);
-    } else {
-      // System service call is not supported pre-O, so must use a broadcast for N-.
-      Intent intent =
-          new Intent(SECRET_CODE_ACTION, Uri.parse("android_secret_code://" + secretCode));
-      context.sendBroadcast(intent);
+    if (!TelecomUtil.isDefaultDialer(context)) {
+      LogUtil.e(
+          "TelephonyManagerCompat.handleSecretCode",
+          "not default dialer, cannot send special code");
+      return;
     }
+    context.getSystemService(TelephonyManager.class).sendDialerSpecialCode(secretCode);
   }
 
   /**
@@ -226,12 +167,10 @@ public class TelephonyManagerCompat {
     if (phoneAccountHandle == null) {
       return telephonyManager;
     }
-    if (VERSION.SDK_INT >= VERSION_CODES.O) {
-      TelephonyManager telephonyManagerForPhoneAccount =
-          telephonyManager.createForPhoneAccountHandle(phoneAccountHandle);
-      if (telephonyManagerForPhoneAccount != null) {
-        return telephonyManagerForPhoneAccount;
-      }
+    TelephonyManager telephonyManagerForPhoneAccount =
+        telephonyManager.createForPhoneAccountHandle(phoneAccountHandle);
+    if (telephonyManagerForPhoneAccount != null) {
+      return telephonyManagerForPhoneAccount;
     }
     return telephonyManager;
   }

@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2017 The Android Open Source Project
+ * Copyright (C) 2023 The LineageOS Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -18,15 +19,16 @@ package com.android.dialer.precall.impl;
 
 import android.content.Context;
 import android.content.Intent;
-import android.support.annotation.NonNull;
+
+import androidx.annotation.NonNull;
+
 import com.android.dialer.callintent.CallIntentBuilder;
 import com.android.dialer.common.LogUtil;
-import com.android.dialer.logging.DialerImpression;
-import com.android.dialer.logging.Logger;
 import com.android.dialer.precall.PreCall;
 import com.android.dialer.precall.PreCallAction;
 import com.android.dialer.precall.PreCallCoordinator;
 import com.google.common.collect.ImmutableList;
+
 import javax.inject.Inject;
 
 /** Implementation of {@link PreCall} */
@@ -42,7 +44,6 @@ public class PreCallImpl implements PreCall {
   @NonNull
   @Override
   public Intent buildIntent(Context context, CallIntentBuilder builder) {
-    Logger.get(context).logImpression(DialerImpression.Type.PRECALL_INITIATED);
     if (!requiresUi(context, builder)) {
       LogUtil.i("PreCallImpl.buildIntent", "No UI requested, running pre-call directly");
       for (PreCallAction action : actions) {
