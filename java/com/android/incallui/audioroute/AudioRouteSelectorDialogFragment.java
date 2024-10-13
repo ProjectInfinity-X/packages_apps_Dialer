@@ -44,6 +44,7 @@ import com.android.dialer.common.LogUtil;
 import com.android.dialer.theme.base.ThemeComponent;
 import com.android.incallui.call.TelecomAdapter;
 import com.android.incallui.util.BluetoothUtil;
+import com.google.android.material.bottomsheet.BottomSheetDialog;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import java.util.Collection;
@@ -87,44 +88,68 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
           .getWindow()
           .setType(WindowManager.LayoutParams.TYPE_APPLICATION_OVERLAY);
     }
+    
+    dialog.setOnShowListener(dialogInterface -> {
+        BottomSheetDialog bottomSheetDialog = (BottomSheetDialog) dialogInterface;
+        View bottomSheet = bottomSheetDialog.findViewById(com.google.android.material.R.id.design_bottom_sheet);
+
+        if (bottomSheet != null) {
+            bottomSheet.setBackgroundColor(getResources().getColor(android.R.color.transparent));
+        }
+    });
+    
     return dialog;
   }
 
   @Nullable
-  @Override
-  @SuppressLint("NewApi")
-  public View onCreateView(
-      LayoutInflater layoutInflater, @Nullable ViewGroup viewGroup, @Nullable Bundle bundle) {
-    View view = layoutInflater.inflate(R.layout.audioroute_selector, viewGroup, false);
-    CallAudioState audioState = getArguments().getParcelable(ARG_AUDIO_STATE, CallAudioState.class);
+    @Override
+    @SuppressLint("NewApi")
+    public View onCreateView(
+            LayoutInflater layoutInflater, @Nullable ViewGroup viewGroup, @Nullable Bundle bundle) {
+        View view = layoutInflater.inflate(R.layout.audioroute_selector, viewGroup, false);
+        CallAudioState audioState = getArguments().getParcelable(ARG_AUDIO_STATE, CallAudioState.class);
 
-    // Create items for all connected Bluetooth devices
-    Collection<BluetoothDevice> bluetoothDeviceSet = audioState.getSupportedBluetoothDevices();
-    for (BluetoothDevice device : bluetoothDeviceSet) {
-      boolean selected =
-          (audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH)
-              && (bluetoothDeviceSet.size() == 1
-                  || device.equals(audioState.getActiveBluetoothDevice()));
-      TextView textView = createBluetoothItem(device, selected);
-      ((LinearLayout) view).addView(textView, 0);
+        // Create items for all connected Bluetooth devices
+        Collection<BluetoothDevice> bluetoothDeviceSet = audioState.getSupportedBluetoothDevices();
+        boolean hasConnectedBluetooth = false;
+
+        // Check for connected Bluetooth devices
+        BluetoothDevice activeBluetoothDevice = audioState.getActiveBluetoothDevice();
+        if (activeBluetoothDevice != null && audioState.getRoute() == CallAudioState.ROUTE_BLUETOOTH) {
+            hasConnectedBluetooth = true;
+        }
+
+        TextView headsetTextView = view.findViewById(R.id.audioroute_headset);
+        if (hasConnectedBluetooth) {
+            String bluetoothName = BluetoothUtil.getAliasName(activeBluetoothDevice);
+            headsetTextView.setText(bluetoothName.isEmpty() ? getString(R.string.audioroute_bluetooth) : bluetoothName);
+            headsetTextView.setVisibility(View.VISIBLE);
+        } else {
+            if ((audioState.getSupportedRouteMask() & CallAudioState.ROUTE_WIRED_HEADSET) != 0) {
+                headsetTextView.setText(R.string.audioroute_headset);
+                headsetTextView.setVisibility(View.VISIBLE);
+            } else {
+                headsetTextView.setVisibility(View.GONE);
+            }
+        }
+
+        // Initialize other audio routes
+        if ((audioState.getSupportedRouteMask() & CallAudioState.ROUTE_BLUETOOTH) != 0) {
+            initItem(headsetTextView, CallAudioState.ROUTE_BLUETOOTH, audioState);
+        }
+
+        initItem(
+                view.findViewById(R.id.audioroute_speaker),
+                CallAudioState.ROUTE_SPEAKER,
+                audioState);
+        initItem(
+                view.findViewById(R.id.audioroute_earpiece),
+                CallAudioState.ROUTE_EARPIECE,
+                audioState);
+
+        // TODO(a bug): set peak height correctly to fully expand it in landscape mode.
+        return view;
     }
-
-    initItem(
-        view.findViewById(R.id.audioroute_speaker),
-        CallAudioState.ROUTE_SPEAKER,
-        audioState);
-    initItem(
-        view.findViewById(R.id.audioroute_headset),
-        CallAudioState.ROUTE_WIRED_HEADSET,
-        audioState);
-    initItem(
-        view.findViewById(R.id.audioroute_earpiece),
-        CallAudioState.ROUTE_EARPIECE,
-        audioState);
-
-    // TODO(a bug): set peak height correctly to fully expand it in landscape mode.
-    return view;
-  }
 
   @Override
   public void onCancel(DialogInterface dialogInterface) {

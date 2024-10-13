@@ -29,7 +29,7 @@
       android:layout_height="wrap_content"
       android:text="@string/audioroute_speaker"
       android:textAlignment="viewStart"
-      app:drawableStartCompat="@drawable/quantum_ic_volume_up_vd_theme_24" />
+      android:drawableStart="@drawable/quantum_ic_volume_up_vd_theme_24" />
   <TextView
       android:id="@+id/audioroute_earpiece"
       style="@style/AudioRouteItem"
@@ -37,7 +37,7 @@
       android:layout_height="wrap_content"
       android:text="@string/audioroute_phone"
       android:textAlignment="viewStart"
-      app:drawableStartCompat="@drawable/quantum_ic_phone_in_talk_vd_theme_24" />
+      android:drawableStart="@drawable/quantum_ic_phone_in_talk_vd_theme_24" />
   <TextView
       android:id="@+id/audioroute_headset"
       style="@style/AudioRouteItem"
@@ -45,6 +45,6 @@
       android:layout_height="wrap_content"
       android:text="@string/audioroute_headset"
       android:textAlignment="viewStart"
-      app:drawableStartCompat="@drawable/quantum_ic_headset_vd_theme_24" />
+      android:drawableStart="@drawable/quantum_ic_headset_vd_theme_24" />
 
 </LinearLayout>
