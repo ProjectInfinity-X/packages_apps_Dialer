@@ -17,7 +17,6 @@
 
 <resources xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:xliff="urn:oasis:names:tc:xliff:document:1.2">
-    <string name="main_activity_label" msgid="3121599977875141886">"Telephone"</string>
     <string name="tab_title_call_history" msgid="5191872501729332994">"Call history"</string>
     <string name="tab_title_speed_dial" msgid="1968484500112572774">"Speed dial"</string>
     <string name="tab_title_voicemail" msgid="4777655983569268504">"Voicemail"</string>
