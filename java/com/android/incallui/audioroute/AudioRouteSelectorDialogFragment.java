@@ -207,9 +207,12 @@ public class AudioRouteSelectorDialogFragment extends BottomSheetDialogFragment 
   }
 
   private void setColor(TextView item, boolean isSelected) {
-    int color = isSelected
-            ? ThemeComponent.get(requireContext()).theme().getColorAccent()
-            : requireContext().getColor(R.color.nav_item);
+    Context context = requireContext();
+    int color = context.getColor(
+        isSelected ? R.color.dialer_on_secondary_container : R.color.dialer_on_surface);
+    if (isSelected) {
+      item.setBackgroundResource(R.drawable.pill);
+    }
     item.setTextColor(color);
     TextViewCompat.setCompoundDrawableTintList(item, ColorStateList.valueOf(color));
     TextViewCompat.setCompoundDrawableTintMode(item, Mode.SRC_ATOP);

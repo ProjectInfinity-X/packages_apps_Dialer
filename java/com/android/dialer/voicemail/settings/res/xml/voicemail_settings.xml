@@ -27,13 +27,13 @@
   <SwitchPreferenceCompat
       android:key="@string/voicemail_visual_voicemail_key"
       android:title="@string/voicemail_visual_voicemail_switch_title"
-      app:iconSpaceReserved="false" />"
+      app:iconSpaceReserved="false" />
 
   <SwitchPreferenceCompat
       android:dependency="@string/voicemail_visual_voicemail_key"
       android:key="@string/voicemail_visual_voicemail_archive_key"
       android:title="@string/voicemail_visual_voicemail_auto_archive_switch_title"
-      app:iconSpaceReserved="false" />"
+      app:iconSpaceReserved="false" />
 
   <Preference
       android:key="@string/voicemail_change_pin_key"

@@ -101,12 +101,11 @@
           android:focusable="false"
           android:outlineProvider="none"
           android:src="@drawable/quantum_ic_call_vd_theme_24"
-          android:tint="@color/dialer_call_green"
+          android:tint="@color/incoming_answer_icon"
           android:tintMode="src_atop"
           tools:outlineProvider="background"
           tools:ignore="UseAppTint"
-          app:tint="@color/dialer_call_green" />
-
+          app:tint="@color/incoming_answer_icon" />
     </FrameLayout>
     <TextView
         android:id="@+id/incoming_swipe_to_reject_text"

@@ -18,7 +18,7 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="horizontal"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/row_height">
+    android:layout_height="64dp">
 
   <include layout="@layout/header"/>
 
@@ -28,13 +28,13 @@
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:layout_marginStart="@dimen/header_width"
-      android:layout_marginEnd="@dimen/row_end_margin"
+      android:layout_marginEnd="16dp"
+      android:layout_marginVertical="3dp"
       android:paddingTop="@dimen/row_top_bottom_padding"
       android:paddingBottom="@dimen/row_top_bottom_padding"
       android:paddingStart="@dimen/row_start_padding"
       android:gravity="center_vertical"
-      android:background="?android:attr/selectableItemBackground">
-
+      android:background="@drawable/expressive_card_bg">
     <QuickContactBadge
         android:id="@+id/photo"
         android:layout_width="@dimen/photo_size"

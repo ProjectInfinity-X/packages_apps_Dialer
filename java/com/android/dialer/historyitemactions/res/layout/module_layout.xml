@@ -20,8 +20,10 @@
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="?android:attr/selectableItemBackground">
-
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="3dp"
+    android:minHeight="52dp"
+    android:background="@drawable/expressive_card_bg">
   <!-- The icon is not important for a11y as it is not clickable. -->
   <ImageView
       android:id="@+id/module_image"

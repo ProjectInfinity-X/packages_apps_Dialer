@@ -19,16 +19,20 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:minHeight="48dp">
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="3dp"
+    android:minHeight="56dp"
+    android:background="@drawable/expressive_card_bg">
 
   <ImageView
       android:id="@+id/search_action_image"
-      android:layout_width="48dp"
-      android:layout_height="48dp"
-      android:layout_marginStart="8dp"
+      android:layout_width="40dp"
+      android:layout_height="40dp"
+      android:layout_marginStart="16dp"
       android:layout_gravity="center_vertical|start"
-      android:padding="12dp"
-      app:tint="?colorIcon" />
+      android:padding="8dp"
+      android:background="@drawable/oval_ripple"
+      app:tint="@color/dialer_primary" />
 
   <TextView
       android:id="@+id/search_action_text"

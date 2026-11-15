@@ -21,9 +21,11 @@
     android:orientation="horizontal"
     android:layout_width="match_parent"
     android:layout_height="@dimen/search_row_height"
-    android:paddingStart="8dp"
-    android:paddingEnd="8dp"
-    android:background="?android:attr/selectableItemBackground">
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginVertical="3dp"
+    android:paddingStart="12dp"
+    android:paddingEnd="12dp"
+    android:background="@drawable/expressive_card_bg">
 
   <QuickContactBadge
       android:id="@+id/photo"

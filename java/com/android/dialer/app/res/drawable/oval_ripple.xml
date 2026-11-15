@@ -20,7 +20,7 @@
   android:color="?android:attr/colorControlHighlight">
   <item>
     <shape android:shape="oval">
-      <solid android:color="#fff"/>
+      <solid android:color="@color/dialer_surface_container_high"/>
     </shape>
   </item>
 </ripple>

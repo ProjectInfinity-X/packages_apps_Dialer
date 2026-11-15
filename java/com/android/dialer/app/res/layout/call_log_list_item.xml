@@ -29,11 +29,12 @@
     android:layout_width="wrap_content"
     android:layout_height="wrap_content"
     android:layout_gravity="start"
-    android:layout_marginStart="@dimen/call_log_start_margin"
-    android:layout_marginEnd="@dimen/call_log_outer_margin"
-    android:paddingTop="@dimen/call_log_day_group_padding_top"
-    android:paddingBottom="@dimen/call_log_day_group_padding_bottom"
-    style="@style/Dialer.TextAppearance.OVERLINE.Ellipsize"/>
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="6dp"
+    android:textColor="@color/dialer_primary"
+    style="@style/Dialer.TextAppearance.SubHeader"/>
 
   <androidx.cardview.widget.CardView
     android:id="@+id/call_log_row"
@@ -49,12 +50,12 @@
         android:id="@+id/primary_action_view"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:paddingStart="@dimen/call_log_start_margin"
-        android:paddingEnd="@dimen/call_log_outer_margin"
-        android:paddingTop="@dimen/call_log_vertical_padding"
-        android:paddingBottom="@dimen/call_log_vertical_padding"
+        android:paddingStart="16dp"
+        android:paddingEnd="12dp"
+        android:paddingTop="14dp"
+        android:paddingBottom="14dp"
+        android:background="?android:attr/selectableItemBackground"
         android:orientation="horizontal"
-        android:gravity="center_vertical"
         android:focusable="true"
         android:nextFocusRight="@+id/call_back_action"
         android:nextFocusLeft="@+id/quick_contact_photo">
@@ -128,7 +129,7 @@
               android:layout_height="wrap_content"
               android:layout_marginEnd="@dimen/call_log_icon_margin"
               android:layout_gravity="center_vertical"
-              style="Dialer.TextAppearance.Secondary.Ellipsize"/>
+              style="@style/Dialer.TextAppearance.Secondary.Ellipsize"/>
 
           </LinearLayout>
 
@@ -139,20 +140,19 @@
             android:layout_marginTop="@dimen/call_log_call_account_margin_bottom"
             android:layout_marginEnd="@dimen/call_log_icon_margin"
             android:visibility="gone"
-            style="Dialer.TextAppearance.Secondary2.Ellipsize"/>
+            style="@style/Dialer.TextAppearance.Secondary2.Ellipsize"/>
 
         </LinearLayout>
 
         <ImageView
           android:id="@+id/primary_action_button"
-          android:layout_width="@dimen/call_log_list_item_primary_action_dimen"
-          android:layout_height="@dimen/call_log_list_item_primary_action_dimen"
+          android:layout_width="44dp"
+          android:layout_height="44dp"
           android:layout_gravity="center_vertical"
-          android:background="?android:attr/selectableItemBackgroundBorderless"
+          android:background="@drawable/oval_ripple"
           android:scaleType="center"
           android:visibility="gone"
-          app:tint="?colorIcon" />
-
+          app:tint="@color/dialer_primary" />
       </LinearLayout>
 
       <!-- Viewstub with additional expandable actions for a call log entry -->

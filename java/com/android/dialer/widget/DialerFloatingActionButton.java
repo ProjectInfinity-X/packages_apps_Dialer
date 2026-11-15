@@ -49,13 +49,11 @@ public class DialerFloatingActionButton extends FloatingActionButton {
 
   public DialerFloatingActionButton(Context context, AttributeSet attributeSet) {
     super(context, attributeSet);
-    float radiusPx = 99 * getResources().getDisplayMetrics().density;
-
-        setShapeAppearanceModel(
-            ShapeAppearanceModel.builder()
-                .setAllCornerSizes(radiusPx)
-                .build()
-       );
+    float radiusPx = 16 * getResources().getDisplayMetrics().density;
+    setShapeAppearanceModel(
+        ShapeAppearanceModel.builder()
+            .setAllCornerSizes(radiusPx)
+            .build());
   }
 
   @Override

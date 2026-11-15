@@ -15,6 +15,6 @@
   ~ limitations under the License
   -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
-  <item android:color="?android:attr/colorBackgroundFloating" android:state_checked="true"/>
-  <item android:color="?android:attr/textColorPrimary"/>
+  <item android:color="@color/incall_button_icon_color" android:state_checked="true"/>
+  <item android:color="@android:color/white"/>
 </selector>

@@ -23,22 +23,21 @@
     android:layout_width="match_parent"
     android:layout_height="@dimen/row_height"
     android:layout_marginTop="8dp"
-    android:layout_marginStart="@dimen/header_width"
-    android:layout_marginEnd="@dimen/row_end_margin"
-    android:paddingTop="@dimen/row_top_bottom_padding"
-    android:paddingBottom="@dimen/row_top_bottom_padding"
-    android:paddingStart="@dimen/row_start_padding"
+    android:layout_marginBottom="6dp"
+    android:layout_marginStart="16dp"
+    android:layout_marginEnd="16dp"
+    android:paddingStart="16dp"
+    android:paddingEnd="16dp"
     android:gravity="center_vertical"
-    android:background="?android:attr/selectableItemBackground">
+    android:background="@drawable/expressive_card_primary_bg">
 
   <ImageView
       android:id="@+id/photo"
-      android:layout_width="@dimen/photo_size"
-      android:layout_height="@dimen/photo_size"
+      android:layout_width="24dp"
+      android:layout_height="24dp"
       android:src="@drawable/quantum_ic_person_add_vd_theme_24"
-      android:scaleType="center"
-      app:tint="?colorIcon" />
-
+      android:scaleType="centerInside"
+      app:tint="@color/dialer_on_primary_container" />
   <TextView
       android:id="@+id/contact_name"
       android:layout_width="wrap_content"
@@ -47,5 +46,6 @@
       android:paddingEnd="@dimen/text_padding_end"
       android:gravity="center_vertical"
       android:text="@string/all_contacts_empty_add_contact_action"
-      style="@style/Dialer.TextAppearance.Primary"/>
+      android:textColor="@color/dialer_on_primary_container"
+      style="@style/Dialer.TextAppearance.Header2"/>
 </LinearLayout>

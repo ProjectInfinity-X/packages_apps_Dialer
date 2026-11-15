@@ -16,11 +16,12 @@
   -->
 <resources>
   <style name="DialtactsTheme" parent="Dialer.ThemeBase.ActionBar">
-    <item name="android:windowLightNavigationBar">true</item>
-    <item name="colorPrimary">@color/dialer_actionbar_color</item>
-    <item name="colorSurface">@color/dialer_search_bar_color</item>
-    <item name="android:statusBarColor">@color/dialer_actionbar_color</item>
-    <item name="android:navigationBarColor">?android:attr/windowBackground</item>
+    <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
+    <item name="android:windowLightNavigationBar">@bool/light_navigation_bar</item>
+    <item name="colorPrimary">@color/dialer_primary</item>
+    <item name="colorSurface">@color/dialer_surface</item>
+    <item name="android:statusBarColor">@color/dialer_surface</item>
+    <item name="android:navigationBarColor">@color/dialer_surface</item>
     <item name="android:navigationBarDividerColor">@null</item>
   </style>
 
@@ -83,19 +84,13 @@
     <item name="android:padding">8dp</item>
   </style>
 
-  <style name="DialerFlatButtonStyle" parent="@style/Widget.Material3.Button">
-    <item name="android:background">?android:attr/selectableItemBackground</item>
+  <style name="DialerFlatButtonStyle" parent="@style/Widget.Material3.Button.TextButton">
     <item name="android:paddingEnd">@dimen/button_horizontal_padding</item>
     <item name="android:paddingStart">@dimen/button_horizontal_padding</item>
-    <item name="android:textColor">?android:attr/colorPrimary</item>
   </style>
 
-  <!-- Style for the 'primary' button in a view. Unlike the DialerFlatButtonStyle, this button -->
-  <!-- is not colored white, to draw more attention to it. -->
   <style name="DialerPrimaryFlatButtonStyle" parent="@style/Widget.Material3.Button">
-    <item name="android:background">@drawable/selectable_primary_flat_button</item>
     <item name="android:paddingEnd">@dimen/button_horizontal_padding</item>
     <item name="android:paddingStart">@dimen/button_horizontal_padding</item>
-    <item name="android:textColor">@android:color/white</item>
   </style>
 </resources>

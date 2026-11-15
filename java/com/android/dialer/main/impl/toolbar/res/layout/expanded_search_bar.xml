@@ -48,8 +48,8 @@
       android:inputType="textFilter"
       android:maxLines="1"
       android:hint="@string/dialer_hint_find_contact"
-      android:textColor="?android:attr/textColorSecondary"
-      android:textColorHint="?android:attr/textColorHint"
+      android:textColor="@color/dialer_on_surface"
+      android:textColorHint="@color/dialer_on_surface_variant"
       android:textCursorDrawable="@drawable/custom_cursor"
       android:textSize="16sp"/>
 

@@ -18,6 +18,7 @@
 package com.android.dialer.theme.base.impl;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.view.ContextThemeWrapper;
 import android.view.LayoutInflater;
@@ -31,35 +32,50 @@ import com.android.dialer.theme.base.Theme;
 
 import javax.inject.Singleton;
 
-/** Utility for fetching */
+/** Utility for fetching theme attributes dynamically across light and dark modes. */
 @SuppressWarnings("unused")
 @Singleton
 public class AospThemeImpl implements Theme {
 
-  private int colorIcon = -2;
-  private int colorIconSecondary = -2;
-  private int colorPrimary = -2;
-  private int colorPrimaryDark = -2;
-  private int colorAccent = -2;
-  private int textColorPrimary = -2;
-  private int textColorSecondary = -2;
-  private int textColorPrimaryInverse = -2;
-  private int textColorHint = -2;
-  private int colorBackground = -2;
-  private int colorBackgroundFloating = -2;
-  private int colorTextOnUnthemedDarkBackground = -2;
-  private int colorIconOnUnthemedDarkBackground = -2;
-  private int colorCallNotificationBackground = -2;
+  private static final int UNINITIALIZED = -2;
+
+  private final Context appContext;
+  private int cachedNightMode = -1;
+
+  private int colorIcon = UNINITIALIZED;
+  private int colorIconSecondary = UNINITIALIZED;
+  private int colorPrimary = UNINITIALIZED;
+  private int colorPrimaryDark = UNINITIALIZED;
+  private int colorAccent = UNINITIALIZED;
+  private int textColorPrimary = UNINITIALIZED;
+  private int textColorSecondary = UNINITIALIZED;
+  private int textColorPrimaryInverse = UNINITIALIZED;
+  private int textColorHint = UNINITIALIZED;
+  private int colorBackground = UNINITIALIZED;
+  private int colorBackgroundFloating = UNINITIALIZED;
+  private int colorTextOnUnthemedDarkBackground = UNINITIALIZED;
+  private int colorIconOnUnthemedDarkBackground = UNINITIALIZED;
+  private int colorCallNotificationBackground = UNINITIALIZED;
 
   public AospThemeImpl(Context context) {
+    this.appContext = context.getApplicationContext();
+    ensureColorsLoaded();
+  }
 
-    context = context.getApplicationContext();
-    context.setTheme(getApplicationThemeRes());
+  private synchronized void ensureColorsLoaded() {
+    int currentNightMode =
+        appContext.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+    if (currentNightMode == cachedNightMode && colorPrimary != UNINITIALIZED) {
+      return;
+    }
+    cachedNightMode = currentNightMode;
+    @StyleRes int themeRes = getApplicationThemeRes();
+    Context themedContext = new ContextThemeWrapper(appContext, themeRes);
     TypedArray array =
-        context
+        themedContext
             .getTheme()
             .obtainStyledAttributes(
-                getApplicationThemeRes(),
+                themeRes,
                 new int[] {
                   android.R.attr.colorPrimary,
                   android.R.attr.colorPrimaryDark,
@@ -76,20 +92,23 @@ public class AospThemeImpl implements Theme {
                   R.attr.colorIconOnUnthemedDarkBackground,
                   R.attr.colorCallNotificationBackground
                 });
-    colorPrimary = array.getColor(/* index= */ 0, /* defValue= */ -2);
-    colorPrimaryDark = array.getColor(/* index= */ 1, /* defValue= */ -2);
-    colorAccent = array.getColor(/* index= */ 2, /* defValue= */ -2);
-    textColorPrimary = array.getColor(/* index= */ 3, /* defValue= */ -2);
-    textColorSecondary = array.getColor(/* index= */ 4, /* defValue= */ -2);
-    textColorPrimaryInverse = array.getColor(/* index= */ 5, /* defValue= */ -2);
-    textColorHint = array.getColor(/* index= */ 6, /* defValue= */ -2);
-    colorBackground = array.getColor(/* index= */ 7, /* defValue= */ -2);
-    colorBackgroundFloating = array.getColor(/* index= */ 8, /* defValue= */ -2);
-    colorIcon = array.getColor(/* index= */ 9, /* defValue= */ -2);
-    colorIconSecondary = array.getColor(/* index= */ 10, /* defValue= */ -2);
-    colorTextOnUnthemedDarkBackground = array.getColor(/* index= */ 11, /* defValue= */ -2);
-    colorIconOnUnthemedDarkBackground = array.getColor(/* index= */ 12, /* defValue= */ -2);
-    colorCallNotificationBackground = array.getColor(/* index= */ 13, /* defValue= */ -2);
+    colorPrimary = array.getColor(/* index= */ 0, /* defValue= */ UNINITIALIZED);
+    colorPrimaryDark = array.getColor(/* index= */ 1, /* defValue= */ UNINITIALIZED);
+    colorAccent = array.getColor(/* index= */ 2, /* defValue= */ UNINITIALIZED);
+    textColorPrimary = array.getColor(/* index= */ 3, /* defValue= */ UNINITIALIZED);
+    textColorSecondary = array.getColor(/* index= */ 4, /* defValue= */ UNINITIALIZED);
+    textColorPrimaryInverse = array.getColor(/* index= */ 5, /* defValue= */ UNINITIALIZED);
+    textColorHint = array.getColor(/* index= */ 6, /* defValue= */ UNINITIALIZED);
+    colorBackground = array.getColor(/* index= */ 7, /* defValue= */ UNINITIALIZED);
+    colorBackgroundFloating = array.getColor(/* index= */ 8, /* defValue= */ UNINITIALIZED);
+    colorIcon = array.getColor(/* index= */ 9, /* defValue= */ UNINITIALIZED);
+    colorIconSecondary = array.getColor(/* index= */ 10, /* defValue= */ UNINITIALIZED);
+    colorTextOnUnthemedDarkBackground =
+        array.getColor(/* index= */ 11, /* defValue= */ UNINITIALIZED);
+    colorIconOnUnthemedDarkBackground =
+        array.getColor(/* index= */ 12, /* defValue= */ UNINITIALIZED);
+    colorCallNotificationBackground =
+        array.getColor(/* index= */ 13, /* defValue= */ UNINITIALIZED);
     array.recycle();
   }
 
@@ -99,8 +118,9 @@ public class AospThemeImpl implements Theme {
    */
   @Override
   public @Type int getTheme() {
-    // TODO(a bug): add share prefs check to configure this
-    return LIGHT;
+    int nightMode =
+        appContext.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+    return nightMode == Configuration.UI_MODE_NIGHT_YES ? DARK : LIGHT;
   }
 
   @Override
@@ -128,61 +148,71 @@ public class AospThemeImpl implements Theme {
 
   @Override
   public @ColorInt int getColorIcon() {
-    Assert.checkArgument(colorIcon != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorIcon != UNINITIALIZED);
     return colorIcon;
   }
 
   @Override
   public @ColorInt int getColorIconSecondary() {
-    Assert.checkArgument(colorIconSecondary != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorIconSecondary != UNINITIALIZED);
     return colorIconSecondary;
   }
 
   @Override
   public @ColorInt int getColorPrimary() {
-    Assert.checkArgument(colorPrimary != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorPrimary != UNINITIALIZED);
     return colorPrimary;
   }
 
   @Override
   public int getColorPrimaryDark() {
-    Assert.checkArgument(colorPrimaryDark != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorPrimaryDark != UNINITIALIZED);
     return colorPrimaryDark;
   }
 
   @Override
   public @ColorInt int getColorAccent() {
-    Assert.checkArgument(colorAccent != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorAccent != UNINITIALIZED);
     return colorAccent;
   }
 
   @Override
   public @ColorInt int getTextColorSecondary() {
-    Assert.checkArgument(textColorSecondary != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(textColorSecondary != UNINITIALIZED);
     return textColorSecondary;
   }
 
   @Override
   public @ColorInt int getTextColorPrimary() {
-    Assert.checkArgument(textColorPrimary != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(textColorPrimary != UNINITIALIZED);
     return textColorPrimary;
   }
 
   @Override
   public @ColorInt int getColorTextOnUnthemedDarkBackground() {
-    Assert.checkArgument(colorTextOnUnthemedDarkBackground != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorTextOnUnthemedDarkBackground != UNINITIALIZED);
     return colorTextOnUnthemedDarkBackground;
   }
 
   @Override
   public @ColorInt int getColorIconOnUnthemedDarkBackground() {
-    Assert.checkArgument(colorIconOnUnthemedDarkBackground != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorIconOnUnthemedDarkBackground != UNINITIALIZED);
     return colorIconOnUnthemedDarkBackground;
   }
 
   @Override
   public @ColorInt int getColorCallNotificationBackground() {
-    Assert.checkArgument(colorCallNotificationBackground != -2);
+    ensureColorsLoaded();
+    Assert.checkArgument(colorCallNotificationBackground != UNINITIALIZED);
     return colorCallNotificationBackground;
   }
 }

@@ -24,8 +24,8 @@
   <LinearLayout
       android:layout_width="match_parent"
       android:layout_height="@dimen/rtt_banner_height"
-      android:background="?android:attr/colorPrimaryDark"
-      android:elevation="3dp"
+      android:background="@color/dialer_surface_container_high"
+      android:elevation="0dp"
       android:orientation="horizontal">
     <ImageButton
         android:id="@+id/rtt_end_call_button"
@@ -53,7 +53,7 @@
           android:layout_gravity="center_horizontal"
           android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
           android:includeFontPadding="false"
-          android:textColor="#FFFFFF"
+          android:textColor="@color/dialer_on_surface"
           android:textSize="20sp"
           tools:text="Bruce Graham"/>
       <Chronometer
@@ -63,7 +63,7 @@
           android:layout_gravity="center_horizontal"
           android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
           android:includeFontPadding="false"
-          android:textColor="#FFFFFF"
+          android:textColor="@color/dialer_on_surface_variant"
           android:textSize="14sp"
           tools:text="00:09"/>
     </LinearLayout>
@@ -77,7 +77,7 @@
         android:contentDescription="@string/content_description_overflow"
         android:scaleType="fitXY"
         android:src="@drawable/quantum_ic_more_vert_vd_theme_24"
-        app:tint="?colorIconOnUnthemedDarkBackground" />
+        app:tint="@color/dialer_on_surface_variant" />
 
   </LinearLayout>
   <FrameLayout
@@ -90,9 +90,9 @@
       android:layout_height="48dp"
       android:paddingStart="16dp"
       android:paddingEnd="16dp"
-      android:background="@android:color/white"
+      android:background="@color/dialer_surface_container"
       android:gravity="center_vertical"
-      android:textColor="#DD000000"
+      android:textColor="@color/dialer_on_surface"
       android:textSize="14sp"/>
 
 </LinearLayout>

@@ -16,16 +16,17 @@
 -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
     android:id="@+id/item"
-    android:background="?android:attr/selectableItemBackground"
+    android:background="@drawable/expressive_card_bg"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="4dp"
     android:orientation="horizontal"
-    android:minHeight="48dp"
-    android:paddingTop="8dp"
-    android:paddingBottom="8dp">
-
+    android:minHeight="68dp"
+    android:paddingVertical="12dp">
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -66,15 +67,16 @@
 
     <ImageView
         android:id="@+id/item_helpline_call_icon"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
         android:layout_gravity="center|end"
         android:layout_marginStart="16dp"
         android:layout_marginEnd="16dp"
         android:scaleType="center"
-        android:background="?android:attr/selectableItemBackgroundBorderless"
+        android:background="@drawable/oval_ripple"
         android:clickable="true"
         android:focusable="true"
         android:src="@drawable/ic_helpline_call"
+        app:tint="@color/dialer_primary"
         android:visibility="visible"/>
 </LinearLayout>

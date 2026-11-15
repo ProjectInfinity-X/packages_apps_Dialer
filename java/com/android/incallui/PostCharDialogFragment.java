@@ -17,15 +17,16 @@
 
 package com.android.incallui;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.android.dialer.R;
 import com.android.incallui.call.TelecomAdapter;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /**
  * Pop up an alert dialog with OK and Cancel buttons to allow user to Accept or Reject the WAIT
@@ -59,7 +60,7 @@ public class PostCharDialogFragment extends DialogFragment {
     buf.append(getResources().getText(R.string.wait_prompt_str));
     buf.append(postDialStr);
 
-    final AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+    final MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
     builder.setMessage(buf.toString());
 
     builder.setPositiveButton(

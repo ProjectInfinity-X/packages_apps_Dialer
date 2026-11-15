@@ -17,7 +17,6 @@
 
 package com.android.incallui;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.os.Bundle;
@@ -29,6 +28,7 @@ import android.view.View;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.android.dialer.R;
@@ -39,6 +39,7 @@ import com.android.incallui.ContactInfoCache.ContactCacheEntry;
 import com.android.incallui.ContactInfoCache.ContactInfoCacheCallback;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.lang.ref.WeakReference;
 
@@ -88,7 +89,7 @@ public class RttRequestDialogFragment extends DialogFragment {
         .setOnClickListener(v -> onPositiveButtonClick());
 
     AlertDialog alertDialog =
-        new AlertDialog.Builder(getActivity())
+        new MaterialAlertDialogBuilder(getActivity())
             .setCancelable(false)
             .setView(dialogView)
             .setTitle(R.string.rtt_request_dialog_title)

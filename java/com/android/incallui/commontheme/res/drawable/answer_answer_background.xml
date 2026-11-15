@@ -2,9 +2,9 @@
 <ripple xmlns:android="http://schemas.android.com/apk/res/android"
   android:color="#80FFFFFF">
   <item>
-    <shape
-      android:shape="oval">
-      <solid android:color="@color/dialer_call_green"/>
+    <shape android:shape="rectangle">
+      <corners android:radius="36dp"/>
+      <solid android:color="#146C2E"/>
     </shape>
   </item>
 </ripple>

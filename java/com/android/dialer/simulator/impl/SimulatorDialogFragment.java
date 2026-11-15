@@ -17,15 +17,16 @@
 
 package com.android.dialer.simulator.impl;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.telecom.TelecomManager;
 import android.widget.EditText;
 
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 
 import com.android.dialer.R;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /** Holds dialog logic for creating different types of voice calls. */
 public final class SimulatorDialogFragment extends DialogFragment {
@@ -49,7 +50,7 @@ public final class SimulatorDialogFragment extends DialogFragment {
 
   @Override
   public Dialog onCreateDialog(Bundle bundle) {
-    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
     final EditText input = new EditText(getActivity());
     input.setHint("Please input phone number");
     builder

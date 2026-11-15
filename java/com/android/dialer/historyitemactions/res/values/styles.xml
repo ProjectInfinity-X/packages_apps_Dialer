@@ -15,18 +15,21 @@
  ~ limitations under the License
  -->
 <resources>
-  <style name="HistoryItemBottomSheet.Base" parent="Theme.Design.Light.BottomSheetDialog">
+  <style name="HistoryItemBottomSheet.Base" parent="Theme.Material3.DayNight.BottomSheetDialog">
     <item name="android:windowDrawsSystemBarBackgrounds">false</item>
     <item name="android:windowTranslucentNavigation">false</item>
     <item name="android:windowTranslucentStatus">false</item>
-    <item name="android:navigationBarColor">?android:attr/colorBackgroundFloating</item>
+    <item name="android:navigationBarColor">@color/dialer_surface_container_low</item>
+    <item name="colorSurface">@color/dialer_surface_container_low</item>
+    <item name="colorOnSurface">@color/dialer_on_surface</item>
   </style>
 
   <style name="HistoryItemBottomSheet" parent="HistoryItemBottomSheet.Base">
     <item name="bottomSheetStyle">@style/HistoryItemBottomSheet.BottomSheetStyle</item>
   </style>
 
-  <style name="HistoryItemBottomSheet.BottomSheetStyle" parent="Widget.Design.BottomSheet.Modal">
+  <style name="HistoryItemBottomSheet.BottomSheetStyle" parent="Widget.Material3.BottomSheet.Modal">
     <item name="behavior_peekHeight">405dp</item>
+    <item name="backgroundTint">@color/dialer_surface_container_low</item>
   </style>
 </resources>

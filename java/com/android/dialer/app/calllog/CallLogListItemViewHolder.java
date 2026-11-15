@@ -747,15 +747,15 @@ public final class CallLogListItemViewHolder extends RecyclerView.ViewHolder
     float targetElevation;
     if (shouldExpand) {
       targetHeight = currentHeight + additionalHeight;
-      colorFrom = res.getColor(android.R.color.transparent, context.getTheme());
-      colorTo  = res.getColor(R.color.cardBackgroundColor, context.getTheme());
+      colorFrom = res.getColor(R.color.dialer_surface_container, context.getTheme());
+      colorTo  = res.getColor(R.color.dialer_surface_container_high, context.getTheme());
       interpolator = new AccelerateDecelerateInterpolator();
       targetVisibility = View.VISIBLE;
-      targetElevation = 4f;
+      targetElevation = 2f;
     } else {
       targetHeight = currentHeight - additionalHeight;
-      colorFrom  = res.getColor(R.color.cardBackgroundColor, context.getTheme());
-      colorTo = res.getColor(android.R.color.transparent, context.getTheme());
+      colorFrom  = res.getColor(R.color.dialer_surface_container_high, context.getTheme());
+      colorTo = res.getColor(R.color.dialer_surface_container, context.getTheme());
       interpolator = new DecelerateInterpolator();
       targetVisibility = View.GONE;
       targetElevation = 0f;

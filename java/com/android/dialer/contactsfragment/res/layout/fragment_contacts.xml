@@ -45,8 +45,8 @@
         android:layout_height="wrap_content"
         android:layout_toStartOf="@+id/fast_scroller_scroll_bar"
         android:gravity="center"
-        android:textSize="48sp"
-        android:textColor="?android:attr/textColorPrimaryInverse"
+        android:textSize="40sp"
+        android:textColor="@color/dialer_on_primary"
         android:visibility="gone"
         android:background="@drawable/fast_scroller_container_background"/>
 

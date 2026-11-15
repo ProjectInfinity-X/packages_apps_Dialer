@@ -349,25 +349,63 @@ public class CallLogFragment extends Fragment
 
         @Override
         public void onChildDraw(Canvas canvas, RecyclerView recyclerView, RecyclerView.ViewHolder viewHolder, float dX, float dY, int actionState, boolean isCurrentlyActive) {
-            if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE) {
+            if (actionState == ItemTouchHelper.ACTION_STATE_SWIPE && dX != 0) {
                 boolean isTowardsRight = dX > 0;
-                Drawable icon =  getResources().getDrawable(isTowardsRight ? R.drawable.quantum_ic_delete_vd_theme_24 : R.drawable.quantum_ic_message_vd_theme_24);
-                int iconHorizontalMargin = 20;
-                int halfIconSize = icon.getIntrinsicHeight() / 2;
-                int top = viewHolder.itemView.getTop() + ((viewHolder.itemView.getBottom() - viewHolder.itemView.getTop()) / 2 - halfIconSize);
-                icon = icon.mutate();
-                Theme theme = ThemeComponent.get(getContext()).theme();
-                icon.setColorFilter(theme.getColorIcon(), PorterDuff.Mode.MULTIPLY);
-                if (dX > 0) { // Right swipe
-                    canvas.clipRect(viewHolder.itemView.getLeft(), viewHolder.itemView.getTop(), viewHolder.itemView.getLeft() + (int) dX, viewHolder.itemView.getBottom());
-                    icon.setBounds(viewHolder.itemView.getLeft() + iconHorizontalMargin, top, viewHolder.itemView.getLeft() + iconHorizontalMargin + icon.getIntrinsicWidth(), top + icon.getIntrinsicHeight()
-                    );
-                } else if (dX < 0) { // Left swipe
-                    canvas.clipRect(viewHolder.itemView.getRight() + (int) dX, viewHolder.itemView.getTop(), viewHolder.itemView.getRight(), viewHolder.itemView.getBottom());
-                    int imgLeft = viewHolder.itemView.getRight() - iconHorizontalMargin - halfIconSize * 2;
-                    icon.setBounds(imgLeft, top, viewHolder.itemView.getRight() - iconHorizontalMargin, top + icon.getIntrinsicHeight());
+                View itemView = viewHolder.itemView;
+                Context ctx = getContext();
+                int bgColor = ctx.getColor(
+                    isTowardsRight ? R.color.dialer_error_container : R.color.dialer_primary_container);
+                int iconTint = ctx.getColor(
+                    isTowardsRight ? R.color.dialer_on_error_container : R.color.dialer_on_primary_container);
+                float density = ctx.getResources().getDisplayMetrics().density;
+                float inset = 4f * density;
+                float radius = 20f * density;
+
+                android.graphics.Paint bgPaint = new android.graphics.Paint(android.graphics.Paint.ANTI_ALIAS_FLAG);
+                bgPaint.setColor(bgColor);
+                android.graphics.RectF rect = isTowardsRight
+                    ? new android.graphics.RectF(
+                        itemView.getLeft() + inset,
+                        itemView.getTop() + inset,
+                        itemView.getLeft() + dX,
+                        itemView.getBottom() - inset)
+                    : new android.graphics.RectF(
+                        itemView.getRight() + dX,
+                        itemView.getTop() + inset,
+                        itemView.getRight() - inset,
+                        itemView.getBottom() - inset);
+                canvas.save();
+                canvas.clipRect(
+                    isTowardsRight ? itemView.getLeft() : itemView.getRight() + (int) dX,
+                    itemView.getTop(),
+                    isTowardsRight ? itemView.getLeft() + (int) dX : itemView.getRight(),
+                    itemView.getBottom());
+                canvas.drawRoundRect(rect, radius, radius, bgPaint);
+
+                Drawable icon = ctx.getDrawable(
+                    isTowardsRight
+                        ? R.drawable.quantum_ic_delete_vd_theme_24
+                        : R.drawable.quantum_ic_message_vd_theme_24);
+                if (icon != null) {
+                  icon = icon.mutate();
+                  icon.setTint(iconTint);
+                  int iconHorizontalMargin = Math.round(24f * density);
+                  int iconHeight = icon.getIntrinsicHeight();
+                  int iconWidth = icon.getIntrinsicWidth();
+                  int top = itemView.getTop() + (itemView.getHeight() - iconHeight) / 2;
+                  if (isTowardsRight) {
+                    icon.setBounds(
+                        itemView.getLeft() + iconHorizontalMargin,
+                        top,
+                        itemView.getLeft() + iconHorizontalMargin + iconWidth,
+                        top + iconHeight);
+                  } else {
+                    int imgLeft = itemView.getRight() - iconHorizontalMargin - iconWidth;
+                    icon.setBounds(imgLeft, top, itemView.getRight() - iconHorizontalMargin, top + iconHeight);
+                  }
+                  icon.draw(canvas);
                 }
-                icon.draw(canvas);
+                canvas.restore();
             }
             super.onChildDraw(canvas, recyclerView, viewHolder, dX, dY, actionState, isCurrentlyActive);
         }

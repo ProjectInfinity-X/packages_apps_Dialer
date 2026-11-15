@@ -6,17 +6,19 @@
 <resources>
   <style name="Dialer.ThemeBase.ActionBar">
     <item name="android:windowLightStatusBar">false</item>
+    <item name="android:windowLightNavigationBar">false</item>
   </style>
 
   <style name="Dialer.ThemeBase.NoActionBar">
-    <!-- Copied from Theme.AppCompat.Light.NoActionBar. We can remove this and update the Dialer
-    base style once none of our activities depend on ActionBar anymore. -->
     <item name="windowActionBar">false</item>
     <item name="windowNoTitle">true</item>
 
     <item name="colorControlHighlight">@color/dialer_ripple_color</item>
     <item name="android:windowLightStatusBar">false</item>
+    <item name="android:windowLightNavigationBar">false</item>
   </style>
 
-  <style name="DialerActionBarBaseTheme" parent="@style/ThemeOverlay.AppCompat.Dark.ActionBar" />
+  <style name="DialerActionBarBaseTheme" parent="@style/ThemeOverlay.Material3.Dark.ActionBar">
+    <item name="colorControlNormal">@color/dialer_on_surface</item>
+  </style>
 </resources>

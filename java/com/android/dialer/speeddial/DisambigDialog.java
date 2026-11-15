@@ -29,7 +29,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.WorkerThread;
-import androidx.appcompat.app.AlertDialog;
 import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
@@ -46,6 +45,7 @@ import com.android.dialer.speeddial.database.SpeedDialEntry;
 import com.android.dialer.speeddial.database.SpeedDialEntry.Channel;
 import com.android.dialer.speeddial.database.SpeedDialEntryDatabaseHelper;
 import com.android.dialer.speeddial.loader.SpeedDialUiItem;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.collect.ImmutableList;
 import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.ListenableFuture;
@@ -81,7 +81,7 @@ public class DisambigDialog extends DialogFragment {
     container = view.findViewById(R.id.communication_avenue_container);
     rememberThisChoice = view.findViewById(R.id.remember_this_choice_checkbox);
     insertOptions(container.findViewById(R.id.communication_avenue_container), channels);
-    return new AlertDialog.Builder(getActivity()).setView(view).create();
+    return new MaterialAlertDialogBuilder(getActivity()).setView(view).create();
   }
 
   @Override

@@ -16,33 +16,34 @@
  -->
 <LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:orientation="vertical"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="8dp"
-    android:layout_marginBottom="12dp">
-
+    android:layout_margin="4dp"
+    android:paddingVertical="12dp"
+    android:paddingHorizontal="6dp"
+    android:background="@drawable/expressive_card_bg">
   <FrameLayout
       android:id="@+id/avatar_container"
-      android:layout_width="wrap_content"
-      android:layout_height="104dp"
+      android:layout_width="88dp"
+      android:layout_height="80dp"
       android:layout_gravity="center_horizontal"
-      android:layout_marginBottom="8dp"
-      android:minWidth="128dp">
+      android:layout_marginBottom="6dp">
 
     <QuickContactBadge
         android:id="@+id/avatar"
-        android:layout_width="104dp"
-        android:layout_height="104dp"
+        android:layout_width="80dp"
+        android:layout_height="80dp"
         android:layout_gravity="center_horizontal"
         android:clickable="false"/>
 
     <FrameLayout
         android:id="@+id/video_call_container"
-        android:layout_width="36dp"
-        android:layout_height="36dp"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
         android:layout_gravity="bottom|end"
-        android:layout_marginEnd="12dp">
+        android:layout_marginEnd="2dp">
 
       <ImageView
           android:layout_width="match_parent"
@@ -50,35 +51,38 @@
           android:src="@drawable/favorite_icon"/>
 
       <ImageView
-          android:layout_width="24dp"
-          android:layout_height="24dp"
+          android:layout_width="18dp"
+          android:layout_height="18dp"
           android:layout_gravity="center"
-          android:src="@drawable/quantum_ic_videocam_vd_white_24"/>
+          android:src="@drawable/quantum_ic_videocam_vd_white_24"
+          app:tint="@color/dialer_on_primary_container"/>
     </FrameLayout>
   </FrameLayout>
 
   <TextView
       android:id="@+id/name"
-      android:layout_width="wrap_content"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_gravity="center_horizontal"
-      android:layout_marginStart="4dp"
-      android:layout_marginEnd="4dp"
-      android:layout_marginTop="8dp"
-      android:layout_marginBottom="1dp"
+      android:layout_marginHorizontal="4dp"
+      android:layout_marginTop="4dp"
+      android:layout_marginBottom="2dp"
       android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
       android:textSize="14sp"
+      android:maxLines="1"
+      android:ellipsize="end"
       android:gravity="center_horizontal"
       style="@style/Dialer.TextAppearance.Primary"/>
 
   <TextView
       android:id="@+id/phone_type"
-      android:layout_width="wrap_content"
+      android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_gravity="center_horizontal"
-      android:layout_marginStart="4dp"
-      android:layout_marginEnd="4dp"
-      android:layout_marginBottom="17dp"
+      android:layout_marginHorizontal="4dp"
+      android:textSize="12sp"
+      android:maxLines="1"
+      android:ellipsize="end"
       android:gravity="center_horizontal"
       style="@style/Dialer.TextAppearance.Secondary"/>
 </LinearLayout>

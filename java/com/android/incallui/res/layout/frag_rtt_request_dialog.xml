@@ -20,61 +20,47 @@
 
   <TextView
       android:id="@+id/details"
+      style="@style/Dialer.TextAppearance.Primary"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:paddingTop="20dp"
       android:paddingBottom="12dp"
       android:paddingStart="24dp"
-      android:paddingEnd="24dp"
-      android:textColor="#DE000000"
-      android:textSize="16sp"/>
+      android:paddingEnd="24dp"/>
 
   <TextView
       android:id="@+id/more_information"
+      style="@style/Dialer.TextAppearance.Secondary"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:paddingBottom="16dp"
       android:paddingStart="24dp"
       android:paddingEnd="24dp"
-      android:text="@string/rtt_request_dialog_more_information"
-      android:textColor="#8A000000"
-      android:textSize="14sp"/>
+      android:text="@string/rtt_request_dialog_more_information"/>
 
   <LinearLayout
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:padding="8dp"
+      android:paddingHorizontal="16dp"
+      android:paddingVertical="12dp"
       android:orientation="horizontal">
     <Space
         android:layout_width="0dp"
         android:layout_height="match_parent"
         android:layout_weight="1"/>
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/rtt_button_decline_request"
-        style="@style/Widget.AppCompat.Button"
+        style="@style/Widget.Material3.Button.TextButton"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:backgroundTint="?android:attr/colorBackgroundFloating"
-        android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
-        android:stateListAnimator="@null"
-        android:text="@string/rtt_button_decline_request"
-        android:textColor="#757575"/>
-    <Button
+        android:layout_marginEnd="8dp"
+        android:text="@string/rtt_button_decline_request"/>
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/rtt_button_accept_request"
-        style="@style/Widget.AppCompat.Button"
+        style="@style/Widget.Material3.Button"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="end"
-        android:paddingStart="16dp"
-        android:paddingEnd="16dp"
-        android:backgroundTint="?android:attr/colorPrimary"
-        android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
-        android:stateListAnimator="@null"
-        android:text="@string/rtt_button_accept_request"
-        android:textColor="@android:color/white"/>
+        android:text="@string/rtt_button_accept_request"/>
   </LinearLayout>
 
 </LinearLayout>

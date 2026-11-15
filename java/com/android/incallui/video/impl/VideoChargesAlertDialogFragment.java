@@ -17,7 +17,6 @@
 
 package com.android.incallui.video.impl;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -27,6 +26,7 @@ import android.view.View;
 import android.widget.CheckBox;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.core.os.UserManagerCompat;
 import androidx.fragment.app.DialogFragment;
 import androidx.preference.PreferenceManager;
@@ -36,6 +36,7 @@ import com.android.dialer.common.Assert;
 import com.android.dialer.common.LogUtil;
 import com.android.incallui.call.CallList;
 import com.android.incallui.call.DialerCall;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /** Alert dialog for video charges. */
 public class VideoChargesAlertDialogFragment extends DialogFragment {
@@ -120,7 +121,7 @@ public class VideoChargesAlertDialogFragment extends DialogFragment {
 
     SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
     AlertDialog alertDialog =
-        new AlertDialog.Builder(getActivity())
+        new MaterialAlertDialogBuilder(getActivity())
             .setView(dialogView)
             .setPositiveButton(
                 android.R.string.ok,

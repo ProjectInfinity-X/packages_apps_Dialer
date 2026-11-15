@@ -38,10 +38,10 @@
     <item name="dialpad_key_letters_size_for_single_alphabet">@dimen/incall_dialpad_key_letters_size_for_single_alphabet</item>
     <item name="dialpad_key_numbers_size">@dimen/incall_dialpad_key_numbers_size</item>
     <item name="dialpad_end_key_spacing">@dimen/incall_end_call_spacing</item>
-    <item name="dialpad_elevation">10dp</item>
-    <item name="dialpad_text_color">@color/dialer_theme_color_light</item>
-    <item name="dialpad_text_color_primary">@color/dialer_theme_color_light</item>
-    <item name="dialpad_text_color_secondary">@color/dialer_secondary_text_color</item>
+    <item name="dialpad_elevation">12dp</item>
+    <item name="dialpad_text_color">@color/dialer_on_surface</item>
+    <item name="dialpad_text_color_primary">@color/dialer_on_surface</item>
+    <item name="dialpad_text_color_secondary">@color/dialer_on_surface_variant</item>
   </style>
 
   <style name="AfterCallNotificationTheme" parent="Dialer.ThemeBase.NoActionBar">

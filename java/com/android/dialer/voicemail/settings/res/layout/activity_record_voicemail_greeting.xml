@@ -56,25 +56,28 @@
       android:layout_height="wrap_content"
       android:layout_alignParentBottom="true"
       android:layout_centerHorizontal="true"
-      android:orientation="horizontal"
-      style="?android:attr/buttonBarStyle">
+      android:paddingHorizontal="24dp"
+      android:paddingVertical="16dp"
+      android:orientation="horizontal">
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/save_button"
+        style="@style/Widget.Material3.Button"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:layout_marginEnd="8dp"
         android:text="@string/save_button_text"
-        android:visibility="gone"
-        style="?android:attr/buttonBarButtonStyle"/>
+        android:visibility="gone"/>
 
-    <Button
+    <com.google.android.material.button.MaterialButton
         android:id="@+id/redo_button"
+        style="@style/Widget.Material3.Button.OutlinedButton"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:layout_marginStart="8dp"
         android:text="@string/redo_button_text"
-        android:visibility="gone"
-        style="?android:attr/buttonBarButtonStyle"/>
+        android:visibility="gone"/>
   </LinearLayout>
 </RelativeLayout>

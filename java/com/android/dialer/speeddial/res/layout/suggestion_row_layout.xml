@@ -21,14 +21,15 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:minHeight="72dp"
-    android:background="?android:attr/selectableItemBackground">
-
+    android:layout_marginHorizontal="8dp"
+    android:layout_marginVertical="3dp"
+    android:paddingHorizontal="16dp"
+    android:background="@drawable/expressive_card_bg">
   <com.android.dialer.widget.ContactPhotoView
       android:id="@+id/avatar"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_centerVertical="true"
-      android:layout_marginStart="12dp"/>
+      android:layout_centerVertical="true"/>
 
   <LinearLayout
       android:orientation="vertical"
@@ -37,8 +38,7 @@
       android:layout_centerVertical="true"
       android:layout_toEndOf="@+id/avatar"
       android:layout_toStartOf="@+id/overflow"
-      android:layout_marginStart="4dp">
-
+      android:layout_marginStart="16dp">
     <TextView
         android:id="@+id/name"
         android:layout_width="wrap_content"
@@ -54,13 +54,13 @@
 
   <ImageView
       android:id="@+id/overflow"
-      android:layout_width="48dp"
-      android:layout_height="48dp"
+      android:layout_width="44dp"
+      android:layout_height="44dp"
       android:layout_centerVertical="true"
       android:layout_alignParentEnd="true"
       android:scaleType="center"
       android:src="@drawable/quantum_ic_more_vert_vd_theme_24"
-      android:background="?android:attr/selectableItemBackgroundBorderless"
+      android:background="@drawable/oval_ripple"
       android:contentDescription="@string/content_description_overflow"
       app:tint="?colorIcon" />
 </RelativeLayout>

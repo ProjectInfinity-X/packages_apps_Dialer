@@ -17,17 +17,17 @@
 
 <!-- Layout parameters are set programmatically. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+  xmlns:app="http://schemas.android.com/apk/res-auto"
   android:id="@+id/call_log_fragment_root"
   android:layout_width="match_parent"
   android:layout_height="match_parent"
   android:orientation="vertical">
-
   <LinearLayout
       android:id="@+id/multi_select_select_all_view_content"
       android:layout_width="match_parent"
       android:layout_height="@dimen/tab_height"
       android:layout_gravity="start"
-      android:background="?android:attr/colorPrimary"
+      android:background="@color/dialer_surface_container_high"
       android:orientation="horizontal"
       android:visibility="gone">
 
@@ -47,8 +47,8 @@
         android:paddingStart="@dimen/select_all_text_left_padding"
         android:gravity="center_vertical"
         android:text="@string/select_all"
-        android:textAllCaps="true"
-        android:textColor="?android:attr/textColorPrimaryInverse"
+        android:textAllCaps="false"
+        android:textColor="@color/dialer_on_surface"
         android:textSize="@dimen/select_all_text_size"/>
   </LinearLayout>
 

@@ -26,7 +26,6 @@ import android.os.Bundle;
 import android.provider.CallLog.Calls;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
@@ -37,6 +36,7 @@ import com.android.dialer.common.concurrent.DialerExecutor.Worker;
 import com.android.dialer.common.concurrent.DialerExecutorComponent;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService;
 import com.android.dialer.phonenumbercache.PhoneNumberCache;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /** Dialog that clears the call log after confirming with the user */
 public class ClearCallLogDialog extends DialogFragment {
@@ -81,7 +81,7 @@ public class ClearCallLogDialog extends DialogFragment {
 
           clearCallLogTask.executeSerial(null);
         };
-    return new AlertDialog.Builder(getActivity())
+    return new MaterialAlertDialogBuilder(getActivity())
         .setTitle(R.string.clearCallLogConfirmation_title)
         .setIconAttribute(android.R.attr.alertDialogIcon)
         .setMessage(R.string.clearCallLogConfirmation)

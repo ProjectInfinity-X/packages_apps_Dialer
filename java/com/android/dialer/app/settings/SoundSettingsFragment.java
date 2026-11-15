@@ -20,7 +20,6 @@ package com.android.dialer.app.settings;
 import static android.app.Activity.RESULT_OK;
 
 import android.annotation.SuppressLint;
-import android.app.AlertDialog;
 import android.app.NotificationManager;
 import android.content.Context;
 import android.content.Intent;
@@ -37,9 +36,11 @@ import android.telephony.CarrierConfigManager;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
 
+import android.view.View;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
+import androidx.annotation.NonNull;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -50,6 +51,7 @@ import androidx.preference.SwitchPreferenceCompat;
 import com.android.dialer.R;
 import com.android.dialer.callrecord.impl.CallRecorderService;
 import com.android.dialer.util.SettingsUtil;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 public class SoundSettingsFragment extends PreferenceFragmentCompat
     implements Preference.OnPreferenceChangeListener {
@@ -184,6 +186,12 @@ public class SoundSettingsFragment extends PreferenceFragmentCompat
   }
 
   @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    ExpressivePreferenceStyler.apply(this);
+  }
+
+  @Override
   public void onResume() {
     super.onResume();
 
@@ -239,7 +247,7 @@ public class SoundSettingsFragment extends PreferenceFragmentCompat
     } else if (preference == enableDndInCall) {
       boolean newValue = (Boolean) objValue;
       if (newValue && !notificationManager.isNotificationPolicyAccessGranted()) {
-        new AlertDialog.Builder(getContext())
+        new MaterialAlertDialogBuilder(getContext())
             .setMessage(R.string.incall_dnd_dialog_message)
             .setPositiveButton(R.string.allow, (dialog, which) -> {
               dialog.dismiss();

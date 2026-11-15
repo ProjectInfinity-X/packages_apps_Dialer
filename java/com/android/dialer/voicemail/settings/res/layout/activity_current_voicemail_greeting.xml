@@ -49,16 +49,14 @@
       <!-- Change Greeting Button -->
     <ImageButton
         android:id="@+id/change_greeting_button"
-        style="@android:style/Widget.Material.Light.ImageButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="16dp"
         android:layout_gravity="center_vertical"
-        android:background="?android:attr/colorBackground"
-        android:foregroundGravity="center_vertical"
-        android:scaleType="centerCrop"
+        android:background="@drawable/oval_ripple"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_circles_add_googblue_48dp"/>
-
     <TextView
         android:id="@+id/textView"
         android:layout_width="0dp"
@@ -84,17 +82,14 @@
       <!-- Play Button -->
     <ImageButton
         android:id="@+id/play_button"
-        style="@android:style/Widget.Material.Light.ImageButton"
-        android:layout_width="40dp"
-        android:layout_height="40dp"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
         android:layout_marginStart="16dp"
         android:layout_gravity="center_vertical"
-        android:adjustViewBounds="false"
-        android:background="?android:attr/colorBackground"
-        android:cropToPadding="false"
-        android:scaleType="centerCrop"
+        android:background="@drawable/oval_ripple"
+        android:padding="8dp"
+        android:scaleType="fitCenter"
         android:src="@drawable/ic_play_circle_filled_googblue_48dp"/>
-
     <LinearLayout
         android:layout_width="232dp"
         android:layout_height="wrap_content"

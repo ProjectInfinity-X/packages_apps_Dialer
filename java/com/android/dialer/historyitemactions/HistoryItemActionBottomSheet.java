@@ -236,7 +236,7 @@ public class HistoryItemActionBottomSheet extends BottomSheetDialog implements O
     if (module.tintDrawable()) {
       ((ImageView) moduleView.findViewById(R.id.module_image))
           .setImageTintList(
-              ColorStateList.valueOf(ThemeComponent.get(getContext()).theme().getColorIcon()));
+              ColorStateList.valueOf(getContext().getColor(R.color.dialer_on_surface_variant)));
     }
     moduleView.setOnClickListener(this);
     moduleView.setTag(module);

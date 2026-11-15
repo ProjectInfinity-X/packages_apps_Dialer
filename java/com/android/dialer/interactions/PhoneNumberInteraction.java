@@ -19,7 +19,6 @@ package com.android.dialer.interactions;
 import android.Manifest.permission;
 import android.annotation.SuppressLint;
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -44,8 +43,10 @@ import android.widget.TextView;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.annotation.IntDef;
+import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import androidx.fragment.app.FragmentManager;
 import androidx.loader.content.CursorLoader;
 import androidx.loader.content.Loader;
@@ -526,7 +527,7 @@ public class PhoneNumberInteraction implements Loader.OnLoadCompleteListener<Cur
       final LayoutInflater inflater = activity.getLayoutInflater();
       @SuppressLint("InflateParams") // Allowed since dialog view is not available yet
       final View setPrimaryView = inflater.inflate(R.layout.set_primary_checkbox, null);
-      return new AlertDialog.Builder(activity)
+      return new MaterialAlertDialogBuilder(activity)
           .setAdapter(phonesAdapter, this)
           .setTitle(
               interactionType == ContactDisplayUtils.INTERACTION_SMS

@@ -22,62 +22,84 @@
     <item name="actionBarStyle">@style/DialerActionBarBaseStyle</item>
     <item name="actionBarSize">@dimen/action_bar_height</item>
 
-    <!-- Pulled from Theme.AppCompat.Light.DarkActionbar-->
-    <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.Light</item>
+    <item name="actionBarPopupTheme">@style/ThemeOverlay.AppCompat.DayNight</item>
     <item name="actionBarWidgetTheme">@null</item>
     <item name="actionBarTheme">@style/DialerActionBarBaseTheme</item>
-    <item name="listChoiceBackgroundIndicator">@drawable/abc_list_selector_holo_dark</item>
 
     <item name="colorControlHighlight">@color/dialer_ripple_color</item>
-    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
+    <item name="android:windowLightNavigationBar">@bool/light_navigation_bar</item>
   </style>
 
   <style name="Dialer.ThemeBase.NoActionBar">
-    <!-- Copied from Theme.AppCompat.Light.NoActionBar. We can remove this and update the Dialer
-        base style once none of our activities depend on ActionBar anymore. -->
     <item name="windowActionBar">false</item>
     <item name="windowNoTitle">true</item>
 
     <item name="colorControlHighlight">@color/dialer_ripple_color</item>
-    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:windowLightStatusBar">@bool/light_navigation_bar</item>
+    <item name="android:windowLightNavigationBar">@bool/light_navigation_bar</item>
   </style>
 
   <!-- Activities and Applications should inherit from one of the themes above. -->
   <style name="Dialer.ThemeBase">
-    <item name="android:forceDarkAllowed">true</item>
-    <!-- These values should be used to color all backgrounds. -->
-    <item name="android:colorBackground">@color/dialer_background_color</item>
-    <item name="android:colorBackgroundFloating">@color/dialer_background_floating</item>
-    <item name="colorBackgroundSearchBar">@color/dialer_search_bar_color</item>
+    <!-- Material 3 Surface & Background tokens -->
+    <item name="android:colorBackground">@color/dialer_surface</item>
+    <item name="android:windowBackground">@color/dialer_surface</item>
+    <item name="android:colorBackgroundFloating">@color/dialer_surface_container_high</item>
+    <item name="colorSurface">@color/dialer_surface</item>
+    <item name="colorOnSurface">@color/dialer_on_surface</item>
+    <item name="colorSurfaceVariant">@color/dialer_surface_container_high</item>
+    <item name="colorOnSurfaceVariant">@color/dialer_on_surface_variant</item>
+    <item name="colorBackgroundSearchBar">@color/dialer_surface_container_high</item>
 
-    <!-- These values should be used to set text color. -->
+    <!-- Text colors -->
     <item name="android:textColorPrimary">@color/dialer_primary_text_color</item>
     <item name="android:textColorSecondary">@color/dialer_secondary_text_color</item>
-    <item name="android:textColorPrimaryInverse">@color/google_grey_300</item>
-    <item name="android:textColorSecondaryInverse">@color/google_grey_400</item>
-    <item name="android:textColorHint">@color/google_grey_600</item>
+    <item name="android:textColorPrimaryInverse">@color/dialer_on_primary</item>
+    <item name="android:textColorSecondaryInverse">@color/dialer_on_surface_variant</item>
+    <item name="android:textColorHint">@color/dialer_on_surface_variant</item>
 
-    <!-- These will be automatically used to color most Appcompat/Material widgets. -->
-    <item name="android:colorPrimary">@color/dialer_primary_color</item>
-    <item name="colorPrimary">@color/dialer_primary_color</item>
-    <item name="android:colorPrimaryDark">@color/dialer_primary_color</item>
-    <item name="colorPrimaryDark">@color/dialer_primary_color</item>
-    <item name="android:colorAccent">@color/dialer_theme_color</item>
-    <item name="colorAccent">@color/dialer_theme_color</item>
+    <!-- Material 3 Accent / Primary / Secondary / Tertiary / Error tokens -->
+    <item name="android:colorPrimary">@color/dialer_primary</item>
+    <item name="colorPrimary">@color/dialer_primary</item>
+    <item name="colorOnPrimary">@color/dialer_on_primary</item>
+    <item name="colorPrimaryContainer">@color/dialer_primary_container</item>
+    <item name="colorOnPrimaryContainer">@color/dialer_on_primary_container</item>
+    <item name="android:colorPrimaryDark">@color/dialer_surface</item>
+    <item name="colorPrimaryDark">@color/dialer_surface</item>
+    <item name="colorSecondary">@color/dialer_secondary</item>
+    <item name="colorOnSecondary">@color/dialer_on_secondary</item>
+    <item name="colorSecondaryContainer">@color/dialer_secondary_container</item>
+    <item name="colorOnSecondaryContainer">@color/dialer_on_secondary_container</item>
+    <item name="colorTertiary">@color/dialer_tertiary</item>
+    <item name="colorOnTertiary">@color/dialer_on_tertiary</item>
+    <item name="colorTertiaryContainer">@color/dialer_tertiary_container</item>
+    <item name="colorOnTertiaryContainer">@color/dialer_on_tertiary_container</item>
+    <item name="colorOutline">@color/dialer_outline</item>
+    <item name="colorError">@color/dialer_error</item>
+    <item name="colorOnError">@color/dialer_on_error</item>
+    <item name="android:colorAccent">@color/dialer_primary</item>
+    <item name="colorAccent">@color/dialer_primary</item>
+    <item name="colorControlActivated">@color/dialer_primary</item>
 
-    <!-- Used to automatically style check/selected checkbox, switches and radio buttons -->
-    <item name="colorControlActivated">?android:attr/colorAccent</item>
+    <!-- System bars -->
+    <item name="android:statusBarColor">@color/dialer_surface</item>
+    <item name="android:navigationBarColor">@color/dialer_surface_container</item>
 
-    <!-- Dialer specific attributes. -->
-    <item name="colorIcon">@color/google_grey_700</item>
-    <item name="colorIconSecondary">@color/google_grey_400</item>
+    <!-- Dialer specific attributes -->
+    <item name="colorIcon">@color/dialer_on_surface_variant</item>
+    <item name="colorIconSecondary">@color/dialer_outline</item>
     <item name="colorTextOnUnthemedDarkBackground">@android:color/system_neutral1_0</item>
     <item name="colorIconOnUnthemedDarkBackground">@android:color/system_neutral1_0</item>
-    <item name="colorCallNotificationBackground">@android:color/system_accent2_200</item>
+    <item name="colorCallNotificationBackground">@android:color/system_accent1_600</item>
+    <item name="actionOverflowMenuStyle">@style/DialerOverflowMenuStyle</item>
+    <item name="android:actionOverflowMenuStyle">@style/DialerOverflowMenuStyle</item>
+    <item name="popupMenuStyle">@style/DialerOverflowMenuStyle</item>
+    <item name="android:popupMenuStyle">@style/DialerOverflowMenuStyle</item>
+    <item name="android:contextPopupMenuStyle">@style/DialerOverflowMenuStyle</item>
   </style>
 
-  <!-- TODO(a bug): investigate making this style's parent Dialer.ThemeBase.NoActionBar -->
-  <style name="Theme.AppCompat.Translucent" parent="Theme.AppCompat.NoActionBar">
+  <style name="Theme.AppCompat.Translucent" parent="Theme.Material3.DayNight.NoActionBar">
     <item name="android:windowNoTitle">true</item>
     <item name="android:windowBackground">@android:color/transparent</item>
     <item name="android:colorBackgroundCacheHint">@null</item>
@@ -85,18 +107,28 @@
     <item name="android:windowAnimationStyle">@android:style/Animation</item>
   </style>
 
-  <!-- Deprecated: Use Toolbar instead of ActionBar. -->
-  <!-- Used to style all Dialer's action bars. Every actionbar is awarded this for free if the parent
-     activity's theme extends from Dialer.ThemeBase.ActionBar or doesn't specify a theme. -->
-  <style name="DialerActionBarBaseStyle" parent="@style/Widget.AppCompat.Light.ActionBar.Solid.Inverse">
-    <item name="android:background">?android:attr/colorPrimary</item>
-    <item name="background">?android:attr/colorPrimary</item>
+  <style name="DialerActionBarBaseStyle" parent="@style/Widget.Material3.ActionBar.Solid">
+    <item name="android:background">@color/dialer_surface</item>
+    <item name="background">@color/dialer_surface</item>
+    <item name="elevation">0dp</item>
+    <item name="titleTextStyle">@style/DialerActionBarTitleTextStyle</item>
   </style>
-  <style name="DialerActionBarBaseTheme" parent="@style/ThemeOverlay.AppCompat.ActionBar" />
+
+  <style name="DialerActionBarTitleTextStyle" parent="@style/TextAppearance.Material3.TitleLarge">
+    <item name="android:textColor">@color/dialer_on_surface</item>
+  </style>
+
+  <style name="DialerActionBarBaseTheme" parent="@style/ThemeOverlay.Material3.ActionBar">
+    <item name="colorControlNormal">@color/dialer_on_surface</item>
+  </style>
 
   <style name="Dialer.Settings.PreferenceTheme" parent="@style/PreferenceThemeOverlay">
     <item name="switchPreferenceCompatStyle">@style/Dialer.SwitchPreferenceCompat</item>
   </style>
 
-
+  <style name="DialerOverflowMenuStyle" parent="Widget.Material3.PopupMenu.Overflow">
+    <item name="android:popupBackground">@drawable/popup_background</item>
+    <item name="android:popupElevation">6dp</item>
+    <item name="android:overlapAnchor">false</item>
+  </style>
 </resources>

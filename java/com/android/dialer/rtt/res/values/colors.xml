@@ -15,7 +15,7 @@
   ~ limitations under the License
   -->
 <resources>
-  <color name="rtt_transcript_primary_color">#37474F</color>
-  <color name="rtt_transcript_primary_color_dark">#263238</color>
-  <color name="rtt_transcript_background_color">#ECEFF1</color>
+  <color name="rtt_transcript_primary_color">@color/dialer_primary</color>
+  <color name="rtt_transcript_primary_color_dark">@color/dialer_surface</color>
+  <color name="rtt_transcript_background_color">@color/dialer_surface</color>
 </resources>

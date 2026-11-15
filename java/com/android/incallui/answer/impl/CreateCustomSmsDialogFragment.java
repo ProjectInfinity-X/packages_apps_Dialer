@@ -17,7 +17,6 @@
 
 package com.android.incallui.answer.impl;
 
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.DialogInterface;
 import android.os.Bundle;
@@ -29,11 +28,13 @@ import android.widget.Button;
 import android.widget.EditText;
 
 import androidx.annotation.NonNull;
+import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDialogFragment;
 
 import com.android.dialer.R;
 import com.android.dialer.common.FragmentUtils;
 import com.android.incallui.incalluilock.InCallUiLock;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /**
  * Shows the dialog for users to enter a custom message when rejecting a call with an SMS message.
@@ -53,7 +54,7 @@ public class CreateCustomSmsDialogFragment extends AppCompatDialogFragment {
   @Override
   public Dialog onCreateDialog(Bundle savedInstanceState) {
     super.onCreateDialog(savedInstanceState);
-    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
     View view = View.inflate(builder.getContext(), R.layout.fragment_custom_sms_dialog, null);
     editText = view.findViewById(R.id.custom_sms_input);
     if (savedInstanceState != null) {

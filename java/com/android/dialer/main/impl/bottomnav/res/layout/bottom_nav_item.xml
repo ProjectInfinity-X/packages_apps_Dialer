@@ -31,9 +31,8 @@
     <FrameLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="16dp"
-        android:layout_marginBottom="8dp">
-
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="4dp">
     <View
         android:id="@+id/active_indicator"
         android:layout_width="64dp"
@@ -65,7 +64,7 @@
         android:minWidth="20dp"
         android:gravity="center"
         android:textSize="12sp"
-        android:textColor="?android:attr/textColorPrimaryInverse"
+        android:textColor="@android:color/white"
         android:background="@drawable/notification_badge"
         android:fontFamily="@*android:string/config_headlineFontFamilyMedium"
         android:visibility="invisible"/>
@@ -75,9 +74,9 @@
       android:id="@+id/bottom_nav_item_text"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
-      android:layout_marginBottom="16dp"
+      android:layout_marginBottom="8dp"
       android:gravity="center_horizontal"
       android:textSize="12sp"
       style="@style/Dialer.TextAppearance.OVERLINE"
-      android:textColor="?android:attr/textColorPrimary"/>
+      android:textColor="@color/dialer_on_surface_variant"/>
 </com.android.dialer.main.impl.bottomnav.BottomNavItem>

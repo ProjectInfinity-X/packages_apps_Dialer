@@ -27,13 +27,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.provider.ContactsContract;
 
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentManager;
 
 import com.android.dialer.R;
 import com.android.dialer.util.PermissionsUtil;
-
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -71,7 +70,7 @@ public class ClearFrequentsDialog extends DialogFragment {
           handler.post(progressDialog::dismiss);
         });
     };
-    return new AlertDialog.Builder(getActivity())
+    return new MaterialAlertDialogBuilder(getActivity())
         .setTitle(R.string.clearFrequentsConfirmation_title)
         .setMessage(R.string.clearFrequentsConfirmation)
         .setNegativeButton(android.R.string.cancel, null)

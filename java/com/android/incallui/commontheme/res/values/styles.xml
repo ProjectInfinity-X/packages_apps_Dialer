@@ -29,8 +29,9 @@
   </style>
 
   <style name="Dialer.Incall.TextAppearance.Label">
-    <item name="android:textColor">?android:attr/textColorPrimary</item>
-    <item name="android:textSize">12sp</item>
+    <item name="android:textColor">@android:color/white</item>
+    <item name="android:fontFamily">@*android:string/config_headlineFontFamilyMedium</item>
+    <item name="android:textSize">13sp</item>
   </style>
 
   <style name="BottomRowIcon">
@@ -43,9 +44,9 @@
 
   <style name="Incall.Button.End" parent="android:Widget.Material.Button">
     <item name="android:background">@drawable/incall_end_call_background</item>
-    <item name="android:elevation">8dp</item>
+    <item name="android:elevation">6dp</item>
     <item name="android:layout_height">@dimen/incall_end_call_button_size</item>
-    <item name="android:layout_width">@dimen/incall_end_call_button_size</item>
+    <item name="android:layout_width">96dp</item>
     <item name="android:padding">8dp</item>
     <item name="android:src">@drawable/quantum_ic_call_end_vd_theme_36</item>
     <item name="android:tint">@color/incall_end_call_icon_color</item>

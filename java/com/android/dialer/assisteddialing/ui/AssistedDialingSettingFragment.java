@@ -19,7 +19,9 @@ package com.android.dialer.assisteddialing.ui;
 import android.icu.util.ULocale;
 import android.icu.util.ULocale.Builder;
 import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -27,6 +29,7 @@ import androidx.preference.PreferenceFragmentCompat;
 
 import com.android.dialer.R;
 import com.android.dialer.assisteddialing.AssistedDialingMediator;
+import com.android.dialer.app.settings.ExpressivePreferenceStyler;
 import com.android.dialer.assisteddialing.ConcreteCreator;
 import com.android.dialer.assisteddialing.CountryCodeProvider;
 import com.android.dialer.common.LogUtil;
@@ -78,6 +81,12 @@ public class AssistedDialingSettingFragment extends PreferenceFragmentCompat {
     updateCountryChooserSummary(countryChooserPref);
 
     countryChooserPref.setOnPreferenceChangeListener(this::updateListSummary);
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    ExpressivePreferenceStyler.apply(this);
   }
 
   private void updateCountryChooserSummary(ListPreference countryChooserPref) {

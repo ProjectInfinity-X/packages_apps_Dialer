@@ -20,14 +20,14 @@
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:state_enabled="false">
     <shape>
-      <solid android:color="@color/material_grey_300"/>
-      <corners android:radius="28dp"/>
+      <solid android:color="@color/dialer_surface_container_highest"/>
+      <corners android:radius="24dp"/>
     </shape>
   </item>
   <item>
     <shape>
-      <solid android:color="?android:attr/colorAccent"/>
-      <corners android:radius="28dp"/>
+      <solid android:color="@color/dialer_primary"/>
+      <corners android:radius="24dp"/>
     </shape>
   </item>
 </selector>

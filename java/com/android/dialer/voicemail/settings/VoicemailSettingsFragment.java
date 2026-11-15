@@ -17,7 +17,6 @@
 
 package com.android.dialer.voicemail.settings;
 
-import android.app.AlertDialog;
 import android.content.Intent;
 import android.os.Bundle;
 import android.provider.Settings;
@@ -26,8 +25,10 @@ import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.SubscriptionInfo;
 import android.telephony.TelephonyManager;
+import android.view.View;
 
 import androidx.annotation.IntDef;
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -42,7 +43,8 @@ import com.android.dialer.telecom.TelecomUtil;
 import com.android.voicemail.VoicemailClient;
 import com.android.voicemail.VoicemailClient.ActivationStateListener;
 import com.android.voicemail.VoicemailComponent;
-
+import com.android.dialer.app.settings.ExpressivePreferenceStyler;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.Optional;
@@ -85,6 +87,12 @@ public class VoicemailSettingsFragment extends PreferenceFragmentCompat
   @Override
   public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
 
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    ExpressivePreferenceStyler.apply(this);
   }
 
   @Override
@@ -303,7 +311,7 @@ public class VoicemailSettingsFragment extends PreferenceFragmentCompat
 
   private void showDisableConfirmationDialog() {
     LogUtil.i(TAG, "showDisableConfirmationDialog");
-    AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getContext());
     builder.setTitle(R.string.confirm_disable_voicemail_dialog_title);
     builder.setMessage(R.string.confirm_disable_voicemail_dialog_message);
     builder.setPositiveButton(R.string.confirm_disable_voicemail_accept_dialog_label,

@@ -20,9 +20,12 @@
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:paddingTop="@dimen/call_entry_padding"
-    android:paddingBottom="@dimen/call_entry_bottom_padding">
-
+    android:layout_marginHorizontal="16dp"
+    android:layout_marginVertical="3dp"
+    android:paddingTop="14dp"
+    android:paddingBottom="14dp"
+    android:paddingEnd="16dp"
+    android:background="@drawable/expressive_card_bg">
   <com.android.dialer.calllogutils.CallTypeIconsView
       android:id="@+id/call_direction"
       android:layout_width="wrap_content"

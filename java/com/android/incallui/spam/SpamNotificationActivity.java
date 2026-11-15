@@ -26,7 +26,6 @@ import android.provider.ContactsContract;
 import android.telephony.PhoneNumberUtils;
 
 import androidx.annotation.Nullable;
-import androidx.appcompat.app.AlertDialog;
 import androidx.fragment.app.DialogFragment;
 import androidx.fragment.app.FragmentActivity;
 
@@ -38,6 +37,7 @@ import com.android.dialer.logging.ContactLookupResult;
 import com.android.dialer.notification.DialerNotificationManager;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.incallui.call.DialerCall;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 /** Creates the after call notification dialogs. */
 public class SpamNotificationActivity extends FragmentActivity {
@@ -282,7 +282,7 @@ public class SpamNotificationActivity extends FragmentActivity {
           ContactLookupResult.Type.forNumber(
               getArguments().getInt(CALL_INFO_CONTACT_LOOKUP_RESULT_TYPE, 0));
 
-      return new AlertDialog.Builder(getActivity())
+      return new MaterialAlertDialogBuilder(getActivity())
           .setCancelable(false)
           .setTitle(getString(R.string.spam_notification_title,
                   getFormattedNumber(number, applicationContext)))
@@ -352,7 +352,7 @@ public class SpamNotificationActivity extends FragmentActivity {
       final ContactLookupResult.Type contactLookupResultType =
           ContactLookupResult.Type.forNumber(
               getArguments().getInt(CALL_INFO_CONTACT_LOOKUP_RESULT_TYPE, 0));
-      return new AlertDialog.Builder(getActivity())
+      return new MaterialAlertDialogBuilder(getActivity())
           .setTitle(
               getString(R.string.non_spam_notification_title, getFormattedNumber(number, context)))
           .setCancelable(false)

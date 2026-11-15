@@ -41,7 +41,7 @@
           android:textSize="@dimen/answer_contact_name_text_size"
           app:autoResizeText_minTextSize="24sp"
           tools:text="Jake Peralta"
-          android:textColor="@color/dndn"/>
+          android:textColor="@android:color/white"/>
 
   <include
     layout="@layout/incall_contactgrid_bottom_row"

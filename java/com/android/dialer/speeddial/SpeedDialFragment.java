@@ -166,7 +166,7 @@ public class SpeedDialFragment extends Fragment {
     LogUtil.enterBlock("SpeedDialFragment.onCreateView");
     View rootLayout = inflater.inflate(R.layout.fragment_speed_dial, container, false);
     emptyContentView = rootLayout.findViewById(R.id.speed_dial_empty_content_view);
-    emptyContentView.setImage(R.drawable.oneplus_empty_speed_dial_illustration);
+    emptyContentView.setImage(R.drawable.ic_empty_favorites);
 
     speedDialLoaderListener =
         DialerExecutorComponent.get(getContext())

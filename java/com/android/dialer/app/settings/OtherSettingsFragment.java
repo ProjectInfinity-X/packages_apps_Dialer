@@ -22,7 +22,9 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.hardware.SensorManager;
 import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
@@ -60,6 +62,12 @@ public class OtherSettingsFragment extends PreferenceFragmentCompat
         SwitchPreferenceCompat disableProximity = findPreference(DISABLE_PROXIMITY_SENSOR);
         getPreferenceScreen().removePreference(disableProximity);
     }
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    ExpressivePreferenceStyler.apply(this);
   }
 
   @Override

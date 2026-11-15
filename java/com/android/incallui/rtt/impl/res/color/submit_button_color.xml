@@ -16,6 +16,6 @@
   -->
 <selector xmlns:android="http://schemas.android.com/apk/res/android">
   <item android:state_enabled="false"
-      android:color="#EEEEEE" />
-  <item android:color="#2A56C6" />
+      android:color="@color/dialer_on_surface_variant" />
+  <item android:color="@color/dialer_on_primary" />
 </selector>

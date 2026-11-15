@@ -16,6 +16,6 @@
 <resources>
 
   <!-- Note, this is also used by InCallUi. -->
-  <color name="blocked_contact_background">#A52714</color>
+  <color name="blocked_contact_background">#DC362E</color>
 
 </resources>

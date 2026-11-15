@@ -77,13 +77,12 @@
       android:id="@+id/call_back_button"
       android:layout_width="@dimen/call_back_button_size"
       android:layout_height="@dimen/call_back_button_size"
-      android:background="?android:attr/selectableItemBackgroundBorderless"
+      android:background="@drawable/oval_ripple"
       android:src="@drawable/quantum_ic_call_vd_theme_24"
       android:scaleType="center"
       android:contentDescription="@string/call"
       android:visibility="gone"
-      app:tint="?android:attr/textColorSecondary" />
-
+      app:tint="@color/dialer_primary" />
   </LinearLayout>
 
   <ScrollView
@@ -104,8 +103,7 @@
         android:layout_height="1dp"
         android:layout_marginTop="@dimen/ec_divider_top_bottom_margin"
         android:layout_marginBottom="@dimen/ec_divider_top_bottom_margin"
-        android:background="#12000000" />
-
+        android:background="@color/dialer_divider_line_color" />
       <TextView
         android:id="@+id/call_detail_action_copy"
         style="@style/CallDetailsActionItemStyle"

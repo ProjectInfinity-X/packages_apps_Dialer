@@ -15,8 +15,8 @@
   ~ limitations under the License
   -->
 <resources>
-  <color name="rtt_status_bar_color">#03165C</color>
-  <color name="rtt_navigation_bar_color">#FAFAFA</color>
-  <color name="rtt_button_unselected_color">#757575</color>
-  <color name="rtt_button_selected_color">#2A56C6</color>
+  <color name="rtt_status_bar_color">@color/dialer_surface_container</color>
+  <color name="rtt_navigation_bar_color">@color/dialer_surface</color>
+  <color name="rtt_button_unselected_color">@color/dialer_on_surface_variant</color>
+  <color name="rtt_button_selected_color">@color/dialer_primary</color>
 </resources>

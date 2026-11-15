@@ -19,7 +19,9 @@ package com.android.dialer.lookup;
 
 import android.content.Context;
 import android.os.Bundle;
+import android.view.View;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.preference.ListPreference;
 import androidx.preference.Preference;
@@ -27,7 +29,7 @@ import androidx.preference.PreferenceFragmentCompat;
 import androidx.preference.SwitchPreferenceCompat;
 
 import com.android.dialer.R;
-
+import com.android.dialer.app.settings.ExpressivePreferenceStyler;
 public class LookupSettingsFragment extends PreferenceFragmentCompat
     implements Preference.OnPreferenceChangeListener {
 
@@ -62,6 +64,12 @@ public class LookupSettingsFragment extends PreferenceFragmentCompat
 
     forwardLookupProvider.setOnPreferenceChangeListener(this);
     reverseLookupProvider.setOnPreferenceChangeListener(this);
+  }
+
+  @Override
+  public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+    super.onViewCreated(view, savedInstanceState);
+    ExpressivePreferenceStyler.apply(this);
   }
 
   @Override

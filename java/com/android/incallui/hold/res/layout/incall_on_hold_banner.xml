@@ -19,7 +19,9 @@
   xmlns:tools="http://schemas.android.com/tools"
   android:layout_width="match_parent"
   android:layout_height="wrap_content"
-  android:background="#CC212121">
+  android:layout_marginHorizontal="12dp"
+  android:layout_marginTop="12dp"
+  android:background="@drawable/incall_banner_background">
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"

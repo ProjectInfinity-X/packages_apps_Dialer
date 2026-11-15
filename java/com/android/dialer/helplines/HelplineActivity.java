@@ -19,7 +19,6 @@ package com.android.dialer.helplines;
 import static android.graphics.Paint.UNDERLINE_TEXT_FLAG;
 
 import android.app.ActionBar;
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -41,11 +40,13 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.appcompat.app.AlertDialog;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.android.dialer.R;
 import com.android.dialer.app.BaseActivity;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.android.dialer.app.calllog.IntentProvider;
 import com.android.dialer.helplines.utils.HelplineUtils;
 import com.android.dialer.util.DialerUtils;
@@ -140,7 +141,7 @@ public class HelplineActivity extends BaseActivity {
                 .putBoolean(KEY_FIRST_LAUNCH, true)
                 .apply();
 
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.helplines_help_title)
                 .setMessage(R.string.helplines_help_message)
                 .setPositiveButton(android.R.string.ok, null)
@@ -149,7 +150,7 @@ public class HelplineActivity extends BaseActivity {
     }
 
     private void showMoreInfo() {
-        new AlertDialog.Builder(this)
+        new MaterialAlertDialogBuilder(this)
                 .setMessage(getResources().getString(R.string.helplines_help_more_message,
                         getResources().getString(R.string.helplines_contact_url)))
                 .setPositiveButton(android.R.string.ok, null)
@@ -205,7 +206,7 @@ public class HelplineActivity extends BaseActivity {
             fillOrHideDialogRow(item.getWebsite(), dialogView, R.id.website_title, R.id.website,
                     true);
 
-            mDialog = new AlertDialog.Builder(HelplineActivity.this)
+            mDialog = new MaterialAlertDialogBuilder(HelplineActivity.this)
                     .setView(dialogView)
                     .setPositiveButton(android.R.string.ok, null)
                     .show();
@@ -238,8 +239,8 @@ public class HelplineActivity extends BaseActivity {
 
                 LayoutInflater inflater = HelplineActivity.this.getLayoutInflater();
                 contentView.setOnClickListener(v -> {
-                    AlertDialog.Builder dialogBuilder =
-                            new AlertDialog.Builder(HelplineActivity.this);
+                    MaterialAlertDialogBuilder dialogBuilder =
+                            new MaterialAlertDialogBuilder(HelplineActivity.this);
                     View webviewDlgView = inflater.inflate(R.layout.dialog_webview, null);
                     dialogBuilder.setView(webviewDlgView);
                     LinearLayout loadingLayout = webviewDlgView.findViewById(R.id.webview_loading);

@@ -14,12 +14,13 @@
   ~ limitations under the License
   -->
 <resources>
-    <!-- Essential theme colors -->
-    <color name="dialer_theme_color_dark">@color/dialer_background_color</color>
-    <color name="dialer_background_color">@android:color/system_neutral1_900</color>
-    <color name="dialer_background_floating">@android:color/system_neutral1_800</color>
-    <color name="dialer_search_bar_color">@android:color/system_neutral1_800</color>
-    <color name="rounded_dialpad_bg_color">@android:color/system_neutral1_800</color>
-    <color name="dialer_theme_color_light">@android:color/system_accent1_100</color>
-  <color name="dialer_buttons_color">@*android:color/system_accent1_100</color>
+  <!-- Essential theme colors -->
+  <color name="dialer_theme_color_dark">@color/dialer_surface</color>
+  <color name="dialer_ripple_color">#24FFFFFF</color>
+  <color name="dialer_background_color">@color/dialer_surface</color>
+  <color name="dialer_background_floating">@color/dialer_surface_container_high</color>
+  <color name="dialer_search_bar_color">@color/dialer_surface_container_high</color>
+  <color name="rounded_dialpad_bg_color">@color/dialer_surface_container_low</color>
+  <color name="dialer_theme_color_light">@color/dialer_primary</color>
+  <color name="dialer_buttons_color">@color/dialer_on_surface_variant</color>
 </resources>

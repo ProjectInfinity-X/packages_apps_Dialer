@@ -54,8 +54,8 @@ public class RemoveView extends FrameLayout {
     removeText = findViewById(R.id.remove_view_text);
     removeIcon = findViewById(R.id.remove_view_icon);
     final Resources r = getResources();
-    unhighlightedColor = r.getColor(android.R.color.white, getContext().getTheme());
-    highlightedColor = r.getColor(R.color.remove_highlighted_text_color, getContext().getTheme());
+    unhighlightedColor = r.getColor(R.color.dialer_on_surface, getContext().getTheme());
+    highlightedColor = r.getColor(R.color.dialer_error, getContext().getTheme());
   }
 
   @Override

@@ -29,18 +29,19 @@
       android:minHeight="56dp"
       android:paddingStart="24dp"
       android:paddingEnd="24dp"
-      android:elevation="1dp"
+      android:paddingTop="16dp"
+      android:paddingBottom="8dp"
       android:text="@string/speed_dial_disambig_dialog_title"
-      android:background="?android:attr/colorBackgroundFloating"
-      style="@style/Dialer.TextAppearance.Header2"/>
+      android:background="@android:color/transparent"
+      style="@style/Dialer.TextAppearance.Header1"/>
 
   <com.android.dialer.widget.MaxHeightScrollView
       android:id="@+id/disambig_scrollview"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
-      android:minHeight="168dp"
+      android:minHeight="144dp"
       app:maxHeight="256dp"
-      android:background="?android:attr/colorBackgroundFloating">
+      android:background="@android:color/transparent">
 
     <LinearLayout
         android:id="@+id/communication_avenue_container"
@@ -49,14 +50,19 @@
         android:layout_height="wrap_content"/>
   </com.android.dialer.widget.MaxHeightScrollView>
 
+  <View
+      android:layout_width="match_parent"
+      android:layout_height="1dp"
+      android:background="@color/dialer_divider_line_color"/>
+
   <FrameLayout
       android:id="@+id/remember_this_choice_container"
       android:layout_width="match_parent"
       android:layout_height="wrap_content"
       android:layout_gravity="bottom"
-      android:minHeight="64dp"
-      android:elevation="4dp"
-      android:background="?android:attr/colorBackgroundFloating">
+      android:minHeight="60dp"
+      android:paddingVertical="4dp"
+      android:background="@android:color/transparent">
 
     <CheckBox
         android:id="@+id/remember_this_choice_checkbox"

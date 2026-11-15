@@ -15,7 +15,8 @@
 -->
 
 <resources>
-  <color name="nav_item">@android:color/system_neutral1_300</color>
-  <color name="dialer_pill_color">@android:color/system_accent2_700</color>
-  <color name="dialer_fab_icon_color">#ff000000</color>
+  <color name="voicemail_icon_disabled_tint">#61FFFFFF</color>
+  <color name="nav_item">@color/dialer_on_surface_variant</color>
+  <color name="dialer_pill_color">@color/dialer_secondary_container</color>
+  <color name="dialer_fab_icon_color">@color/dialer_on_primary_container</color>
 </resources>

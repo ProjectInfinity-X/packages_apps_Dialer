@@ -40,7 +40,7 @@ import com.android.dialer.phonenumbercache.CachedNumberLookupService;
 import com.android.dialer.phonenumbercache.CachedNumberLookupService.CachedContactInfo;
 import com.android.dialer.phonenumbercache.PhoneNumberCache;
 import com.android.dialer.theme.base.ThemeComponent;
-
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 /** Dialog for reporting an inaccurate caller id information. */
 public class ReportDialogFragment extends DialogFragment {
 
@@ -78,7 +78,7 @@ public class ReportDialogFragment extends DialogFragment {
     lookupContactInfo(number);
 
     AlertDialog reportDialog =
-        new AlertDialog.Builder(getActivity())
+        new MaterialAlertDialogBuilder(getActivity())
             .setTitle(R.string.report_caller_id_dialog_title)
             .setPositiveButton(android.R.string.ok, (dialog, which) -> positiveClick(dialog))
             .setNegativeButton(android.R.string.cancel, (dialog, which) -> dialog.dismiss())

@@ -52,6 +52,7 @@ import com.android.dialer.location.GeoUtil;
 import com.android.dialer.phonenumberutil.PhoneNumberHelper;
 import com.android.dialer.protos.ProtoParsers;
 import com.android.dialer.telecom.TelecomUtil;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.util.Optional;
 
@@ -122,7 +123,7 @@ public class SelectPhoneAccountDialogFragment extends DialogFragment {
     final CompoundButton.OnCheckedChangeListener checkListener =
             (check, isChecked) -> isDefaultChecked = isChecked;
 
-    AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
     ListAdapter selectAccountListAdapter =
         new SelectAccountListAdapter(
             builder.getContext(), R.layout.select_account_list_item, options);

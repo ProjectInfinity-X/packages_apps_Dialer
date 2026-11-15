@@ -18,12 +18,12 @@
 
   <style name="Dialer.Incall.TextAppearance.RttMessage" parent="Dialer.Incall.TextAppearance">
     <item name="android:fontFamily">@*android:string/config_bodyFontFamily</item>
-    <item name="android:textColor">#DD000000</item>
+    <item name="android:textColor">@color/dialer_on_surface</item>
     <item name="android:textSize">16sp</item>
   </style>
 
   <style name="ButtonTheme">
-    <item name="android:colorControlHighlight">#33000000</item>
+    <item name="android:colorControlHighlight">@color/dialer_ripple_color</item>
   </style>
 
   <style name="RttButton">

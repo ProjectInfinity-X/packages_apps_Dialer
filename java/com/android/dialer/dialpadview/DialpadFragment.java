@@ -18,7 +18,6 @@
 package com.android.dialer.dialpadview;
 
 import android.app.Activity;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.content.BroadcastReceiver;
 import android.content.ContentResolver;
@@ -99,6 +98,7 @@ import com.android.dialer.util.CallUtil;
 import com.android.dialer.util.PermissionsUtil;
 import com.android.dialer.util.ViewUtil;
 import com.android.dialer.widget.FloatingActionButtonController;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 import com.google.common.base.Ascii;
 
@@ -1733,7 +1733,7 @@ public class DialpadFragment extends Fragment
 
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
-      AlertDialog.Builder builder = new AlertDialog.Builder(getActivity());
+      MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(getActivity());
       if (titleResId != 0) {
         builder.setTitle(titleResId);
       }
@@ -1770,24 +1770,21 @@ public class DialpadFragment extends Fragment
       choiceItems[0] =
           new ChoiceItem(
               context.getString(R.string.dialer_useDtmfDialpad),
-              BitmapFactory.decodeResource(
-                  context.getResources(), R.drawable.ic_dialer_fork_tt_keypad),
+              R.drawable.ic_dialer_fork_tt_keypad,
               DIALPAD_CHOICE_USE_DTMF_DIALPAD);
 
       // - "Return to call in progress"
       choiceItems[1] =
           new ChoiceItem(
               context.getString(R.string.dialer_returnToInCallScreen),
-              BitmapFactory.decodeResource(
-                  context.getResources(), R.drawable.ic_dialer_fork_current_call),
+              R.drawable.ic_dialer_fork_current_call,
               DIALPAD_CHOICE_RETURN_TO_CALL);
 
       // - "Add call"
       choiceItems[2] =
           new ChoiceItem(
               context.getString(R.string.dialer_addAnotherCall),
-              BitmapFactory.decodeResource(
-                  context.getResources(), R.drawable.ic_dialer_fork_add_call),
+              R.drawable.ic_dialer_fork_add_call,
               DIALPAD_CHOICE_ADD_NEW_CALL);
     }
 
@@ -1821,7 +1818,7 @@ public class DialpadFragment extends Fragment
       text.setText(choiceItems[position].text);
 
       ImageView icon = convertView.findViewById(R.id.icon);
-      icon.setImageBitmap(choiceItems[position].icon);
+      icon.setImageResource(choiceItems[position].iconRes);
 
       return convertView;
     }
@@ -1830,12 +1827,12 @@ public class DialpadFragment extends Fragment
     static class ChoiceItem {
 
       final String text;
-      final Bitmap icon;
+      final int iconRes;
       final int id;
 
-      ChoiceItem(String s, Bitmap b, int i) {
+      ChoiceItem(String s, int iconRes, int i) {
         text = s;
-        icon = b;
+        this.iconRes = iconRes;
         id = i;
       }
     }

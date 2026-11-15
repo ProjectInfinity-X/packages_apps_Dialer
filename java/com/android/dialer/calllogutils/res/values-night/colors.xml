@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+  <!-- Color for missed call icons. -->
+  <color name="missed_call">#F2B8B5</color>
+  <!-- Color for answered call icons. -->
+  <color name="answered_incoming_call">#7FCFFF</color>
+  <!-- Color for outgoing call icons. -->
+  <color name="answered_outgoing_call">#6DD58C</color>
+  <!-- Color for blocked call icons. -->
+  <color name="blocked_call">#F2B8B5</color>
+</resources>

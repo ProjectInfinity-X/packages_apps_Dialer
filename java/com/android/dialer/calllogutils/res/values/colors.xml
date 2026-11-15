@@ -16,11 +16,11 @@
  -->
 <resources>
   <!-- Color for missed call icons. -->
-  <color name="missed_call">#C53929</color>
+  <color name="missed_call">#DC362E</color>
   <!-- Color for answered call icons. -->
-  <color name="answered_incoming_call">#00a8ff</color>
+  <color name="answered_incoming_call">#0288D1</color>
   <!-- Color for outgoing call icons. -->
-  <color name="answered_outgoing_call">#00c853</color>
+  <color name="answered_outgoing_call">#1E8E3E</color>
   <!-- Color for blocked call icons. -->
-  <color name="blocked_call">@color/dialer_secondary_text_color</color>
+  <color name="blocked_call">#DC362E</color>
 </resources>

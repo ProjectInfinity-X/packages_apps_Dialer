@@ -75,12 +75,16 @@ final class BottomNavItem extends LinearLayout {
   @Override
   public void setSelected(boolean selected) {
     super.setSelected(selected);
-    int colorId = selected
-            ? DialerUtils.resolveColor(getContext(), android.R.attr.textColorPrimary)
-            : DialerUtils.resolveColor(getContext(), android.R.attr.textColorSecondary);
+    Context context = getContext();
+    int iconColor =
+        context.getColor(
+            selected ? R.color.dialer_on_secondary_container : R.color.dialer_on_surface_variant);
+    int textColor =
+        context.getColor(
+            selected ? R.color.dialer_on_surface : R.color.dialer_on_surface_variant);
     image.setImageResource(selected ? drawableResSelected : drawableRes);
-    image.setImageTintList(ColorStateList.valueOf(colorId));
-    text.setTextColor(colorId);
+    image.setImageTintList(ColorStateList.valueOf(iconColor));
+    text.setTextColor(textColor);
 
     float newIndicatorProgress = selected ? 1F : 0F;
     maybeAnimateActiveIndicatorToProgress(newIndicatorProgress);

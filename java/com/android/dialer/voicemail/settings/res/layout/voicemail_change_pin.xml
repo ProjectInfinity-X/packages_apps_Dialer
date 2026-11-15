@@ -70,25 +70,29 @@
   <LinearLayout
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:clipChildren="false"
-    android:clipToPadding="false"
+    android:paddingHorizontal="24dp"
+    android:paddingVertical="16dp"
     android:gravity="end"
     android:orientation="horizontal">
 
     <!-- left : cancel -->
-    <Button
+    <com.google.android.material.button.MaterialButton
       android:id="@+id/cancel_button"
+      style="@style/Widget.Material3.Button.TextButton"
       android:layout_width="0dp"
       android:layout_weight="1"
       android:layout_height="wrap_content"
+      android:layout_marginEnd="8dp"
       android:text="@android:string/cancel"/>
 
     <!-- right : continue -->
-    <Button
+    <com.google.android.material.button.MaterialButton
       android:id="@+id/next_button"
+      style="@style/Widget.Material3.Button"
       android:layout_width="0dp"
       android:layout_weight="1"
       android:layout_height="wrap_content"
+      android:layout_marginStart="8dp"
       android:text="@string/change_pin_continue_label"/>
 
   </LinearLayout>

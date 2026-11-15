@@ -45,11 +45,11 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_marginEnd="16dp"
-      android:layout_marginTop="8dp"
+      android:layout_marginTop="2dp"
       android:layout_gravity="center_vertical"
       android:layout_below="@id/speed_dial_label"
-      style="@style/Dialer.TextAppearance.Primary"
-      tools:text="Mobile"/>
+      style="@style/Dialer.TextAppearance.Secondary"
+      tools:text="+1 (650) 253-0000"/>
 
 
   <ImageView

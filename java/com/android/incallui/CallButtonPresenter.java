@@ -17,7 +17,6 @@
 
 package com.android.incallui;
 
-import android.app.AlertDialog;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;

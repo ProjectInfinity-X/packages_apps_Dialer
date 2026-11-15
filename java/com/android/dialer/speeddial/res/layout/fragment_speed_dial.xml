@@ -25,10 +25,10 @@
       android:layout_width="match_parent"
       android:layout_height="match_parent"
       android:layout_marginTop="@dimen/expanded_search_bar_height_minus"
+      android:paddingHorizontal="8dp"
       android:clipToPadding="false"
       android:background="@android:color/transparent"
       android:paddingBottom="@dimen/floating_action_button_list_bottom_padding"/>
-
   <com.android.dialer.widget.EmptyContentView
       android:id="@+id/speed_dial_empty_content_view"
       android:layout_width="match_parent"

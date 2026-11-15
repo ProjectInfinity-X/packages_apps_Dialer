@@ -20,9 +20,9 @@
   xmlns:android="http://schemas.android.com/apk/res/android"
   xmlns:app="http://schemas.android.com/apk/res-auto"
   android:layout_width="match_parent"
-  android:layout_height="64dp"
+  android:layout_height="72dp"
   android:paddingStart="16dp"
-  android:paddingEnd="8dp"
+  android:paddingEnd="16dp"
   android:gravity="center_vertical"
   android:orientation="horizontal">
 
@@ -96,12 +96,12 @@
     android:id="@+id/conferenceCallerSeparate"
     android:layout_width="@dimen/conference_call_manager_button_dimension"
     android:layout_height="@dimen/conference_call_manager_button_dimension"
-    android:background="?android:attr/selectableItemBackgroundBorderless"
+    android:background="@drawable/oval_ripple"
     android:clickable="true"
     android:contentDescription="@string/goPrivate"
     android:scaleType="center"
     android:src="@drawable/quantum_ic_call_split_vd_theme_24"
-    app:tint="?colorIcon" />
+    app:tint="@color/dialer_on_surface_variant" />
 
   <!-- "Disconnect" button which terminates the connection with this caller. -->
   <ImageButton
@@ -109,11 +109,10 @@
     android:layout_width="@dimen/conference_call_manager_button_dimension"
     android:layout_height="@dimen/conference_call_manager_button_dimension"
     android:layout_marginStart="8dp"
-    android:background="?android:attr/selectableItemBackgroundBorderless"
+    android:background="@drawable/oval_ripple"
     android:clickable="true"
     android:contentDescription="@string/conference_caller_disconnect_content_description"
     android:scaleType="center"
     android:src="@drawable/quantum_ic_call_end_vd_theme_24"
-    app:tint="?colorIcon" />
-
+    app:tint="@color/dialer_end_call_button_color" />
 </LinearLayout>  <!-- End of single list element -->

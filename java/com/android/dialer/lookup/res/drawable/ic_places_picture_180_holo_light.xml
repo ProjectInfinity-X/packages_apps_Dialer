@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="96dp"
+    android:height="96dp"
+    android:viewportWidth="24"
+    android:viewportHeight="24">
+  <path
+      android:fillColor="@color/dialer_primary_container"
+      android:pathData="M12,2C6.48,2 2,6.48 2,12C2,17.52 6.48,22 12,22C17.52,22 22,17.52 22,12C22,6.48 17.52,2 12,2Z"/>
+  <path
+      android:fillColor="@color/dialer_on_primary_container"
+      android:pathData="M17.5,7H6.5C5.95,7 5.5,7.45 5.5,8C5.5,8.55 5.95,9 6.5,9H17.5C18.05,9 18.5,8.55 18.5,8C18.5,7.45 18.05,7 17.5,7ZM18.4,10.4L18.14,9.89C17.97,9.56 17.63,9.35 17.25,9.35H6.75C6.37,9.35 6.03,9.56 5.86,9.89L5.6,10.4C5.43,10.74 5.46,11.15 5.68,11.46C5.9,11.77 6.26,11.95 6.64,11.95H7V16.5C7,17.05 7.45,17.5 8,17.5H13C13.55,17.5 14,17.05 14,16.5V11.95H15V16.5C15,17.05 15.45,17.5 16,17.5C16.55,17.5 17,17.05 17,16.5V11.95H17.36C17.74,11.95 18.1,11.77 18.32,11.46C18.54,11.15 18.57,10.74 18.4,10.4ZM12.5,15.5H8.5V12H12.5V15.5Z"/>
+</vector>

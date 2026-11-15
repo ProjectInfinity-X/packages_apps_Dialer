@@ -87,7 +87,7 @@ public class LetterTileDrawable extends Drawable {
   public static final int SHAPE_RECTANGLE = 2;
 
   /** Default icon scale for vector drawable. */
-  private static final float VECTOR_ICON_SCALE = 0.7f;
+  private static final float VECTOR_ICON_SCALE = 0.58f;
 
   /** Reusable components to avoid new allocations */
   private final Paint paint = new Paint();
@@ -131,7 +131,7 @@ public class LetterTileDrawable extends Drawable {
     defaultSpamAvatar = res.getDrawable(R.drawable.quantum_ic_report_vd_theme_24, null);
     defaultConferenceAvatar = res.getDrawable(R.drawable.quantum_ic_group_vd_theme_24, null);
 
-    paint.setTypeface(Typeface.create("@*android:string/config_headlineFontFamilyMedium", Typeface.NORMAL));
+    paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
     paint.setTextAlign(Align.CENTER);
     paint.setAntiAlias(true);
     paint.setFilterBitmap(true);
@@ -215,7 +215,7 @@ public class LetterTileDrawable extends Drawable {
       // Scale text by canvas bounds and user selected scaling factor
       paint.setTextSize(scale * letterToTileRatio * minDimension);
       paint.getTextBounds(firstChar, 0, 1, rect);
-      paint.setTypeface(Typeface.create("@*android:string/config_bodyFontFamily", Typeface.NORMAL));
+      paint.setTypeface(Typeface.create("sans-serif-medium", Typeface.NORMAL));
       paint.setColor(tileFontColor);
 
       // Draw the letter in the canvas, vertically shifted up or down by the user-defined

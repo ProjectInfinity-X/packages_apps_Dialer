@@ -87,8 +87,7 @@
         android:contentDescription="@string/description_dialpad_back"
         android:gravity="center"
         android:src="@drawable/quantum_ic_close_vd_theme_24"
-        android:tint="@*android:color/system_accent1_400"
-        android:tintMode="src_in"
+        app:tint="@color/dialer_on_surface_variant"
         android:visibility="gone" />
 
     <ImageButton
@@ -102,8 +101,7 @@
         android:contentDescription="@string/description_dialpad_overflow"
         android:gravity="center"
         android:src="@drawable/quantum_ic_more_vert_vd_theme_24"
-        android:tint="@*android:color/system_accent1_400"
-        android:tintMode="src_in"
+        app:tint="@color/dialer_on_surface_variant"
         android:visibility="gone"
         tools:visibility="visible"/>
 
@@ -151,15 +149,14 @@
         android:contentDescription="@string/description_delete_button"
         android:src="@drawable/quantum_ic_backspace_vd_theme_24"
         android:state_enabled="false"
-        android:tint="@*android:color/system_accent1_400"
-        android:tintMode="src_in"/>
+        app:tint="@color/dialer_on_surface_variant"/>
   </LinearLayout>
 
   <View
       android:layout_width="match_parent"
       android:layout_height="1dp"
-      android:background="@android:color/transparent"/>
-
+      android:layout_marginHorizontal="24dp"
+      android:background="@color/dialer_outline_variant"/>
   <Space
       android:layout_width="match_parent"
       android:layout_height="@dimen/dialpad_space_above_keys"/>

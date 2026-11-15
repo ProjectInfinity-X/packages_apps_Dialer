@@ -18,6 +18,7 @@
 package com.android.dialer.calllogutils;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.content.res.TypedArray;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -55,6 +56,7 @@ public class CallTypeIconsView extends View {
 
   private static Resources resources;
   private static Resources largeResources;
+  private static int cachedNightMode = -1;
   private final List<Integer> callTypes = new ArrayList<>(3);
   private boolean showVideo;
   private boolean showHd;
@@ -74,8 +76,12 @@ public class CallTypeIconsView extends View {
         context.getTheme().obtainStyledAttributes(attrs, R.styleable.CallTypeIconsView, 0, 0);
     useLargeIcons = typedArray.getBoolean(R.styleable.CallTypeIconsView_useLargeIcons, false);
     typedArray.recycle();
-    if (resources == null) {
+    int currentNightMode =
+        context.getResources().getConfiguration().uiMode & Configuration.UI_MODE_NIGHT_MASK;
+    if (resources == null || currentNightMode != cachedNightMode) {
+      cachedNightMode = currentNightMode;
       resources = new Resources(context, false);
+      largeResources = null;
     }
     if (largeResources == null && useLargeIcons) {
       largeResources = new Resources(context, true);
@@ -293,15 +299,14 @@ public class CallTypeIconsView extends View {
       // Need to make a copy of the arrow drawable, otherwise the same instance colored
       // above will be recolored here.
       missed = getBitmap(context, R.drawable.quantum_ic_call_missed_vd_theme_24,
-              r.getColor(R.color.dialer_red, contextTheme), largeIcons);
+              r.getColor(R.color.missed_call, contextTheme), largeIcons);
 
-      Theme theme = ThemeComponent.get(context).theme();
-      int iconColor = theme.getColorIcon();
+      int iconColor = context.getColor(R.color.dialer_on_surface_variant);
 
       voicemail = getBitmap(context, R.drawable.quantum_ic_voicemail_vd_theme_24, iconColor,
               largeIcons);
-      blocked = getBitmap(context, R.drawable.quantum_ic_block_vd_theme_24, iconColor,
-              largeIcons);
+      blocked = getBitmap(context, R.drawable.quantum_ic_block_vd_theme_24,
+              r.getColor(R.color.missed_call, contextTheme), largeIcons);
       videoCall = getBitmap(context, R.drawable.quantum_ic_videocam_vd_white_24, iconColor,
               largeIcons);
       hdCall = getBitmap(context, R.drawable.quantum_ic_hd_vd_theme_24, iconColor,
@@ -320,9 +325,9 @@ public class CallTypeIconsView extends View {
                                boolean largeIcons) {
       final android.content.res.Resources r = context.getResources();
       Drawable drawable = largeIcons
-              ? ResourcesCompat.getDrawable(r, iconId, context.getTheme())
+              ? ResourcesCompat.getDrawable(r, iconId, context.getTheme()).mutate()
               : getScaledBitmap(context, iconId);
-      drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY));
+      drawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
       return drawable;
     }
 

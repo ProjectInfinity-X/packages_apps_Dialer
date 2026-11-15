@@ -16,7 +16,6 @@
   -->
 <shape xmlns:android="http://schemas.android.com/apk/res/android"
     android:shape="rectangle">
-  <!-- Color is theme dependent and will be overridden in code. -->
-  <solid android:color="@android:color/white"/>
+  <solid android:color="@color/dialer_surface_container_high"/>
   <corners android:radius="24dp"/>
 </shape>

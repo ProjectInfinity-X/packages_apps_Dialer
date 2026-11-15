@@ -15,10 +15,12 @@
  ~ limitations under the License
  -->
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginStart="16dp"
-    android:layout_marginEnd="16dp"
+    android:layout_marginHorizontal="12dp"
+    android:layout_marginTop="8dp"
+    android:layout_marginBottom="4dp"
     android:minHeight="48dp">
 
   <TextView
@@ -26,21 +28,21 @@
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_centerVertical="true"
-      android:textSize="16sp"
-      style="@style/Dialer.TextAppearance.Secondary"/>
+      android:textColor="@color/dialer_primary"
+      style="@style/Dialer.TextAppearance.Header2"/>
 
-  <Button
+  <com.google.android.material.button.MaterialButton
       android:id="@+id/speed_dial_add_button"
+      style="@style/Widget.Material3.Button.TonalButton"
       android:layout_width="wrap_content"
       android:layout_height="wrap_content"
       android:layout_alignParentEnd="true"
       android:layout_centerVertical="true"
-      android:minHeight="@dimen/dialer_touch_target_min_size"
-      android:minWidth="48dp"
-      android:paddingStart="8dp"
-      android:paddingEnd="8dp"
+      android:minHeight="40dp"
       android:text="@string/speed_dial_add_button_text"
-      android:textColor="?android:attr/colorAccent"
-      android:textAllCaps="false"
-      style="@style/Widget.AppCompat.Button.Borderless"/>
+      android:textColor="@color/dialer_on_secondary_container"
+      app:backgroundTint="@color/dialer_secondary_container"
+      app:icon="@drawable/quantum_ic_person_add_vd_theme_24"
+      app:iconSize="18dp"
+      app:iconTint="@color/dialer_on_secondary_container"/>
 </RelativeLayout>

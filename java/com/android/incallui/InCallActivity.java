@@ -20,7 +20,6 @@ package com.android.incallui;
 import android.app.ActivityManager;
 import android.app.ActivityManager.AppTask;
 import android.app.ActivityManager.TaskDescription;
-import android.app.AlertDialog;
 import android.app.Dialog;
 import android.app.KeyguardManager;
 import android.content.Context;
@@ -97,6 +96,7 @@ import com.android.incallui.video.bindings.VideoBindings;
 import com.android.incallui.video.protocol.VideoCallScreen;
 import com.android.incallui.video.protocol.VideoCallScreenDelegate;
 import com.android.incallui.video.protocol.VideoCallScreenDelegateFactory;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.lang.annotation.Retention;
@@ -1112,8 +1112,8 @@ public class InCallActivity extends TransactionSafeFragmentActivity
 
     dismissPendingDialogs();
 
-    AlertDialog.Builder builder =
-        new AlertDialog.Builder(this).setTitle(R.string.video_call_lte_to_wifi_failed_title);
+    MaterialAlertDialogBuilder builder =
+        new MaterialAlertDialogBuilder(this).setTitle(R.string.video_call_lte_to_wifi_failed_title);
 
     // This allows us to use the theme of the dialog instead of the activity
     View dialogCheckBoxView =

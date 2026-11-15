@@ -15,17 +15,17 @@
   -->
 <resources>
   <!-- Essential theme colors -->
-  <color name="dialer_theme_color">@android:color/system_accent1_600</color>
-  <color name="dialer_theme_color_20pct">#332A56C6</color>
-  <color name="dialer_theme_color_dark">@color/dialer_background_color</color>
-  <color name="dialer_primary_color">@android:color/system_accent1_400</color>
-  <color name="dialer_actionbar_color">@android:color/system_accent1_200</color>
-  <color name="dialer_ripple_color">#1f000000</color>
-  <color name="dialer_background_color">@android:color/system_neutral1_0</color>
-  <color name="dialer_background_floating">@android:color/system_neutral1_50</color>
-  <color name="dialer_search_bar_color">@android:color/system_neutral1_50</color>
-  <color name="rounded_dialpad_bg_color">@android:color/system_neutral1_50</color>
-  <color name="searchbar_icon_color">@android:color/system_neutral1_900</color>
-  <color name="dialer_theme_color_light">@android:color/system_accent1_600</color>
-  <color name="dialer_buttons_color">@*android:color/system_neutral1_900</color>
+  <color name="dialer_theme_color">@color/dialer_primary</color>
+  <color name="dialer_theme_color_20pct">@color/dialer_primary_container</color>
+  <color name="dialer_theme_color_dark">@color/dialer_surface</color>
+  <color name="dialer_primary_color">@color/dialer_primary</color>
+  <color name="dialer_actionbar_color">@color/dialer_surface</color>
+  <color name="dialer_ripple_color">#1F000000</color>
+  <color name="dialer_background_color">@color/dialer_surface</color>
+  <color name="dialer_background_floating">@color/dialer_surface_container_high</color>
+  <color name="dialer_search_bar_color">@color/dialer_surface_container_high</color>
+  <color name="rounded_dialpad_bg_color">@color/dialer_surface_container_low</color>
+  <color name="searchbar_icon_color">@color/dialer_on_surface_variant</color>
+  <color name="dialer_theme_color_light">@color/dialer_primary</color>
+  <color name="dialer_buttons_color">@color/dialer_on_surface_variant</color>
 </resources>

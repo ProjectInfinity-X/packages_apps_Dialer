@@ -30,12 +30,15 @@ import android.telecom.PhoneAccountHandle;
 import android.telecom.TelecomManager;
 import android.telephony.TelephonyManager;
 import android.widget.Toast;
+import android.view.View;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
+import androidx.preference.PreferenceCategory;
+import androidx.preference.PreferenceScreen;
 import androidx.preference.PreferenceManager;
 
 import com.android.dialer.R;
@@ -123,36 +126,47 @@ public class DialerSettingsActivity extends BaseActivity implements
 
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
-      setPreferenceScreen(getPreferenceManager().createPreferenceScreen(requireContext()));
+      PreferenceScreen screen = getPreferenceManager().createPreferenceScreen(requireContext());
+      setPreferenceScreen(screen);
+
+      PreferenceCategory generalCategory = new PreferenceCategory(requireContext());
+      generalCategory.setTitle(R.string.settings_category_general);
+      generalCategory.setIconSpaceReserved(false);
+      screen.addPreference(generalCategory);
 
       if (showDisplayOptions()) {
         Preference displayOptions = new Preference(getContext());
         displayOptions.setTitle(R.string.display_options_title);
         displayOptions.setFragment(DisplayOptionsSettingsFragment.class.getName());
-        displayOptions.setIconSpaceReserved(false);
-        getPreferenceScreen().addPreference(displayOptions);
+        displayOptions.setIcon(R.drawable.quantum_ic_people_outline_vd_theme_24);
+        generalCategory.addPreference(displayOptions);
       }
 
       Preference soundSettings = new Preference(getContext());
       soundSettings.setTitle(R.string.sounds_and_vibration_title);
       soundSettings.setFragment(SoundSettingsFragment.class.getName());
       soundSettings.setViewId(R.id.settings_header_sounds_and_vibration);
-      soundSettings.setIconSpaceReserved(false);
-      getPreferenceScreen().addPreference(soundSettings);
+      soundSettings.setIcon(R.drawable.quantum_ic_volume_up_vd_theme_24);
+      generalCategory.addPreference(soundSettings);
 
       Preference quickResponseSettings = new Preference(getContext());
       Intent quickResponseSettingsIntent =
               new Intent(TelecomManager.ACTION_SHOW_RESPOND_VIA_SMS_SETTINGS);
       quickResponseSettings.setTitle(R.string.respond_via_sms_setting_title);
       quickResponseSettings.setIntent(quickResponseSettingsIntent);
-      quickResponseSettings.setIconSpaceReserved(false);
-      getPreferenceScreen().addPreference(quickResponseSettings);
+      quickResponseSettings.setIcon(R.drawable.quantum_ic_message_vd_theme_24);
+      generalCategory.addPreference(quickResponseSettings);
+
+      PreferenceCategory callsCategory = new PreferenceCategory(requireContext());
+      callsCategory.setTitle(R.string.call_settings_label);
+      callsCategory.setIconSpaceReserved(false);
+      screen.addPreference(callsCategory);
 
       final Preference lookupSettings = new Preference(getContext());
       lookupSettings.setTitle(R.string.lookup_settings_label);
       lookupSettings.setFragment(LookupSettingsFragment.class.getName());
-      lookupSettings.setIconSpaceReserved(false);
-      getPreferenceScreen().addPreference(lookupSettings);
+      lookupSettings.setIcon(R.drawable.quantum_ic_search_vd_theme_24);
+      callsCategory.addPreference(lookupSettings);
 
       TelephonyManager telephonyManager = getContext().getSystemService(TelephonyManager.class);
       TelecomManager telecomManager = (TelecomManager) getContext().getSystemService(
@@ -168,8 +182,8 @@ public class DialerSettingsActivity extends BaseActivity implements
 
         callSettings.setTitle(R.string.call_settings_label);
         callSettings.setIntent(callSettingsIntent);
-        callSettings.setIconSpaceReserved(false);
-        getPreferenceScreen().addPreference(callSettings);
+        callSettings.setIcon(R.drawable.quantum_ic_call_vd_theme_24);
+        callsCategory.addPreference(callSettings);
       } else {
         Preference phoneAccountSettings = new Preference(getContext());
         Intent phoneAccountSettingsIntent = new Intent(TelecomManager.ACTION_CHANGE_PHONE_ACCOUNTS);
@@ -177,19 +191,24 @@ public class DialerSettingsActivity extends BaseActivity implements
 
         phoneAccountSettings.setTitle(R.string.phone_account_settings_label);
         phoneAccountSettings.setIntent(phoneAccountSettingsIntent);
-        phoneAccountSettings.setIconSpaceReserved(false);
-        getPreferenceScreen().addPreference(phoneAccountSettings);
+        phoneAccountSettings.setIcon(R.drawable.quantum_ic_call_vd_theme_24);
+        callsCategory.addPreference(phoneAccountSettings);
       }
       if (BlockedNumberContract.canCurrentUserBlockNumbers(getContext())) {
         Preference blockedCalls = new Preference(getContext());
         blockedCalls.setTitle(R.string.manage_blocked_numbers_label);
         blockedCalls.setIntent(getContext().getSystemService(TelecomManager.class)
                 .createManageBlockedNumbersIntent());
-        blockedCalls.setIconSpaceReserved(false);
-        getPreferenceScreen().addPreference(blockedCalls);
+        blockedCalls.setIcon(R.drawable.quantum_ic_block_vd_theme_24);
+        callsCategory.addPreference(blockedCalls);
       }
 
-      addVoicemailSettings(isPrimaryUser);
+      addVoicemailSettings(isPrimaryUser, callsCategory);
+
+      PreferenceCategory moreCategory = new PreferenceCategory(requireContext());
+      moreCategory.setTitle(R.string.settings_category_more);
+      moreCategory.setIconSpaceReserved(false);
+      screen.addPreference(moreCategory);
 
       if (isPrimaryUser
               && (TelephonyManagerCompat.isTtyModeSupported(telecomManager)
@@ -199,15 +218,21 @@ public class DialerSettingsActivity extends BaseActivity implements
                 new Intent(TelecomManager.ACTION_SHOW_CALL_ACCESSIBILITY_SETTINGS);
         accessibilitySettings.setTitle(R.string.accessibility_settings_title);
         accessibilitySettings.setIntent(accessibilitySettingsIntent);
-        accessibilitySettings.setIconSpaceReserved(false);
-        getPreferenceScreen().addPreference(accessibilitySettings);
+        accessibilitySettings.setIcon(R.drawable.ic_settings_accessibility);
+        moreCategory.addPreference(accessibilitySettings);
       }
 
       final Preference otherSettings = new Preference(getContext());
       otherSettings.setTitle(R.string.other_settings_label);
       otherSettings.setFragment(OtherSettingsFragment.class.getName());
-      otherSettings.setIconSpaceReserved(false);
-      getPreferenceScreen().addPreference(otherSettings);
+      otherSettings.setIcon(R.drawable.ic_settings_tune);
+      moreCategory.addPreference(otherSettings);
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+      super.onViewCreated(view, savedInstanceState);
+      ExpressivePreferenceStyler.apply(this);
     }
 
     @Override
@@ -229,7 +254,7 @@ public class DialerSettingsActivity extends BaseActivity implements
       return false;
     }
 
-    private void addVoicemailSettings(boolean isPrimaryUser) {
+    private void addVoicemailSettings(boolean isPrimaryUser, PreferenceCategory callsCategory) {
       if (!isPrimaryUser) {
         LogUtil.i("DialerSettingsActivity.addVoicemailSettings", "user not primary user");
         return;
@@ -265,8 +290,8 @@ public class DialerSettingsActivity extends BaseActivity implements
         bundle.putParcelable(VoicemailClient.PARAM_PHONE_ACCOUNT_HANDLE, soleAccount);
       }
       voicemailSettings.getExtras().putAll(bundle);
-      voicemailSettings.setIconSpaceReserved(false);
-      getPreferenceScreen().addPreference(voicemailSettings);
+      voicemailSettings.setIcon(R.drawable.quantum_ic_voicemail_vd_theme_24);
+      callsCategory.addPreference(voicemailSettings);
     }
 
     /**

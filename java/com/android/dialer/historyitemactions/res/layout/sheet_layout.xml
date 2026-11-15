@@ -22,8 +22,15 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-  <include layout="@layout/contact_layout"/>
+  <View
+      android:layout_width="32dp"
+      android:layout_height="4dp"
+      android:layout_gravity="center_horizontal"
+      android:layout_marginTop="12dp"
+      android:layout_marginBottom="4dp"
+      android:background="@color/dialer_outline"/>
 
+  <include layout="@layout/contact_layout"/>
   <androidx.core.widget.NestedScrollView
       android:id="@+id/history_actions_scroll_view"
       android:layout_width="match_parent"

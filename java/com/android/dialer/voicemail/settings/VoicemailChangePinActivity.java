@@ -17,7 +17,6 @@
 
 package com.android.dialer.voicemail.settings;
 
-import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface.OnDismissListener;
@@ -55,6 +54,7 @@ import com.android.voicemail.PinChanger.ChangePinResult;
 import com.android.voicemail.PinChanger.PinSpecification;
 import com.android.voicemail.VoicemailClient;
 import com.android.voicemail.VoicemailComponent;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.lang.ref.WeakReference;
 
@@ -523,7 +523,7 @@ public class VoicemailChangePinActivity extends BaseActivity
   }
 
   private void showError(CharSequence message, @Nullable OnDismissListener callback) {
-    new AlertDialog.Builder(this)
+    new MaterialAlertDialogBuilder(this)
         .setMessage(message)
         .setPositiveButton(android.R.string.ok, null)
         .setOnDismissListener(callback)
